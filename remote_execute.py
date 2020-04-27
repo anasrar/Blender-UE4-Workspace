@@ -65,7 +65,8 @@ class RemoteExecution(object):
         '''
         return self._broadcast_connection.remote_nodes if self._broadcast_connection else []
 
-    def start(self):
+    def start(self, config=RemoteExecutionConfig()):
+        self._config = config
         '''
         Start the remote execution session. This will begin the discovey process for remote "nodes" (UE4 instances running Python).
         '''
