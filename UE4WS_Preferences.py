@@ -15,9 +15,9 @@ class Preferences(AddonPreferences):
         default="0.0.0.0"
     )
 
-    multicastTTL: StringProperty(
+    multicastTTL: IntProperty(
         name="Multicast Time-To-Live",
-        default="0"
+        default=0
     )
 
     devMode: BoolProperty(
