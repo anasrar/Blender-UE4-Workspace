@@ -84,7 +84,7 @@ class OP_ConnectToUnrealEngine(Operator):
 class OP_CheckConnection(Operator):
     bl_idname = "ue4workspace.checkconnection"
     bl_label = "UE4Workspace Operator"
-    bl_description = "Check Connect Unreal Engine"
+    bl_description = "Refresh Project List"
 
     remote = None
 
