@@ -90,6 +90,25 @@ class OP_ExportStaticMesh(Operator):
 
     remote = None
 
+    @classmethod
+    def description(self, context, properties):
+        preferences = context.preferences.addons[__package__].preferences
+        description = "Export Static Mesh"
+
+        # Check folder for validation
+        if preferences.exportOption in ["FBX", "BOTH"]:
+            return ("FBX folder not valid", description)[bool(preferences.ExportFBXFolder.strip())]
+        return ("Temporary folder not valid", description)[bool(preferences.TempFolder.strip())]
+
+    @classmethod
+    def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+
+        # Check folder for validation
+        if preferences.exportOption in ["FBX", "BOTH"]:
+            return bool(preferences.ExportFBXFolder.strip())
+        return bool(preferences.TempFolder.strip())
+
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
         selectedObjects = context.selected_objects
