@@ -2,6 +2,16 @@ import bpy
 from bpy.props import (EnumProperty, StringProperty)
 from bpy.types import (Panel, Operator)
 
+class RemoteExecutionConfig(object):
+    '''
+    Configuration data for establishing a remote connection with a UE4 instance running Python.
+    '''
+    def __init__(self, DEFAULT_MULTICAST_TTL=0, DEFAULT_MULTICAST_GROUP_ENDPOINT=("239.0.0.1", 6766), DEFAULT_MULTICAST_BIND_ADDRESS="0.0.0.0", DEFAULT_COMMAND_ENDPOINT=("127.0.0.1", 6776)):
+        self.multicast_ttl = DEFAULT_MULTICAST_TTL
+        self.multicast_group_endpoint = DEFAULT_MULTICAST_GROUP_ENDPOINT
+        self.multicast_bind_address = DEFAULT_MULTICAST_BIND_ADDRESS
+        self.command_endpoint = DEFAULT_COMMAND_ENDPOINT
+
 # PANEL
 
 class PANEL(Panel):
@@ -62,8 +72,11 @@ class OP_ConnectToUnrealEngine(Operator):
     remote = None
 
     def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+
         if self.remote._broadcast_connection is None:
-            self.remote.start()
+            config = RemoteExecutionConfig(DEFAULT_MULTICAST_TTL=preferences.multicastTTL, DEFAULT_MULTICAST_GROUP_ENDPOINT=(preferences.multicastGroupEndPoint.split(":")[0], int(preferences.multicastGroupEndPoint.split(":")[1])), DEFAULT_MULTICAST_BIND_ADDRESS=preferences.multicastBindAddress, DEFAULT_COMMAND_ENDPOINT=("127.0.0.1", 6776))
+            self.remote.start(config=config)
         else:
             self.remote.stop()
         return {"FINISHED"}
