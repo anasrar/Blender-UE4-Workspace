@@ -75,9 +75,10 @@ class PANEL(Panel):
                         row.operator("ue4workspace.togglevisibilityobject",icon=("HIDE_OFF", "HIDE_ON")[obj.hide_get()], text="", emboss=False).objName = obj.name
                         row.operator("ue4workspace.removeobject",icon="TRASH", text="", emboss=False).objName = obj.name
 
-            layout.prop(preferences, "SM_OBJTabLOD", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_OBJTabLOD], emboss=False)
-            if preferences.SM_OBJTabLOD:
-                pass
+            if preferences.devMode:
+                layout.prop(preferences, "SM_OBJTabLOD", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_OBJTabLOD], emboss=False)
+                if preferences.SM_OBJTabLOD:
+                    pass
 
 # OPERATOR
 
