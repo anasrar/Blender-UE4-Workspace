@@ -26,7 +26,7 @@ class PANEL(Panel):
         # Big Button Documentation
         row = layout.row(align=True)
         row.scale_y = 1.5
-        row.operator("wm.url_open",icon="INFO", text="DOCUMENTATION").url="https://github.com/anasrar"
+        row.operator("wm.url_open",icon="INFO", text="DOCUMENTATION").url="https://github.com/anasrar/Blender-UE4-Workspace"
         # My Link
         col = layout.column(align=True)
         row = col.row(align=True)
