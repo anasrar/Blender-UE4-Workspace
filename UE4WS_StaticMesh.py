@@ -113,8 +113,8 @@ class OP_ExportStaticMesh(Operator):
         preferences = context.preferences.addons[__package__].preferences
         selectedObjects = context.selected_objects
         objects = (selectedObjects, context.scene.objects)[preferences.SM_ExportMeshOption == "ALL"]
-        # Filter object for mesh and object name not start with UCX_
-        objects = [obj for obj in objects if obj.type == "MESH" and not obj.name.startswith("UCX_")]
+        # Filter object for mesh, object name not start with UCX_, and mesh does not have ARMATURE modifiers
+        objects = [obj for obj in objects if obj.type == "MESH" and not obj.name.startswith("UCX_") and not "ARMATURE" in [mod.type for mod in obj.modifiers]]
 
         # Deselect all object
         bpy.ops.object.select_all(action="DESELECT")

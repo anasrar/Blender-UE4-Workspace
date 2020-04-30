@@ -47,7 +47,9 @@ class PANEL(Panel):
         layout = self.layout
         preferences = context.preferences.addons[__package__].preferences
 
-        if context.active_object is not None and context.active_object.type == "MESH":
+        modifiersTypeList = [mod.type for mod in context.active_object.modifiers]
+
+        if context.active_object is not None and context.active_object.type == "MESH" and not "ARMATURE" in modifiersTypeList:
 
             layout.prop(preferences, "SM_OBJTabCustomCollision", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_OBJTabCustomCollision], emboss=False)
             if preferences.SM_OBJTabCustomCollision:
