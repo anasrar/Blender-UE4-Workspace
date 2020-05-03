@@ -55,6 +55,10 @@ from . UE4WS_StaticMeshUnrealEngine import (
     PANEL as staticMeshUnrealEnginePanel
 )
 
+from . UE4WS_Character import (
+    PANEL as characterPanel
+)
+
 from . UE4WS_Credit import (
     PANEL as creditPanel
 )
@@ -94,6 +98,8 @@ AR_UE4WS_classes = (
     staticMeshPanel,
     staticMeshFBXOptionPanel,
     staticMeshUnrealEnginePanel,
+    ## Character
+    characterPanel,
     ## Credit
     creditPanel,
     ## Misc.
