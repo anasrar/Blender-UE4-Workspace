@@ -41,46 +41,47 @@ class PANEL(Panel):
 
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.type in ["MESH"]
+        return context.active_object is not None and context.active_object.type in ["MESH"] and not "ARMATURE" in [mod.type for mod in context.active_object.modifiers]
 
     def draw(self, context):
         layout = self.layout
         preferences = context.preferences.addons[__package__].preferences
 
-        modifiersTypeList = [mod.type for mod in context.active_object.modifiers]
+        if context.active_object is not None:
+            modifiersTypeList = [mod.type for mod in context.active_object.modifiers]
 
-        if context.active_object is not None and context.active_object.type == "MESH" and not "ARMATURE" in modifiersTypeList:
+            if context.active_object is not None and context.active_object.type == "MESH" and not "ARMATURE" in modifiersTypeList:
 
-            layout.prop(preferences, "SM_OBJTabCustomCollision", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_OBJTabCustomCollision], emboss=False)
-            if preferences.SM_OBJTabCustomCollision:
-                row = layout.row()
-                row.scale_y = 1.5
-                row.operator("wm.url_open",icon="INFO", text="FBX Static Mesh Pipeline").url="https://docs.unrealengine.com/en-US/Engine/Content/Importing/FBX/StaticMeshes/#collision"
-                # Add Collision Button
-                row = layout.row()
-                row.scale_y = 1.5
-                row.operator("ue4workspace.makecollision",icon="OUTLINER_OB_MESH", text="Make Collision")
+                layout.prop(preferences, "SM_OBJTabCustomCollision", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_OBJTabCustomCollision], emboss=False)
+                if preferences.SM_OBJTabCustomCollision:
+                    row = layout.row()
+                    row.scale_y = 1.5
+                    row.operator("wm.url_open",icon="INFO", text="FBX Static Mesh Pipeline").url="https://docs.unrealengine.com/en-US/Engine/Content/Importing/FBX/StaticMeshes/#collision"
+                    # Add Collision Button
+                    row = layout.row()
+                    row.scale_y = 1.5
+                    row.operator("ue4workspace.makecollision",icon="OUTLINER_OB_MESH", text="Make Collision")
 
-                collisionObjects = [obj for obj in context.scene.objects if obj.type == "MESH" and obj.name.startswith("UCX_" + context.active_object.name)]
+                    collisionObjects = [obj for obj in context.scene.objects if obj.type == "MESH" and obj.name.startswith("UCX_" + context.active_object.name)]
 
-                if collisionObjects:
-                    box = layout.box()
-                    for obj in collisionObjects:
-                        col = box.column()
-                        row = col.row()
-                        split = row.split(factor=0.6)
-                        col = split.column()
-                        col.label(text=obj.name)
-                        split = split.split()
-                        row = split.row()
-                        row.alignment = "RIGHT"
-                        row.operator("ue4workspace.togglevisibilityobject",icon=("HIDE_OFF", "HIDE_ON")[obj.hide_get()], text="", emboss=False).objName = obj.name
-                        row.operator("ue4workspace.removeobject",icon="TRASH", text="", emboss=False).objName = obj.name
+                    if collisionObjects:
+                        box = layout.box()
+                        for obj in collisionObjects:
+                            col = box.column()
+                            row = col.row()
+                            split = row.split(factor=0.6)
+                            col = split.column()
+                            col.label(text=obj.name)
+                            split = split.split()
+                            row = split.row()
+                            row.alignment = "RIGHT"
+                            row.operator("ue4workspace.togglevisibilityobject",icon=("HIDE_OFF", "HIDE_ON")[obj.hide_get()], text="", emboss=False).objName = obj.name
+                            row.operator("ue4workspace.removeobject",icon="TRASH", text="", emboss=False).objName = obj.name
 
-            if preferences.devMode:
-                layout.prop(preferences, "SM_OBJTabLOD", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_OBJTabLOD], emboss=False)
-                if preferences.SM_OBJTabLOD:
-                    pass
+                if preferences.devMode:
+                    layout.prop(preferences, "SM_OBJTabLOD", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_OBJTabLOD], emboss=False)
+                    if preferences.SM_OBJTabLOD:
+                        pass
 
 # OPERATOR
 
