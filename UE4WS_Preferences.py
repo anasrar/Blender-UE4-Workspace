@@ -525,6 +525,50 @@ class Preferences(AddonPreferences):
         default=True
     )
 
+    # Character 
+
+    CHAR_Subfolder: StringProperty(
+        name="Subfolder",
+        description="Subfolder for skeletal mesh export folder, leave it blank if you want to export to root project folder",
+        default=""
+    )
+
+    CHAR_OverwriteFile: BoolProperty(
+        name="Overwrite File",
+        description="Overwrite file if filename exist, if false will not export",
+        default=True
+    )
+
+    CHAR_ExportCharacterOption: EnumProperty(
+        name="Export Character Option",
+        description="Export Character Option",
+        items=[
+            ("SELECT", "Select", "Export selected character on scene"),
+            ("ALL", "All", "Export All Character On Scene")
+        ],
+        default="SELECT"
+    )
+
+    CHAR_CharacterOption: EnumProperty(
+        name="Character Option",
+        description="Character Option",
+        items=[
+            ("COMBINE", "Combine", "Combine character mesh into one fbx file"),
+            ("PART", "Part", "Separate character mesh into multiple fbx file")
+        ],
+        default="PART"
+    )
+
+    CHAR_CharacterSkeleton: EnumProperty(
+        name="Character Skeleton",
+        description="Character Skeleton",
+        items=[
+            ("NEW", "New", "Create new skeleton")
+        ],
+        default=None
+    )
+
+
     def draw(self, context):
         layout = self.layout
         
