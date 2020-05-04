@@ -82,6 +82,12 @@ class OP_UpdateListSkeleton(Operator):
 
     remote = None
 
+    @classmethod
+    def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+
+        return preferences.exportOption in ["UNREAL", "BOTH"] and self.remote.remote_nodes
+
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
 
@@ -93,6 +99,12 @@ class OP_UpdateListSkeleton(Operator):
         # add skeleton
         for enum in json.loads(output["output"][0]["output"]):
             preferences.skeleton.append((enum[0], enum[1], enum[0]))
+
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Update List Skeleton Done")
+        except Exception: 
+            pass
+
 
         return {"FINISHED"}
 
