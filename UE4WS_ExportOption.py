@@ -78,6 +78,8 @@ class OP_ConnectToUnrealEngine(Operator):
             config = RemoteExecutionConfig(DEFAULT_MULTICAST_TTL=preferences.multicastTTL, DEFAULT_MULTICAST_GROUP_ENDPOINT=(preferences.multicastGroupEndPoint.split(":")[0], int(preferences.multicastGroupEndPoint.split(":")[1])), DEFAULT_MULTICAST_BIND_ADDRESS=preferences.multicastBindAddress, DEFAULT_COMMAND_ENDPOINT=("127.0.0.1", 6776))
             self.remote.start(config=config)
         else:
+            # clear all skeleton list
+            preferences.skeleton.clear()
             self.remote.stop()
         return {"FINISHED"}
 
