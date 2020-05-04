@@ -5,6 +5,10 @@ from bpy.props import (StringProperty, BoolProperty, BoolVectorProperty, IntProp
 class Preferences(AddonPreferences):
     bl_idname = __package__
 
+    remote = None
+
+    skeleton = []
+
     multicastGroupEndPoint: StringProperty(
         name="Multicast Group Endpoint",
         default="239.0.0.1:6766"
@@ -529,7 +533,7 @@ class Preferences(AddonPreferences):
 
     CHAR_Subfolder: StringProperty(
         name="Subfolder",
-        description="Subfolder for skeletal mesh export folder, leave it blank if you want to export to root project folder",
+        description="Subfolder for skeleton mesh export folder, leave it blank if you want to export to root project folder",
         default=""
     )
 
@@ -559,12 +563,13 @@ class Preferences(AddonPreferences):
         default="PART"
     )
 
+    def update_skeleton(self, context):
+        return [("NEW", "New", "Create new skeleton")] + self.skeleton
+
     CHAR_CharacterSkeleton: EnumProperty(
         name="Character Skeleton",
         description="Character Skeleton",
-        items=[
-            ("NEW", "New", "Create new skeleton")
-        ],
+        items=update_skeleton,
         default=None
     )
 
