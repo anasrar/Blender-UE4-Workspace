@@ -1,3 +1,5 @@
+import os
+import json
 import bpy
 from bpy.types import (Panel, Operator)
 
@@ -82,6 +84,15 @@ class OP_UpdateListSkeleton(Operator):
 
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
+
+        # clear all skeleton list
+        preferences.skeleton.clear()
+        self.remote.open_command_connection(self.remote.remote_nodes)
+        output = self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "GetAllSkeleton.py"), exec_mode="ExecuteFile")
+        self.remote.close_command_connection()
+        # add skeleton
+        for enum in json.loads(output["output"][0]["output"]):
+            preferences.skeleton.append((enum[0], enum[1], enum[0]))
 
         return {"FINISHED"}
 
