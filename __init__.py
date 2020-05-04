@@ -56,7 +56,8 @@ from . UE4WS_StaticMeshUnrealEngine import (
 )
 
 from . UE4WS_Character import (
-    PANEL as characterPanel
+    PANEL as characterPanel,
+    Ops as characterOperator
 )
 
 from . UE4WS_Credit import (
@@ -83,7 +84,8 @@ AR_UE4WS_OperatorArray = []
 for x in [
     objectOperator,
     exportOptionOperator,
-    staticMeshOperator
+    staticMeshOperator,
+    characterOperator
     ]:
     AR_UE4WS_OperatorArray.extend(x)
 
