@@ -1,5 +1,5 @@
 import bpy
-from bpy.types import (Panel)
+from bpy.types import (Panel, Operator)
 
 class PANEL(Panel):
     bl_idname = "UE4WORKSPACE_PT_CharacterPanel"
@@ -65,7 +65,7 @@ class PANEL(Panel):
 
             row = layout.row()
             row.scale_y = 1.5
-            row.operator("ue4workspace.exportstaticmesh",icon="ARMATURE_DATA", text="Update List Skeleton")
+            row.operator("ue4workspace.updatelistskeleton",icon="ARMATURE_DATA", text="Update List Skeleton")
 
         row = layout.row()
         row.scale_y = 1.5
@@ -73,7 +73,21 @@ class PANEL(Panel):
 
 #  OPERATOR
 
+class OP_UpdateListSkeleton(Operator):
+    bl_idname = "ue4workspace.updatelistskeleton"
+    bl_label = "UE4Workspace Operator"
+    bl_description = "Update List Skeleton"
+
+    remote = None
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+
+        return {"FINISHED"}
+
+
 # operator export
 
 Ops = [
+    OP_UpdateListSkeleton
 ]
