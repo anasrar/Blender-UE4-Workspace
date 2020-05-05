@@ -272,10 +272,11 @@ class OP_ExportStaticMesh(Operator):
             file.write(json.dumps(unrealsetting))
             file.close()
 
+            for node_id in [user["node_id"] for user in self.remote.remote_nodes]:
             # tell unreal engine tor run python script
-            self.remote.open_command_connection(self.remote.remote_nodes)
-            self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "StaticMesh.py"), exec_mode="ExecuteFile")
-            self.remote.close_command_connection()
+                self.remote.open_command_connection(node_id)
+                self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "StaticMesh.py"), exec_mode="ExecuteFile")
+                self.remote.close_command_connection()
 
         try:
             bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Export Static Mesh Done")

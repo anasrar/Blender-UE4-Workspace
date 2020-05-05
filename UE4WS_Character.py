@@ -93,11 +93,16 @@ class OP_UpdateListSkeleton(Operator):
 
         # clear all skeleton list
         preferences.skeleton.clear()
-        self.remote.open_command_connection(self.remote.remote_nodes)
-        output = self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "GetAllSkeleton.py"), exec_mode="ExecuteFile")
-        self.remote.close_command_connection()
+        skeletonList = []
+
+        for node_id in [user["node_id"] for user in self.remote.remote_nodes]:
+            self.remote.open_command_connection(node_id)
+            output = self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "GetAllSkeleton.py"), exec_mode="ExecuteFile")
+            self.remote.close_command_connection()
+            skeletonList += json.loads(output["output"][0]["output"])
+
         # add skeleton
-        for enum in json.loads(output["output"][0]["output"]):
+        for enum in skeletonList:
             preferences.skeleton.append((enum[0], enum[1], enum[0]))
 
         try:
