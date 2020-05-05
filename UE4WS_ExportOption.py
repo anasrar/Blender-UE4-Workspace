@@ -59,8 +59,25 @@ class PANEL(Panel):
                 layout.prop(preferences, "SM_TabListProject", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_TabListProject], emboss=False)
                 if preferences.SM_TabListProject:
                     for X in self.remote.remote_nodes:
-                        boxes = layout.box()
-                        boxes.label(text=X.get("project_name", "Project"), icon="FILE_FOLDER")
+                        box = layout.box()
+
+                        col = box.column()
+                        row = col.row()
+                        split = row.split(factor=0.4)
+                        col = split.column()
+                        col.label(text="Project", icon="TEXT")
+                        split = split.split()
+                        col = split.column()
+                        col.label(text=X.get("project_name", "Project"))
+
+                        col = box.column()
+                        row = col.row()
+                        split = row.split(factor=0.4)
+                        col = split.column()
+                        col.label(text="Engine", icon="TOOL_SETTINGS")
+                        split = split.split()
+                        col = split.column()
+                        col.label(text=X.get("engine_version", "XX.XX.XX").split("-")[0])
 
 # OPERATOR
 
