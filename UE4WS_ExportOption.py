@@ -97,6 +97,7 @@ class OP_ConnectToUnrealEngine(Operator):
         else:
             # clear all skeleton list
             preferences.skeleton.clear()
+            preferences.CHAR_CharacterSkeleton = "NEW"
             self.remote.stop()
         return {"FINISHED"}
 
