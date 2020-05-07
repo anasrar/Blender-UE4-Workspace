@@ -573,6 +573,178 @@ class Preferences(AddonPreferences):
         default=None
     )
 
+    ## FBX Option
+
+    ## Transform
+
+    CHAR_FBXTabTransform: BoolProperty(
+        name="Transform",
+        description="Transform Tab",
+        default=False
+    )
+
+    CHAR_FBXGlobalScale: FloatProperty(
+        name="Scale",
+        description="Scale all data (Some importers do not support scaled armatures!)",
+        default=1.0,
+        min=0.001,
+        max=1000
+    )
+
+    CHAR_FBXApplyScaleOptions: EnumProperty(
+        name="Apply Scalings",
+        description="How to apply custom and units scalings in generated FBX file (Blender uses FBX scale to detect units on import, but many other applications do not handle the same way)",
+        items=[
+            ("FBX_SCALE_NONE", "All Local", "Apply custom scaling and units scaling to each object transformation, FBX scale remains at 1.0"),
+            ("FBX_SCALE_UNITS", "FBX Units Scale", "Apply custom scaling to each object transformation, and units scaling to FBX scale"),
+            ("FBX_SCALE_CUSTOM", "FBX Custom Scale", "Apply custom scaling to FBX scale, and units scaling to each object transformation"),
+            ("FBX_SCALE_ALL", "FBX All", "Apply custom scaling and units scaling to FBX scale")
+        ],
+        default="FBX_SCALE_NONE"
+    )
+
+    CHAR_FBXAxisForward: EnumProperty(
+        name="Forward",
+        description="Forward",
+        items=[
+            ("X", "X Forward", "X Forward"),
+            ("Y", "Y Forward", "Y Forward"),
+            ("Z", "Z Forward", "Z Forward"),
+            ("-X", "-X Forward", "-X Forward"),
+            ("-Y", "-Y Forward", "-Y Forward"),
+            ("-Z", "-Z Forward", "-Z Forward")
+        ],
+        default="-Z"
+    )
+
+    CHAR_FBXAxisUp: EnumProperty(
+        name="Up",
+        description="Up",
+        items=[
+            ("X", "X Up", "X Up"),
+            ("Y", "Y Up", "Y Up"),
+            ("Z", "Z Up", "Z Up"),
+            ("-X", "-X Up", "-X Up"),
+            ("-Y", "-Y Up", "-Y Up"),
+            ("-Z", "-Z Up", "-Z Up")
+        ],
+        default="Y"
+    )
+
+    CHAR_FBXApplyUnitScale: BoolProperty(
+        name="Apply Unit",
+        description="Take into account current Blender units settings (if unset, raw Blender Units values are used as-is)",
+        default=True
+    )
+
+    CHAR_FBXBakeSpaceTransform: BoolProperty(
+        name="!EXPERIMENTAL! Apply Transform",
+        description="Bake space transform into object data, avoids getting unwanted rotations to objects when target space is not aligned with Blender’s space (WARNING! experimental option, use at own risks, known broken with armatures/animations)",
+        default=False
+    )
+
+    ## Geometry
+
+    CHAR_FBXTabGeometry: BoolProperty(
+        name="Geometry",
+        description="Geometry Tab",
+        default=False
+    )
+
+    CHAR_FBXMeshSmoothType: EnumProperty(
+        name="Smoothing",
+        description="Export smoothing information (prefer ‘Normals Only’ option if your target importer understand split normals)",
+        items=[
+            ("OFF", "Normals Only", "Export only normals instead of writing edge or face smoothing data"),
+            ("FACE", "Face", "Write face smoothing"),
+            ("EDGE", "Edge", "Write edge smoothing")
+        ],
+        default="OFF"
+    ) 
+
+    CHAR_FBXUseSubsurf: BoolProperty(
+        name="Export Subdivision Surface",
+        description="Export the last Catmull-Rom subidivion modifier as FBX subdivision (Does not apply the modifier even if ‘Apply Modifiers’ is enabled)",
+        default=False
+    )
+
+    CHAR_FBXUseMeshModifiers: BoolProperty(
+        name="Apply Modifiers",
+        description="Apply modifiers to mesh objects (except Armature ones) - WARNING: prevents exporting shape keys",
+        default=True
+    )
+
+    CHAR_FBXUseMeshEdges: BoolProperty(
+        name="Loose Edges",
+        description="Export loose edges (as two-vertices polygons)",
+        default=False
+    )
+
+    CHAR_FBXUseTSpace: BoolProperty(
+        name="Tangent Space",
+        description="Add binormal and tangent vectors, together with normal they form the tangent space (will only work correctly with tris/quads only meshes!)",
+        default=False
+    )
+
+    ## Armature
+
+    CHAR_FBXTabArmature: BoolProperty(
+        name="Armature",
+        description="Armature Tab",
+        default=False
+    )
+
+    CHAR_FBXPrimaryBoneAxis: EnumProperty(
+        name="Primary Bone Axis",
+        description="Primary Bone Axis",
+        items=[
+            ("X", "X Axis", "X Axis"),
+            ("Y", "Y Axis", "Y Axis"),
+            ("Z", "Z Axis", "Z Axis"),
+            ("-X", "-X Axis", "-X Axis"),
+            ("-Y", "-Y Axis", "-Y Axis"),
+            ("-Z", "-Z Axis", "-Z Axis")
+        ],
+        default="Y"
+    )
+
+    CHAR_FBXSecondaryBoneAxis: EnumProperty(
+        name="Secondary Bone Axis",
+        description="Secondary Bone Axis",
+        items=[
+            ("X", "X Axis", "X Axis"),
+            ("Y", "Y Axis", "Y Axis"),
+            ("Z", "Z Axis", "Z Axis"),
+            ("-X", "-X Axis", "-X Axis"),
+            ("-Y", "-Y Axis", "-Y Axis"),
+            ("-Z", "-Z Axis", "-Z Axis")
+        ],
+        default="X"
+    )
+
+    CHAR_FBXArmatureFBXNodeType: EnumProperty(
+        name="Armature FBXNode Type",
+        description="FBX type of node (object) used to represent Blender’s armatures (use Null one unless you experience issues with other app, other choices may no import back perfectly in Blender…)",
+        items=[
+            ("NULL", "Null", "‘Null’ FBX node, similar to Blender’s Empty (default)"),
+            ("ROOT", "Root", "‘Root’ FBX node, supposed to be the root of chains of bones"),
+            ("LIMBNODE", "LimbNode", "‘LimbNode’ FBX node, regular joint between two bones")
+        ],
+        default="NULL"
+    )
+
+    CHAR_FBXOnlyDeformBones: BoolProperty(
+        name="Only Deform Bones",
+        description="Only write deforming bones (and non-deforming ones when they have deforming children)",
+        default=False
+    )
+
+    CHAR_FBXAddLeafBones: BoolProperty(
+        name="Add Leaf Bones",
+        description="Only write deforming bones (and non-deforming ones when they have deforming children)",
+        default=True
+    )
+
 
     def draw(self, context):
         layout = self.layout
