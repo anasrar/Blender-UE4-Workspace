@@ -64,6 +64,10 @@ from . UE4WS_Credit import (
     PANEL as creditPanel
 )
 
+from . UE4WS_CharacterFBXOption import (
+    PANEL as CharacterFBXOptionPanel
+)
+
 from . remote_execute import (
     RemoteExecution
 )
@@ -102,6 +106,7 @@ AR_UE4WS_classes = (
     staticMeshUnrealEnginePanel,
     ## Character
     characterPanel,
+    CharacterFBXOptionPanel,
     ## Credit
     creditPanel,
     ## Misc.
