@@ -1,7 +1,9 @@
 import os
 import json
+import re
 import bpy
 from bpy.types import (Panel, Operator)
+from . UE4WS_CharacterBoneManipulation import (BoneManipulation)
 
 class PANEL(Panel):
     bl_idname = "UE4WORKSPACE_PT_CharacterPanel"
@@ -71,7 +73,7 @@ class PANEL(Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("ue4workspace.exportstaticmesh",icon="MESH_CUBE", text="Export")
+        row.operator("ue4workspace.exportcharacter",icon="MESH_CUBE", text="Export")
 
 #  OPERATOR
 
@@ -110,12 +112,236 @@ class OP_UpdateListSkeleton(Operator):
         except Exception: 
             pass
 
+        return {"FINISHED"}
+
+class OP_CharacterRotateBone(Operator):
+    bl_idname = "ue4workspace.rotatebone"
+    bl_label = "UE4Workspace Operator"
+    bl_description = "Character Rotate Bone"
+    bl_options = {"UNDO"}
+
+    remote = None
+    
+    @classmethod
+    def poll(self, context):
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG")
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+
+        bone = BoneManipulation(context)
+        bone.rotateBone()
+        context.active_object["UE4RIGHASTEMPBONE"] = 1
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Calculate Bone Done")
+        except Exception:
+            pass
 
         return {"FINISHED"}
 
+class OP_CharacteRemoveTemporaryBone(Operator):
+    bl_idname = "ue4workspace.characterremovetemporarybone"
+    bl_label = "UE4Workspace Operator"
+    bl_description = "Characte Remove Temporary Bone"
+    bl_options = {"UNDO"}
+
+    remote = None
+    
+    @classmethod
+    def poll(self, context):
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.active_object.get("UE4RIGHASTEMPBONE", False)
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+
+        bone = BoneManipulation(context)
+        bone.removeTemporaryBone()
+        context.active_object.pop("UE4RIGHASTEMPBONE")
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Remove Temporary Bone Done")
+        except Exception:
+            pass
+
+        return {"FINISHED"}
+
+class OP_ExportCharacter(Operator):
+    bl_idname = "ue4workspace.exportcharacter"
+    bl_label = "UE4Workspace Operator"
+    bl_description = "Export Character"
+
+    remote = None
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        oldActiveObject = context.active_object
+        selectedObjects = context.selected_objects
+        objects = (selectedObjects, context.scene.objects)[preferences.CHAR_ExportCharacterOption == "ALL"]
+        # Filter object for aramture
+        objects = [obj for obj in objects if obj.type == "ARMATURE"]
+
+        # Deselect all object
+        bpy.ops.object.select_all(action="DESELECT")
+
+        subFolder = re.sub("[\\/:<>\'\"|?*&]", "", preferences.CHAR_Subfolder).strip()
+        directory = os.path.join((preferences.TempFolder, preferences.ExportFBXFolder)[preferences.exportOption in ["FBX","BOTH"]], subFolder)
+
+        arrCharacterObject = []
+
+        # Check Subfolder if exist, if not will make new folder
+        if not os.path.isdir(directory) and subFolder:
+            os.mkdir(directory)
+
+        for obj in objects:
+            if preferences.CHAR_CharacterOption == "COMBINE":
+                # Remove invalid character for filename
+                filename = re.sub("[\\/:<>\'\"|?*&]", "", obj.name).strip()
+                # Check duplicate from arrCharacterObject
+                checkDuplicate = len([obj for obj in arrCharacterObject if obj["name"].startswith(filename)])
+                # Add number if have duplicate name
+                filename += ("", "_" + str(checkDuplicate) )[bool(checkDuplicate)]
+
+                # Check if file alredy exist and overwrite
+                if not os.path.isfile(os.path.join(directory, filename + ".fbx")) or preferences.CHAR_OverwriteFile:
+                    # set armature as active object
+                    context.view_layer.objects.active = obj
+                    if obj.get("UE4RIG"):
+                        bone = BoneManipulation(context)
+                        bone.rotateBone()
+                        bone.beforeExport()
+
+                    obj.select_set(state=True)
+                    # select childern mesh
+                    for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
+                        mesh.select_set(state=True)
+
+                    # Export character option
+                    bpy.ops.export_scene.fbx(
+                        filepath= os.path.join(directory, filename + ".fbx"),
+                        check_existing=False,
+                        filter_glob="*.fbx",
+                        use_selection=True,
+                        use_active_collection=False,
+                        global_scale=preferences.CHAR_FBXGlobalScale,
+                        apply_unit_scale=preferences.CHAR_FBXApplyUnitScale,
+                        apply_scale_options=preferences.CHAR_FBXApplyScaleOptions,
+                        bake_space_transform=preferences.CHAR_FBXBakeSpaceTransform,
+                        object_types={"MESH", "ARMATURE"},
+                        use_mesh_modifiers=preferences.CHAR_FBXUseMeshModifiers,
+                        mesh_smooth_type=preferences.CHAR_FBXMeshSmoothType,
+                        use_subsurf=preferences.CHAR_FBXUseSubsurf,
+                        use_mesh_edges=preferences.CHAR_FBXUseMeshEdges,
+                        use_tspace=preferences.CHAR_FBXUseTSpace,
+                        use_custom_props=False,
+                        add_leaf_bones=preferences.CHAR_FBXAddLeafBones,
+                        primary_bone_axis=preferences.CHAR_FBXPrimaryBoneAxis,
+                        secondary_bone_axis=preferences.CHAR_FBXSecondaryBoneAxis,
+                        use_armature_deform_only=preferences.CHAR_FBXOnlyDeformBones,
+                        armature_nodetype=preferences.CHAR_FBXArmatureFBXNodeType,
+                        bake_anim=False,
+                        path_mode="AUTO",
+                        embed_textures=False,
+                        batch_mode="OFF",
+                        axis_forward=preferences.CHAR_FBXAxisUp,
+                        axis_up=preferences.CHAR_FBXAxisForward
+                    )
+
+                    arrCharacterObject.append({
+                        "name": filename,
+                        "skeleton": preferences.CHAR_CharacterSkeleton
+                    })
+
+                    obj.select_set(state=False)
+                    # deselect childern mesh
+                    for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
+                        mesh.select_set(state=False)
+
+                    if obj.get("UE4RIG"):
+                        bone.afterExport()
+                        if not obj.get("UE4RIGHASTEMPBONE"):
+                            bone.removeTemporaryBone()
+            else:
+                context.view_layer.objects.active = obj
+                if obj.get("UE4RIG"):
+                    bone = BoneManipulation(context)
+                    bone.rotateBone()
+                    bone.beforeExport()
+
+                for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
+                    # Remove invalid character for filename
+                    filename = re.sub("[\\/:<>\'\"|?*&]", "", obj.name + "_" + mesh.name).strip()
+                    # Check duplicate from arrCharacterObject
+                    checkDuplicate = len([obj for obj in arrCharacterObject if obj["name"].startswith(filename)])
+                    # Add number if have duplicate name
+                    filename += ("", "_" + str(checkDuplicate) )[bool(checkDuplicate)]
+
+                    # Check if file alredy exist and overwrite
+                    if not os.path.isfile(os.path.join(directory, filename + ".fbx")) or preferences.CHAR_OverwriteFile:
+                        obj.select_set(state=True)
+                        # select childern mesh
+                        mesh.select_set(state=True)
+
+                        # Export character option
+                        bpy.ops.export_scene.fbx(
+                            filepath= os.path.join(directory, filename + ".fbx"),
+                            check_existing=False,
+                            filter_glob="*.fbx",
+                            use_selection=True,
+                            use_active_collection=False,
+                            global_scale=preferences.CHAR_FBXGlobalScale,
+                            apply_unit_scale=preferences.CHAR_FBXApplyUnitScale,
+                            apply_scale_options=preferences.CHAR_FBXApplyScaleOptions,
+                            bake_space_transform=preferences.CHAR_FBXBakeSpaceTransform,
+                            object_types={"MESH", "ARMATURE"},
+                            use_mesh_modifiers=preferences.CHAR_FBXUseMeshModifiers,
+                            mesh_smooth_type=preferences.CHAR_FBXMeshSmoothType,
+                            use_subsurf=preferences.CHAR_FBXUseSubsurf,
+                            use_mesh_edges=preferences.CHAR_FBXUseMeshEdges,
+                            use_tspace=preferences.CHAR_FBXUseTSpace,
+                            use_custom_props=False,
+                            add_leaf_bones=preferences.CHAR_FBXAddLeafBones,
+                            primary_bone_axis=preferences.CHAR_FBXPrimaryBoneAxis,
+                            secondary_bone_axis=preferences.CHAR_FBXSecondaryBoneAxis,
+                            use_armature_deform_only=preferences.CHAR_FBXOnlyDeformBones,
+                            armature_nodetype=preferences.CHAR_FBXArmatureFBXNodeType,
+                            bake_anim=False,
+                            path_mode="AUTO",
+                            embed_textures=False,
+                            batch_mode="OFF",
+                            axis_forward=preferences.CHAR_FBXAxisUp,
+                            axis_up=preferences.CHAR_FBXAxisForward
+                        )
+
+                        arrCharacterObject.append({
+                            "name": filename,
+                            "skeleton": preferences.CHAR_CharacterSkeleton
+                        })
+
+                        obj.select_set(state=False)
+                        # deselect childern mesh
+                        mesh.select_set(state=False)
+
+                if obj.get("UE4RIG"):
+                    bone.afterExport()
+                    if not obj.get("UE4RIGHASTEMPBONE"):
+                        bone.removeTemporaryBone()
+
+        # Select all object after export
+        for obj in selectedObjects:
+            obj.select_set(state=True)
+        context.view_layer.objects.active = oldActiveObject
+
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Export Character Done")
+        except Exception:
+            pass
+
+        return {"FINISHED"}
 
 # operator export
 
 Ops = [
-    OP_UpdateListSkeleton
+    OP_UpdateListSkeleton,
+    OP_CharacterRotateBone,
+    OP_CharacteRemoveTemporaryBone,
+    OP_ExportCharacter
 ]
