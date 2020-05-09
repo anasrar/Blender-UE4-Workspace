@@ -560,7 +560,7 @@ class Preferences(AddonPreferences):
             ("COMBINE", "Combine", "Combine character mesh into one fbx file"),
             ("PART", "Part", "Separate character mesh into multiple fbx file")
         ],
-        default="PART"
+        default="COMBINE"
     )
 
     def update_skeleton(self, context):
