@@ -745,6 +745,233 @@ class Preferences(AddonPreferences):
         default=True
     )
 
+    ## Unreal Engine Option
+
+    ## Mesh
+
+    CHAR_ImportContentType: EnumProperty(
+        name="Import Content Type",
+        description="Filter the content we want to import from the incoming FBX skeletal mesh",
+        items=[
+            ("FBXICT_ALL", "Geometry and Skinning Weights", "Import all fbx content* – geometry, skinning and weights"),
+            ("FBXICT_GEOMETRY", "Geometry", "Import the skeletal mesh geometry only (will create a default skeleton, or map the geometry to the existing one). Morph and LOD can be imported with it"),
+            ("FBXICT_SKINNING_WEIGHTS", "Skinning Weights", "Import the skeletal mesh skinning and weights only (no geometry will be imported). Morph and LOD will not be imported with this settings")
+        ],
+        default="FBXICT_ALL"
+    )
+
+    CHAR_VertexColorImportOption: EnumProperty(
+        name="Vertex Color Import Option",
+        description="Specify how vertex colors should be imported",
+        items=[
+            ("REPLACE", "Replace", "Import the static mesh using the vertex colors from the FBX file"),
+            ("IGNORE", "Ignore", "Ignore vertex colors from the FBX file, and keep the existing mesh vertex colors"),
+            ("OVERRIDE", "Override", "Override all vertex colors with the specified color")
+        ],
+        default="REPLACE"
+    )
+
+    CHAR_VertexOverrideColor: FloatProperty(
+        name="Vertex Override Color",
+        description="Specify override color in the case that VertexColorImportOption is set to Override",
+        subtype="COLOR_GAMMA",
+        size=4,
+        default=(0.0,0.0,0.0,0.0)
+    )
+
+    CHAR_UpdateSkeletonReferencePose: BoolProperty(
+        name="Update Skeleton Reference Pose",
+        description="If enabled, update the Skeleton (of the mesh being imported)’s reference pose",
+        default=False
+    ) 
+
+    CHAR_UseT0AsRefPose: BoolProperty(
+        name="Use T0 As Ref Pose",
+        description="Enable this option to use frame 0 as reference pose",
+        default=False
+    )
+
+    CHAR_PreserveSmoothingGroups: BoolProperty(
+        name="Preserve Smoothing Groups",
+        description="If checked, triangles with non-matching smoothing groups will be physically split",
+        default=True
+    )
+
+    CHAR_ImportMeshesInBoneHierarchy: BoolProperty(
+        name="Import Meshes In Bone Hierarchy",
+        description="If checked, meshes nested in bone hierarchies will be imported instead of being converted to bones",
+        default=True
+    )
+
+    CHAR_ImportMorphTargets: BoolProperty(
+        name="Import Morph Targets",
+        description="If enabled, creates Unreal morph objects for the imported meshes",
+        default=False
+    )
+
+    CHAR_ImportMeshLODs: BoolProperty(
+        name="Import Mesh LODs",
+        description="If enabled, creates LOD models for Unreal meshes from LODs in the import file; If not enabled, only the base mesh from the LOD group is imported",
+        default=False
+    )
+
+    CHAR_NormalImportMethod: EnumProperty(
+        name="Normal Import Method",
+        description="Enabling this option will read the tangents(tangent,binormal,normal) from FBX file instead of generating them automatically",
+        items=[
+            ("COMPUTE_NORMALS", "Compute Normals", ""),
+            ("IMPORT_NORMALS", "Import Normals", ""),
+            ("IMPORT_NORMALS_AND_TANGENTS", "Import Normals and Tangents", "")
+        ],
+        default="IMPORT_NORMALS"
+    )
+
+    CHAR_NormalGenerationMethod: EnumProperty(
+        name="Normal Generation Method",
+        description="Use the MikkTSpace tangent space generator for generating normals and tangents on the mesh",
+        items=[
+            ("BUILT_IN", "Built In", "Use the legacy built in method to generate normals (faster in some cases)"),
+            ("MIKK_T_SPACE", "Mikk T Space", "Use MikkTSpace to generate normals and tangents")
+            ],
+        default="MIKK_T_SPACE"
+    )
+
+    CHAR_ComputeWeightedNormals: BoolProperty(
+        name="Compute Weighted Normals",
+        description="Enabling this option will use weighted normals algorithm (area and angle) when computing normals or tangents",
+        default=True
+    )
+
+    CHAR_ThresholdPosition: FloatProperty(
+        name="Threshold Position",
+        description="Threshold to compare vertex position equality",
+        default=0.00002
+    )
+
+    CHAR_ThresholdTangentNormal: FloatProperty(
+        name="Threshold Tangent Normal",
+        description="Threshold to compare normal, tangent or bi-normal equality",
+        default=0.00002
+    )
+
+    CHAR_ThresholdUV: FloatProperty(
+        name="Threshold UV",
+        description="Threshold to compare UV equality",
+        default=0.000977
+    )
+
+    CHAR_PhysicsAsset: EnumProperty(
+        name="Physics Asset",
+        description="Physics Asset",
+        items=[
+            ("CREATE", "Create", "create new PhysicsAsset")
+        ],
+        default="CREATE"
+    )
+
+    ## Transform
+
+    CHAR_TabTransform: BoolProperty(
+        name="Transform",
+        description="Transform Tab",
+        default=False
+    )
+
+    CHAR_ImportTranslation: FloatVectorProperty(
+        name="Import Translation",
+        description="Import Translation",
+        subtype="XYZ",
+        default=(0.0, 0.0, 0.0)
+    )
+
+    CHAR_ImportRotation: FloatVectorProperty(
+        name="Import Rotation",
+        description="Import Rotation",
+        subtype="XYZ",
+        default=(0.0, 0.0, 0.0)
+    )
+
+    CHAR_ImportUniformScale: FloatProperty(
+        name="Import Uniform Scale",
+        description="Import Uniform Scale",
+        default=1.0
+    )
+
+    ## Misc.
+
+    CHAR_TabMisc: BoolProperty(
+        name="Misc.",
+        description="Miscellaneous Tab",
+        default=False
+    )
+
+    CHAR_ConvertScene: BoolProperty(
+        name="Convert Scene",
+        description="Convert the scene from FBX coordinate system to UE4 coordinate system",
+        default=True
+    )
+
+    CHAR_ForceFrontXAxis: BoolProperty(
+        name="Force Front XAxis",
+        description="Convert the scene from FBX coordinate system to UE4 coordinate system with front X axis instead of -Y",
+        default=False
+    )
+
+    CHAR_ConvertSceneUnit: BoolProperty(
+        name="Convert Scene Unit",
+        description="Convert the scene from FBX unit to UE4 unit (centimeter)",
+        default=False
+    )
+
+    CHAR_OverrideFullName: BoolProperty(
+        name="Override Full Name",
+        description="Use the string in “Name” field as full name of mesh. The option only works when the scene contains one mesh",
+        default=True
+    )
+
+    ## Material
+
+    CHAR_TabMaterial: BoolProperty(
+        name="Material",
+        description="Material Tab",
+        default=False
+    )
+
+    CHAR_MaterialSearchLocation: EnumProperty(
+        name="Search Location",
+        description="Specify where we should search for matching materials when importing",
+        items=[
+            ("LOCAL", "Local", "Search for matching material in local import folder only"),
+            ("UNDER_PARENT", "Under Parent", "Search for matching material recursively from parent folder"),
+            ("UNDER_ROOT", "Under Root", "Search for matching material recursively from root folder"),
+            ("ALL_ASSETS", "All Assets", "Search for matching material in all assets folders")
+            ],
+        default="LOCAL"
+    )
+
+    CHAR_ImportMaterial: BoolProperty(
+        name="Import Material",
+        description="Whether to automatically create Unreal materials for materials found in the FBX scene",
+        default=False
+    )
+
+    CHAR_ImportTexture: BoolProperty(
+        name="Import Texture",
+        description="The option works only when option “Import Material” is OFF. If “Import Material” is ON, textures are always imported",
+        default=True
+    )
+
+    CHAR_InvertNormalMaps: BoolProperty(
+        name="Invert Normal Maps",
+        description="If importing textures is enabled, this option will cause normal map Y (Green) values to be inverted",
+        default=False
+    )
+
+    CHAR_ReorderMaterialToFBXOrder: BoolProperty(
+        name="Reorder Material To FBX Order",
+        description="If checked, The material list will be reorder to the same order has the FBX file",
+        default=True
+    )
 
     def draw(self, context):
         layout = self.layout
