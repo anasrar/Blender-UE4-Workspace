@@ -41,7 +41,11 @@ class PANEL(Panel):
 
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.type in ["MESH"] and not "ARMATURE" in [mod.type for mod in context.active_object.modifiers]
+        if context.active_object is not None and context.active_object.type == "MESH" and not "ARMATURE" in [mod.type for mod in context.active_object.modifiers]:
+            return True
+        elif context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG"):
+            return True
+        return False 
 
     def draw(self, context):
         layout = self.layout
@@ -82,6 +86,16 @@ class PANEL(Panel):
                     layout.prop(preferences, "SM_OBJTabLOD", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_OBJTabLOD], emboss=False)
                     if preferences.SM_OBJTabLOD:
                         pass
+            elif context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG"):
+                row = layout.row()
+                row.scale_y = 1.5
+                # operator location on UE4WS_Character.py
+                row.operator("ue4workspace.rotatebone",icon="BONE_DATA", text=("Create Preview Orient Bone", "Update Preview Orient Bone")[context.active_object.get("UE4RIGHASTEMPBONE", False)])
+                if context.active_object.get("UE4RIGHASTEMPBONE", False):
+                    row = layout.row()
+                    row.scale_y = 1.5
+                    # operator location on UE4WS_Character.py
+                    row.operator("ue4workspace.characterremovetemporarybone",icon="BONE_DATA", text="Remove Preview Orient Bone")
 
 # OPERATOR
 
