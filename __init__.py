@@ -68,6 +68,10 @@ from . UE4WS_CharacterFBXOption import (
     PANEL as CharacterFBXOptionPanel
 )
 
+from . UE4WS_CharacterUnrealEngine import (
+    PANEL as CharacterUnrealEnginePanel
+)
+
 from . remote_execute import (
     RemoteExecution
 )
@@ -107,6 +111,7 @@ AR_UE4WS_classes = (
     ## Character
     characterPanel,
     CharacterFBXOptionPanel,
+    CharacterUnrealEnginePanel,
     ## Credit
     creditPanel,
     ## Misc.
