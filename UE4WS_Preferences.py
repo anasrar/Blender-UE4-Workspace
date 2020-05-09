@@ -777,12 +777,14 @@ class Preferences(AddonPreferences):
         default="REPLACE"
     )
 
-    CHAR_VertexOverrideColor: FloatProperty(
+    CHAR_VertexOverrideColor: FloatVectorProperty(
         name="Vertex Override Color",
         description="Specify override color in the case that VertexColorImportOption is set to Override",
         subtype="COLOR_GAMMA",
         size=4,
-        default=(0.0,0.0,0.0,0.0)
+        default=(0.0,0.0,0.0,0.0),
+        min=0.0,
+        max=1.0
     )
 
     CHAR_UpdateSkeletonReferencePose: BoolProperty(
