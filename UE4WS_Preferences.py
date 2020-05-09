@@ -749,6 +749,12 @@ class Preferences(AddonPreferences):
 
     ## Mesh
 
+    CHAR_TabMesh: BoolProperty(
+        name="Mesh",
+        description="Mesh Tab",
+        default=False
+    )
+
     CHAR_ImportContentType: EnumProperty(
         name="Import Content Type",
         description="Filter the content we want to import from the incoming FBX skeletal mesh",
