@@ -269,6 +269,16 @@ class Preferences(AddonPreferences):
         default="IGNORE"
     )
 
+    SM_VertexOverrideColor: FloatVectorProperty(
+        name="Vertex Override Color",
+        description="Specify override color in the case that VertexColorImportOption is set to Override",
+        subtype="COLOR_GAMMA",
+        size=4,
+        default=(1.0,1.0,1.0,1.0),
+        min=0.0,
+        max=1.0
+    )
+
     SM_RemoveDegenerates: BoolProperty(
         name="Remove Degenerates",
         description="Disabling this option will keep degenerate triangles found. In general you should leave this option on",
