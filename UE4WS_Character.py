@@ -262,13 +262,15 @@ class OP_ExportCharacter(Operator):
             else:
                 context.view_layer.objects.active = obj
                 if obj.get("UE4RIG"):
+                    # save armature name because will rename to root on bone.beforeExport()
+                    armatureName = obj.name
                     bone = BoneManipulation(context)
                     bone.rotateBone()
                     bone.beforeExport()
 
                 for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
                     # Remove invalid character for filename
-                    filename = re.sub("[\\/:<>\'\"|?*&]", "", obj.name + "_" + mesh.name).strip()
+                    filename = re.sub("[\\/:<>\'\"|?*&]", "", armatureName + "_" + mesh.name).strip()
                     # Check duplicate from arrCharacterObject
                     checkDuplicate = len([obj for obj in arrCharacterObject if obj["name"].startswith(filename)])
                     # Add number if have duplicate name
