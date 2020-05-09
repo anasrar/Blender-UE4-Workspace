@@ -9,6 +9,7 @@ from unreal import (
 
     Vector,
     Rotator,
+    Color,
     VertexColorImportOption,
     FBXNormalImportMethod,
     FBXNormalGenerationMethod,
@@ -35,6 +36,7 @@ for file in jsonSetting["files"]:
 
         importOptions.static_mesh_import_data.set_editor_property("auto_generate_collision", (jsonSetting["auto_generate_collision"], False)[file["custom_collision"]])
         importOptions.static_mesh_import_data.set_editor_property("vertex_color_import_option", getattr(VertexColorImportOption, jsonSetting["vertex_color_import_option"]))
+        importOptions.static_mesh_import_data.set_editor_property("vertex_override_color", Color(r=(float(jsonSetting["vertex_override_color"][0]) * 255), g=float(jsonSetting["vertex_override_color"][1]) * 255, b=float(jsonSetting["vertex_override_color"][2]) * 255, a=float(jsonSetting["vertex_override_color"][3]) * 255))
         importOptions.static_mesh_import_data.set_editor_property("remove_degenerates", jsonSetting["remove_degenerates"])
         importOptions.static_mesh_import_data.set_editor_property("build_adjacency_buffer", jsonSetting["build_adjacency_buffer"])
         importOptions.static_mesh_import_data.set_editor_property("build_reversed_index_buffer", jsonSetting["build_reversed_index_buffer"])

@@ -233,6 +233,7 @@ class OP_ExportStaticMesh(Operator):
 
                 "auto_generate_collision": preferences.SM_AutoGenerateCollision,
                 "vertex_color_import_option": preferences.SM_VertexColorImportOption,
+                "vertex_override_color": preferences.SM_VertexOverrideColor,
                 "remove_degenerates": preferences.SM_RemoveDegenerates,
                 "build_adjacency_buffer": preferences.SM_BuildAdjacencyBuffer,
                 "build_reversed_index_buffer": preferences.SM_BuildReversedIndexBuffer,
