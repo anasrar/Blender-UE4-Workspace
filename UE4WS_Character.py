@@ -332,6 +332,58 @@ class OP_ExportCharacter(Operator):
             obj.select_set(state=True)
         context.view_layer.objects.active = oldActiveObject
 
+        if preferences.exportOption in ["UNREAL", "BOTH"] and self.remote.remote_nodes:
+            # Unreal engine import option
+            unrealsetting = {
+                "folder": directory,
+                "files": arrCharacterObject,
+                "subfolder": subFolder,
+                "overwrite_file": preferences.CHAR_OverwriteFile,
+
+                "import_content_type": preferences.CHAR_ImportContentType,
+                "vertex_color_import_option": preferences.CHAR_VertexColorImportOption,
+                "vertex_override_color": list(preferences.CHAR_VertexOverrideColor),
+                "update_skeleton_reference_pose": preferences.CHAR_UpdateSkeletonReferencePose,
+                "use_t0_as_ref_pose": preferences.CHAR_UseT0AsRefPose,
+                "preserve_smoothing_groups": preferences.CHAR_PreserveSmoothingGroups,
+                "import_meshes_in_bone_hierarchy": preferences.CHAR_ImportMeshesInBoneHierarchy,
+                "import_morph_targets": preferences.CHAR_ImportMorphTargets,
+                "import_mesh_lo_ds": preferences.CHAR_ImportMeshLODs,
+                "normal_import_method": preferences.CHAR_NormalImportMethod,
+                "normal_generation_method": preferences.CHAR_NormalGenerationMethod,
+                "compute_weighted_normals": preferences.CHAR_ComputeWeightedNormals,
+                "threshold_position": preferences.CHAR_ThresholdPosition,
+                "threshold_tangent_normal": preferences.CHAR_ThresholdTangentNormal,
+                "threshold_uv": preferences.CHAR_ThresholdUV,
+                "physics_asset": preferences.CHAR_PhysicsAsset,
+
+                "import_translation": list(preferences.CHAR_ImportTranslation),
+                "import_rotation": list(preferences.CHAR_ImportRotation),
+                "import_uniform_scale": preferences.CHAR_ImportUniformScale,
+
+                "convert_scene": preferences.CHAR_ConvertScene,
+                "force_front_x_axis": preferences.CHAR_ForceFrontXAxis,
+                "convert_scene_unit": preferences.CHAR_ConvertSceneUnit,
+                "override_full_name": preferences.CHAR_OverrideFullName,
+
+                "material_search_location": preferences.CHAR_MaterialSearchLocation,
+                "import_material": preferences.CHAR_ImportMaterial,
+                "import_texture": preferences.CHAR_ImportTexture,
+                "invert_normal_maps": preferences.CHAR_InvertNormalMaps,
+                "reorder_material_to_fbx_order": preferences.CHAR_ReorderMaterialToFBXOrder
+            }
+
+            # Save unreal engine import option into a file json
+            file = open(os.path.join(os.path.dirname(__file__), "Data", "unrealenginesetting.json"), "w+")
+            file.write(json.dumps(unrealsetting))
+            file.close()
+
+            for node_id in [user["node_id"] for user in self.remote.remote_nodes]:
+            # tell unreal engine tor run python script
+                self.remote.open_command_connection(node_id)
+                self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "Character.py"), exec_mode="ExecuteFile")
+                self.remote.close_command_connection()
+
         try:
             bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Export Character Done")
         except Exception:
