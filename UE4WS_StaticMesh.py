@@ -230,6 +230,7 @@ class OP_ExportStaticMesh(Operator):
                 "files": arrMeshObject,
                 "subfolder": subFolder,
                 "overwrite_file": preferences.SM_OverwriteFile,
+                "temporary": preferences.exportOption == "UNREAL",
 
                 "auto_generate_collision": preferences.SM_AutoGenerateCollision,
                 "vertex_color_import_option": preferences.SM_VertexColorImportOption,

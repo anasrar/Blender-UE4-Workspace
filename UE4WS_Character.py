@@ -379,6 +379,7 @@ class OP_ExportCharacter(Operator):
                 "files": arrCharacterObject,
                 "subfolder": subFolder,
                 "overwrite_file": preferences.CHAR_OverwriteFile,
+                "temporary": preferences.exportOption == "UNREAL",
 
                 "import_content_type": preferences.CHAR_ImportContentType,
                 "vertex_color_import_option": preferences.CHAR_VertexColorImportOption,
