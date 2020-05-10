@@ -89,14 +89,13 @@ class OP_IMPORTARMATURE(Operator):
 
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.mode == "OBJECT"
+        return context.mode == "OBJECT"
 
     def execute(self, context):
         path = os.path.dirname(os.path.realpath(__file__))
         directory = os.path.join(path, "Data","BLEND.blend", "Object")
         print(directory)
-        for name in ["Character", "CharacterPlacement"]:
-            bpy.ops.wm.append(filename=name, directory=directory, autoselect=False)
+        bpy.ops.wm.append(filename="CharacterPlacement", directory=directory, autoselect=False)
         return {"FINISHED"}
 
 class OP_UpdateListSkeleton(Operator):
