@@ -16,6 +16,10 @@ class PANEL(Panel):
         layout = self.layout
         preferences = context.preferences.addons[__package__].preferences
 
+        row = layout.row()
+        row.scale_y = 1.5
+        row.operator("ue4workspace.importunrealenginerig",icon="ARMATURE_DATA", text="Import Unreal Engine Rig")
+
         col = layout.column()
         row = col.row()
         split = row.split(factor=0.6)
@@ -76,6 +80,24 @@ class PANEL(Panel):
         row.operator("ue4workspace.exportcharacter",icon="MESH_CUBE", text="Export")
 
 #  OPERATOR
+
+class OP_IMPORTARMATURE(Operator):
+    bl_idname = "ue4workspace.importunrealenginerig"
+    bl_label = "UE4Workspace Operator"
+    bl_description = "Import Unreal Engine Rig"
+    bl_options = {"UNDO"}
+
+    @classmethod
+    def poll(self, context):
+        return context.active_object is not None and context.active_object.mode == "OBJECT"
+
+    def execute(self, context):
+        path = os.path.dirname(os.path.realpath(__file__))
+        directory = os.path.join(path, "Data","BLEND.blend", "Object")
+        print(directory)
+        for name in ["Character", "CharacterPlacement"]:
+            bpy.ops.wm.append(filename=name, directory=directory, autoselect=False)
+        return {"FINISHED"}
 
 class OP_UpdateListSkeleton(Operator):
     bl_idname = "ue4workspace.updatelistskeleton"
@@ -170,6 +192,25 @@ class OP_ExportCharacter(Operator):
     bl_description = "Export Character"
 
     remote = None
+
+    @classmethod
+    def description(self, context, properties):
+        preferences = context.preferences.addons[__package__].preferences
+        description = "Export Character"
+
+        # Check folder for validation
+        if preferences.exportOption in ["FBX", "BOTH"]:
+            return ("FBX folder not valid", description)[bool(preferences.ExportFBXFolder.strip())]
+        return ("Temporary folder not valid", description)[bool(preferences.TempFolder.strip())]
+
+    @classmethod
+    def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+
+        # Check folder for validation
+        if preferences.exportOption in ["FBX", "BOTH"]:
+            return bool(preferences.ExportFBXFolder.strip())
+        return bool(preferences.TempFolder.strip())
 
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
@@ -394,6 +435,7 @@ class OP_ExportCharacter(Operator):
 # operator export
 
 Ops = [
+    OP_IMPORTARMATURE,
     OP_UpdateListSkeleton,
     OP_CharacterRotateBone,
     OP_CharacteRemoveTemporaryBone,
