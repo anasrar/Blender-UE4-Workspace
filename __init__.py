@@ -21,7 +21,7 @@ bl_info = {
     "warning" : "",
     "wiki_url": "https://github.com/anasrar",
     "support": "COMMUNITY",
-    "category" : "Development"
+    "category" : "Workspace"
 }
 
 import bpy
