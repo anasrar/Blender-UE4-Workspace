@@ -92,3 +92,6 @@ for file in jsonSetting["files"]:
         importTask.set_editor_property("options", importOptions)
 
         AssetToolsHelpers.get_asset_tools().import_asset_tasks([importTask])
+
+        if jsonSetting["temporary"]:
+            os.remove(sourceFile)
