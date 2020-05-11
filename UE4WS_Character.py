@@ -94,8 +94,12 @@ class OP_IMPORTARMATURE(Operator):
     def execute(self, context):
         path = os.path.dirname(os.path.realpath(__file__))
         directory = os.path.join(path, "Data","BLEND.blend", "Object")
-        print(directory)
         bpy.ops.wm.append(filename="CharacterPlacement", directory=directory, autoselect=False)
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Import Unreal Engine Rig Done")
+        except Exception: 
+            pass
+
         return {"FINISHED"}
 
 class OP_UpdateListSkeleton(Operator):
