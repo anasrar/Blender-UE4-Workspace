@@ -128,7 +128,7 @@ class OP_RemoveObject(Operator):
 class OP_MakeCollision(Operator):
     bl_idname = "ue4workspace.makecollision"
     bl_label = "UE4Workspace Operator"
-    bl_description = "Make Custom Collison Mesh\nSelect a Mesh > Edit Mode > Select Edge"
+    bl_description = "Make Custom Collision Mesh\nSelect a Mesh > Edit Mode > Select Edge"
     bl_options = {"UNDO"}
 
     @classmethod
@@ -167,6 +167,11 @@ class OP_MakeCollision(Operator):
         context.view_layer.objects.active = parentObj
         parentObj.select_set(state=True)
         bpy.ops.object.mode_set(mode=mode)
+
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Make Custom Collision Done")
+        except Exception: 
+            pass
 
         return {"FINISHED"}
 
