@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import re
 import bpy
 from bpy.props import (EnumProperty, StringProperty)
@@ -81,7 +82,144 @@ class PANEL(Panel):
         row.scale_y = 1.5
         row.operator("ue4workspace.exportstaticmesh",icon="MESH_CUBE", text="Export")
 
+        col = layout.column()
+        row = col.row()
+        split = row.split(factor=0.6)
+        col = split.column()
+        col.prop(preferences, "SM_ExportProfile", text="")
+        split = split.split()
+        row = split.row()
+        row.alignment = "RIGHT"
+        row.operator("ue4workspace.smupdateexportprofile",icon="GREASEPENCIL", text="")
+        row.operator("ue4workspace.smcreateexportprofile",icon="FILE_NEW", text="")
+        row.operator("ue4workspace.smremoveexportprofile",icon="TRASH", text="")
+
+
 #  OPERATOR
+
+class OP_SMUpdateExportProfile(Operator):
+    bl_idname = "ue4workspace.smupdateexportprofile"
+    bl_label = "Static Mesh Update Export Profile"
+    bl_description = "Update Current Export Profile"
+
+    @classmethod
+    def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        return not preferences.SM_IsProfileLock
+
+    def execute(self, context):
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Update Profile Success")
+        except Exception: 
+            pass
+        return {"FINISHED"}
+
+class OP_SMCreateExportProfile(Operator):
+    bl_idname = "ue4workspace.smcreateexportprofile"
+    bl_label = "Static Mesh Create Export Profile"
+    bl_description = "Create Export Profile Base On Current Setting"
+
+    name: StringProperty(
+        name = "Name Profile",
+        description = "Name Profile",
+        default = ""
+    )
+
+    description: StringProperty(
+        name = "Description",
+        description = "Description Profile",
+        default = ""
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        if(self.name):
+            setting = {
+                "name": self.name,
+                "description": self.description,
+                "lock": False,
+                "FBX": {},
+                "UNREALENGINE": {}
+            }
+            for key in ["SM_FBXGlobalScale", "SM_FBXApplyScaleOptions","SM_FBXAxisForward","SM_FBXAxisUp", "SM_FBXApplyUnitScale", "SM_FBXBakeSpaceTransform", "SM_FBXMeshSmoothType", "SM_FBXUseSubsurf", "SM_FBXUseMeshModifiers", "SM_FBXUseMeshEdges", "SM_FBXUseTSpace"]:
+                setting["FBX"][key] = getattr(preferences, key)
+
+            for key in [
+                "SM_AutoGenerateCollision",
+                "SM_VertexColorImportOption",
+                "SM_VertexOverrideColor",
+                "SM_RemoveDegenerates",
+                "SM_BuildAdjacencyBuffer",
+                "SM_BuildReversedIndexBuffer",
+                "SM_GenerateLightmapsUVs",
+                "SM_OneConvexHullPerUCX",
+                "SM_CombineMeshes",
+                "SM_TransformVertexToAbsolute",
+                "SM_BakePivotInVertex",
+                "SM_ImportMeshLODs",
+                "SM_NormalImportMethod",
+                "SM_NormalGenerationMethod",
+                "SM_ComputeWeightedNormals",
+                "SM_ImportTranslation",
+                "SM_ImportRotation",
+                "SM_ImportUniformScale",
+                "SM_ConvertScene",
+                "SM_ForceFrontXAxis",
+                "SM_ConvertSceneUnit",
+                "SM_OverrideFullName",
+                "SM_AutoComputeLODScreenSize",
+                "SM_LODDistance0",
+                "SM_LODDistance1",
+                "SM_LODDistance2",
+                "SM_LODDistance3",
+                "SM_LODDistance4",
+                "SM_LODDistance5",
+                "SM_LODDistance6",
+                "SM_LODDistance7",
+                "SM_MinimumLODNumber",
+                "SM_NumberOfLODs",
+                "SM_MaterialSearchLocation",
+                "SM_ImportMaterial",
+                "SM_ImportTexture",
+                "SM_InvertNormalMaps",
+                "SM_ReorderMaterialToFBXOrder"
+            ]:
+                setting["UNREALENGINE"][key] = list(getattr(preferences, key)) if (key in ["SM_VertexOverrideColor", "SM_ImportTranslation", "SM_ImportRotation"]) else getattr(preferences, key)
+            jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+            jsonSetting = json.loads(jsonSetting)
+            timestamp = int(time.time())
+            jsonSetting["staticMesh"][timestamp] = setting
+            # Save profile export into a file json
+            file = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "w+")
+            file.write(json.dumps(jsonSetting, indent=4))
+            file.close()
+
+            preferences.SM_ExportProfile = str(timestamp)
+
+            self.report({"INFO"}, "Create Profile Success")
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width = 250)
+
+class OP_SMRemoveExportProfile(Operator):
+    bl_idname = "ue4workspace.smremoveexportprofile"
+    bl_label = "Static Mesh Remove Export Profile"
+    bl_description = "Remove Current Export Profile"
+
+    @classmethod
+    def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        return not preferences.SM_IsProfileLock
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Remove Profile Success")
+        except Exception: 
+            pass
+        return {"FINISHED"}
 
 class OP_ExportStaticMesh(Operator):
     bl_idname = "ue4workspace.exportstaticmesh"
@@ -290,5 +428,8 @@ class OP_ExportStaticMesh(Operator):
 # operator export
 
 Ops = [
+    OP_SMUpdateExportProfile,
+    OP_SMCreateExportProfile,
+    OP_SMRemoveExportProfile,
     OP_ExportStaticMesh
 ]
