@@ -1,3 +1,5 @@
+import os
+import json
 import bpy
 from bpy.types import (AddonPreferences)
 from bpy.props import (StringProperty, BoolProperty, BoolVectorProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty, CollectionProperty)
@@ -123,6 +125,53 @@ class Preferences(AddonPreferences):
             ("SCENE", "Scene", "Use scene origin")
         ],
         default="OBJECT"
+    )
+
+    ## Export Profile
+
+    def SM_GetExportProfile(self, context):
+        result = []
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+
+        for key, setting in jsonSetting["staticMesh"].items():
+            result += [(key, setting["name"], setting["description"])]
+
+        return result
+
+    def SM_UpdateExportProfile(self, context):
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+        setting = jsonSetting["staticMesh"].get(self.SM_ExportProfile, False)
+        if(setting):
+            fbx = setting.get("FBX", False)
+            unrealengine = setting.get("UNREALENGINE", False)
+            if(fbx):
+                for key, value in fbx.items():
+                    if(hasattr(self, key)):
+                        setattr(self, key, value)
+            if(unrealengine):
+                for key, value in unrealengine.items():
+                    if(hasattr(self, key)):
+                        setattr(self, key, value)
+            self.SM_IsProfileLock = setting.get("lock", False)
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Change export setting success")
+        except Exception:
+            pass
+
+    SM_ExportProfile: EnumProperty(
+        name="Export Profile",
+        description="Save your export setting into a profile",
+        items=SM_GetExportProfile,
+        update=SM_UpdateExportProfile,
+        default=None
+    )
+
+    SM_IsProfileLock: BoolProperty(
+        name="Is Profile Lock",
+        description="check if the current profile is lock",
+        default=True
     )
 
     ## FBX Option
