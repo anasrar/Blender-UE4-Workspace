@@ -108,6 +108,60 @@ class OP_SMUpdateExportProfile(Operator):
         return not preferences.SM_IsProfileLock
 
     def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+
+        for key in ["SM_FBXGlobalScale", "SM_FBXApplyScaleOptions","SM_FBXAxisForward","SM_FBXAxisUp", "SM_FBXApplyUnitScale", "SM_FBXBakeSpaceTransform", "SM_FBXMeshSmoothType", "SM_FBXUseSubsurf", "SM_FBXUseMeshModifiers", "SM_FBXUseMeshEdges", "SM_FBXUseTSpace"]:
+            jsonSetting["staticMesh"][preferences.SM_ExportProfile]["FBX"][key] = getattr(preferences, key)
+
+        for key in [
+            "SM_AutoGenerateCollision",
+            "SM_VertexColorImportOption",
+            "SM_VertexOverrideColor",
+            "SM_RemoveDegenerates",
+            "SM_BuildAdjacencyBuffer",
+            "SM_BuildReversedIndexBuffer",
+            "SM_GenerateLightmapsUVs",
+            "SM_OneConvexHullPerUCX",
+            "SM_CombineMeshes",
+            "SM_TransformVertexToAbsolute",
+            "SM_BakePivotInVertex",
+            "SM_ImportMeshLODs",
+            "SM_NormalImportMethod",
+            "SM_NormalGenerationMethod",
+            "SM_ComputeWeightedNormals",
+            "SM_ImportTranslation",
+            "SM_ImportRotation",
+            "SM_ImportUniformScale",
+            "SM_ConvertScene",
+            "SM_ForceFrontXAxis",
+            "SM_ConvertSceneUnit",
+            "SM_OverrideFullName",
+            "SM_AutoComputeLODScreenSize",
+            "SM_LODDistance0",
+            "SM_LODDistance1",
+            "SM_LODDistance2",
+            "SM_LODDistance3",
+            "SM_LODDistance4",
+            "SM_LODDistance5",
+            "SM_LODDistance6",
+            "SM_LODDistance7",
+            "SM_MinimumLODNumber",
+            "SM_NumberOfLODs",
+            "SM_MaterialSearchLocation",
+            "SM_ImportMaterial",
+            "SM_ImportTexture",
+            "SM_InvertNormalMaps",
+            "SM_ReorderMaterialToFBXOrder"
+        ]:
+            jsonSetting["staticMesh"][preferences.SM_ExportProfile]["UNREALENGINE"][key] = list(getattr(preferences, key)) if (key in ["SM_VertexOverrideColor", "SM_ImportTranslation", "SM_ImportRotation"]) else getattr(preferences, key)
+
+        # Save profile export into a file json
+        file = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "w+")
+        file.write(json.dumps(jsonSetting, indent=4))
+        file.close()
+
         try:
             bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Update Profile Success")
         except Exception: 
