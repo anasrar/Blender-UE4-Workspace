@@ -1,0 +1,75 @@
+{
+    "staticMesh": {
+        "UNREAL_ENGINE": {
+            "name": "UNREAL ENGINE",
+            "description": "Default setting for export compatibility to unreal engine",
+            "lock": true,
+            "FBX": {
+                "SM_FBXGlobalScale": 1.0,
+                "SM_FBXApplyScaleOptions": "FBX_SCALE_NONE",
+                "SM_FBXAxisForward": "-Z",
+                "SM_FBXAxisUp": "Y",
+                "SM_FBXApplyUnitScale": true,
+                "SM_FBXBakeSpaceTransform": false,
+                "SM_FBXMeshSmoothType": "FACE",
+                "SM_FBXUseSubsurf": false,
+                "SM_FBXUseMeshModifiers": true,
+                "SM_FBXUseMeshEdges": false,
+                "SM_FBXUseTSpace": false
+            },
+            "UNREALENGINE": {
+                "SM_AutoGenerateCollision": true,
+                "SM_VertexColorImportOption": "IGNORE",
+                "SM_VertexOverrideColor": [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "SM_RemoveDegenerates": true,
+                "SM_BuildAdjacencyBuffer": true,
+                "SM_BuildReversedIndexBuffer": true,
+                "SM_GenerateLightmapsUVs": true,
+                "SM_OneConvexHullPerUCX": true,
+                "SM_CombineMeshes": false,
+                "SM_TransformVertexToAbsolute": true,
+                "SM_BakePivotInVertex": false,
+                "SM_ImportMeshLODs": false,
+                "SM_NormalImportMethod": "IMPORT_NORMALS",
+                "SM_NormalGenerationMethod": "MIKK_T_SPACE",
+                "SM_ComputeWeightedNormals": true,
+                "SM_ImportTranslation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "SM_ImportRotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "SM_ImportUniformScale": 1.0,
+                "SM_ConvertScene": true,
+                "SM_ForceFrontXAxis": false,
+                "SM_ConvertSceneUnit": false,
+                "SM_OverrideFullName": true,
+                "SM_AutoComputeLODScreenSize": true,
+                "SM_LODDistance0": 0,
+                "SM_LODDistance1": 0,
+                "SM_LODDistance2": 0,
+                "SM_LODDistance3": 0,
+                "SM_LODDistance4": 0,
+                "SM_LODDistance5": 0,
+                "SM_LODDistance6": 0,
+                "SM_LODDistance7": 0,
+                "SM_MinimumLODNumber": 0,
+                "SM_NumberOfLODs": 0,
+                "SM_MaterialSearchLocation": "LOCAL",
+                "SM_ImportMaterial": true,
+                "SM_ImportTexture": true,
+                "SM_InvertNormalMaps": false,
+                "SM_ReorderMaterialToFBXOrder": true
+            }
+        }
+    }
+}
