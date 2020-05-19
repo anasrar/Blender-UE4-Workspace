@@ -214,7 +214,14 @@ class OP_SMRemoveExportProfile(Operator):
 
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
-
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+        del jsonSetting["staticMesh"][preferences.SM_ExportProfile]
+        # Save profile export into a file json
+        file = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "w+")
+        file.write(json.dumps(jsonSetting, indent=4))
+        file.close()
+        preferences.SM_ExportProfile = "UNREAL_ENGINE"
         try:
             bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Remove Profile Success")
         except Exception: 
