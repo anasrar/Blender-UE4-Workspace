@@ -632,6 +632,53 @@ class Preferences(AddonPreferences):
         default=None
     )
 
+    ## Export Profile
+
+    def CHAR_GetExportProfile(self, context):
+        result = []
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+
+        for key, setting in jsonSetting["character"].items():
+            result += [(key, setting["name"], setting["description"])]
+
+        return result
+
+    def CHAR_UpdateExportProfile(self, context):
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+        setting = jsonSetting["character"].get(self.CHAR_ExportProfile, False)
+        if(setting):
+            fbx = setting.get("FBX", False)
+            unrealengine = setting.get("UNREALENGINE", False)
+            if(fbx):
+                for key, value in fbx.items():
+                    if(hasattr(self, key)):
+                        setattr(self, key, value)
+            if(unrealengine):
+                for key, value in unrealengine.items():
+                    if(hasattr(self, key)):
+                        setattr(self, key, value)
+            self.CHAR_IsProfileLock = setting.get("lock", False)
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Change export setting success")
+        except Exception:
+            pass
+
+    CHAR_ExportProfile: EnumProperty(
+        name="Export Profile",
+        description="Save your export setting into a profile",
+        items=CHAR_GetExportProfile,
+        update=CHAR_UpdateExportProfile,
+        default=None
+    )
+
+    CHAR_IsProfileLock: BoolProperty(
+        name="Is Profile Lock",
+        description="check if the current profile is lock",
+        default=True
+    )
+
     ## FBX Option
 
     ## Transform
