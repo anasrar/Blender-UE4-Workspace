@@ -1,8 +1,10 @@
 import os
 import json
+import time
 import re
 import bpy
 from bpy.types import (Panel, Operator)
+from bpy.props import (EnumProperty, StringProperty)
 from . UE4WS_CharacterBoneManipulation import (BoneManipulation)
 
 class PANEL(Panel):
@@ -79,7 +81,184 @@ class PANEL(Panel):
         row.scale_y = 1.5
         row.operator("ue4workspace.exportcharacter",icon="MESH_CUBE", text="Export")
 
+        col = layout.column()
+        row = col.row()
+        split = row.split(factor=0.6)
+        col = split.column()
+        col.prop(preferences, "CHAR_ExportProfile", text="")
+        split = split.split()
+        row = split.row()
+        row.alignment = "RIGHT"
+        row.operator("ue4workspace.charupdateexportprofile",icon="GREASEPENCIL", text="")
+        row.operator("ue4workspace.charcreateexportprofile",icon="FILE_NEW", text="")
+        row.operator("ue4workspace.charremoveexportprofile",icon="TRASH", text="")
+
 #  OPERATOR
+
+class OP_CHARUpdateExportProfile(Operator):
+    bl_idname = "ue4workspace.charupdateexportprofile"
+    bl_label = "Character Update Export Profile"
+    bl_description = "Update Current Export Profile"
+
+    @classmethod
+    def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        return not preferences.CHAR_IsProfileLock
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+
+        for key in ["CHAR_FBXGlobalScale", "CHAR_FBXApplyScaleOptions","CHAR_FBXAxisForward","CHAR_FBXAxisUp", "CHAR_FBXApplyUnitScale", "CHAR_FBXBakeSpaceTransform", "CHAR_FBXMeshSmoothType", "CHAR_FBXUseSubsurf", "CHAR_FBXUseMeshModifiers", "CHAR_FBXUseMeshEdges", "CHAR_FBXUseTSpace", "CHAR_FBXPrimaryBoneAxis", "CHAR_FBXSecondaryBoneAxis", "CHAR_FBXArmatureFBXNodeType", "CHAR_FBXOnlyDeformBones", "CHAR_FBXAddLeafBones"]:
+            jsonSetting["character"][preferences.CHAR_ExportProfile]["FBX"][key] = getattr(preferences, key)
+
+        for key in [
+                "CHAR_ImportContentType",
+                "CHAR_VertexColorImportOption",
+                "CHAR_VertexOverrideColor",
+                "CHAR_UpdateSkeletonReferencePose",
+                "CHAR_UseT0AsRefPose",
+                "CHAR_PreserveSmoothingGroups",
+                "CHAR_ImportMeshesInBoneHierarchy",
+                "CHAR_ImportMorphTargets",
+                "CHAR_ImportMeshLODs",
+                "CHAR_NormalImportMethod",
+                "CHAR_NormalGenerationMethod",
+                "CHAR_ComputeWeightedNormals",
+                "CHAR_ThresholdPosition",
+                "CHAR_ThresholdTangentNormal",
+                "CHAR_ThresholdUV",
+                "CHAR_PhysicsAsset",
+                "CHAR_ImportTranslation",
+                "CHAR_ImportRotation",
+                "CHAR_ImportUniformScale",
+                "CHAR_ConvertScene",
+                "CHAR_ForceFrontXAxis",
+                "CHAR_ConvertSceneUnit",
+                "CHAR_OverrideFullName",
+                "CHAR_MaterialSearchLocation",
+                "CHAR_ImportMaterial",
+                "CHAR_ImportTexture",
+                "CHAR_InvertNormalMaps",
+                "CHAR_ReorderMaterialToFBXOrder"
+        ]:
+            jsonSetting["character"][preferences.CHAR_ExportProfile]["UNREALENGINE"][key] = list(getattr(preferences, key)) if (key in ["CHAR_VertexOverrideColor", "CHAR_ImportTranslation", "CHAR_ImportRotation"]) else getattr(preferences, key)
+
+        # Save profile export into a file json
+        file = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "w+")
+        file.write(json.dumps(jsonSetting, indent=4))
+        file.close()
+
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Update Profile Success")
+        except Exception: 
+            pass
+        return {"FINISHED"}
+
+class OP_CHARCreateExportProfile(Operator):
+    bl_idname = "ue4workspace.charcreateexportprofile"
+    bl_label = "Character Create Export Profile"
+    bl_description = "Create Export Profile Base On Current Setting"
+
+    name: StringProperty(
+        name = "Name Profile",
+        description = "Name Profile",
+        default = ""
+    )
+
+    description: StringProperty(
+        name = "Description",
+        description = "Description Profile",
+        default = ""
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        if(self.name):
+            setting = {
+                "name": self.name,
+                "description": self.description,
+                "lock": False,
+                "FBX": {},
+                "UNREALENGINE": {}
+            }
+            for key in ["CHAR_FBXGlobalScale", "CHAR_FBXApplyScaleOptions","CHAR_FBXAxisForward","CHAR_FBXAxisUp", "CHAR_FBXApplyUnitScale", "CHAR_FBXBakeSpaceTransform", "CHAR_FBXMeshSmoothType", "CHAR_FBXUseSubsurf", "CHAR_FBXUseMeshModifiers", "CHAR_FBXUseMeshEdges", "CHAR_FBXUseTSpace", "CHAR_FBXPrimaryBoneAxis", "CHAR_FBXSecondaryBoneAxis", "CHAR_FBXArmatureFBXNodeType", "CHAR_FBXOnlyDeformBones", "CHAR_FBXAddLeafBones"]:
+                setting["FBX"][key] = getattr(preferences, key)
+
+            for key in [
+                "CHAR_ImportContentType",
+                "CHAR_VertexColorImportOption",
+                "CHAR_VertexOverrideColor",
+                "CHAR_UpdateSkeletonReferencePose",
+                "CHAR_UseT0AsRefPose",
+                "CHAR_PreserveSmoothingGroups",
+                "CHAR_ImportMeshesInBoneHierarchy",
+                "CHAR_ImportMorphTargets",
+                "CHAR_ImportMeshLODs",
+                "CHAR_NormalImportMethod",
+                "CHAR_NormalGenerationMethod",
+                "CHAR_ComputeWeightedNormals",
+                "CHAR_ThresholdPosition",
+                "CHAR_ThresholdTangentNormal",
+                "CHAR_ThresholdUV",
+                "CHAR_PhysicsAsset",
+                "CHAR_ImportTranslation",
+                "CHAR_ImportRotation",
+                "CHAR_ImportUniformScale",
+                "CHAR_ConvertScene",
+                "CHAR_ForceFrontXAxis",
+                "CHAR_ConvertSceneUnit",
+                "CHAR_OverrideFullName",
+                "CHAR_MaterialSearchLocation",
+                "CHAR_ImportMaterial",
+                "CHAR_ImportTexture",
+                "CHAR_InvertNormalMaps",
+                "CHAR_ReorderMaterialToFBXOrder"
+            ]:
+                setting["UNREALENGINE"][key] = list(getattr(preferences, key)) if (key in ["CHAR_VertexOverrideColor", "CHAR_ImportTranslation", "CHAR_ImportRotation"]) else getattr(preferences, key)
+            jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+            jsonSetting = json.loads(jsonSetting)
+            timestamp = int(time.time())
+            jsonSetting["character"][timestamp] = setting
+            # Save profile export into a file json
+            file = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "w+")
+            file.write(json.dumps(jsonSetting, indent=4))
+            file.close()
+
+            preferences.CHAR_ExportProfile = str(timestamp)
+
+            self.report({"INFO"}, "Create Profile Success")
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width = 250)
+
+class OP_CHARRemoveExportProfile(Operator):
+    bl_idname = "ue4workspace.charremoveexportprofile"
+    bl_label = "Character Remove Export Profile"
+    bl_description = "Remove Current Export Profile"
+
+    @classmethod
+    def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        return not preferences.CHAR_IsProfileLock
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+        del jsonSetting["character"][preferences.CHAR_ExportProfile]
+        # Save profile export into a file json
+        file = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "w+")
+        file.write(json.dumps(jsonSetting, indent=4))
+        file.close()
+        preferences.CHAR_ExportProfile = "UNREAL_ENGINE"
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Remove Profile Success")
+        except Exception: 
+            pass
+        return {"FINISHED"}
 
 class OP_IMPORTARMATURE(Operator):
     bl_idname = "ue4workspace.importunrealenginerig"
@@ -443,5 +622,8 @@ Ops = [
     OP_UpdateListSkeleton,
     OP_CharacterRotateBone,
     OP_CharacteRemoveTemporaryBone,
+    OP_CHARUpdateExportProfile,
+    OP_CHARCreateExportProfile,
+    OP_CHARRemoveExportProfile,
     OP_ExportCharacter
 ]
