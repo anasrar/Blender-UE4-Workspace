@@ -71,5 +71,73 @@
                 "SM_ReorderMaterialToFBXOrder": true
             }
         }
+    },
+    "character": {
+        "UNREAL_ENGINE": {
+            "name": "UNREAL ENGINE",
+            "description": "Default setting for export compatibility to unreal engine",
+            "lock": true,
+            "FBX": {
+                "CHAR_FBXGlobalScale": 1.0,
+                "CHAR_FBXApplyScaleOptions": "FBX_SCALE_NONE",
+                "CHAR_FBXAxisForward": "-Z",
+                "CHAR_FBXAxisUp": "Y",
+                "CHAR_FBXApplyUnitScale": true,
+                "CHAR_FBXBakeSpaceTransform": false,
+                "CHAR_FBXMeshSmoothType": "FACE",
+                "CHAR_FBXUseSubsurf": false,
+                "CHAR_FBXUseMeshModifiers": true,
+                "CHAR_FBXUseMeshEdges": false,
+                "CHAR_FBXUseTSpace": false,
+                "CHAR_FBXPrimaryBoneAxis": "Y",
+                "CHAR_FBXSecondaryBoneAxis": "X",
+                "CHAR_FBXArmatureFBXNodeType": "NULL",
+                "CHAR_FBXOnlyDeformBones": true,
+                "CHAR_FBXAddLeafBones": false
+            },
+            "UNREALENGINE": {
+                "CHAR_ImportContentType": "FBXICT_ALL",
+                "CHAR_VertexColorImportOption": "REPLACE",
+                "CHAR_VertexOverrideColor": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "CHAR_UpdateSkeletonReferencePose": false,
+                "CHAR_UseT0AsRefPose": false,
+                "CHAR_PreserveSmoothingGroups": true,
+                "CHAR_ImportMeshesInBoneHierarchy": true,
+                "CHAR_ImportMorphTargets": false,
+                "CHAR_ImportMeshLODs": false,
+                "CHAR_NormalImportMethod": "IMPORT_NORMALS",
+                "CHAR_NormalGenerationMethod": "MIKK_T_SPACE",
+                "CHAR_ComputeWeightedNormals": true,
+                "CHAR_ThresholdPosition": 0.00002,
+                "CHAR_ThresholdTangentNormal": 0.00002,
+                "CHAR_ThresholdUV": 0.000977,
+                "CHAR_PhysicsAsset": "CREATE",
+                "CHAR_ImportTranslation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "CHAR_ImportRotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "CHAR_ImportUniformScale": 1.0,
+                "CHAR_ConvertScene": true,
+                "CHAR_ForceFrontXAxis": false,
+                "CHAR_ConvertSceneUnit": false,
+                "CHAR_OverrideFullName": true,
+                "CHAR_MaterialSearchLocation": "LOCAL",
+                "CHAR_ImportMaterial": true,
+                "CHAR_ImportTexture": true,
+                "CHAR_InvertNormalMaps": false,
+                "CHAR_ReorderMaterialToFBXOrder": true
+            }
+        }
     }
 }
