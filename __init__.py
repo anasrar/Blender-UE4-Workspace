@@ -25,6 +25,7 @@ bl_info = {
 }
 
 import bpy
+from bpy.app.handlers import persistent
 from bpy.props import (StringProperty, BoolProperty, BoolVectorProperty, IntProperty, IntVectorProperty, FloatProperty, EnumProperty, PointerProperty, CollectionProperty)
 from bpy.utils import (register_class, unregister_class)
 
@@ -123,6 +124,14 @@ TypeProps = {
     "object": bpy.types.Object
 }
 
+@persistent
+def resetVariable(scene):
+    """Reset some variable and disconnect from unreal engine after load blend file"""
+    preferences = bpy.context.preferences.addons[__package__].preferences
+    preferences.skeleton.clear()
+    preferences.CHAR_CharacterSkeleton = "NEW"
+    remote_exec.stop()
+
 def register():
 
     for X in AR_UE4WS_OperatorArray:
@@ -138,6 +147,8 @@ def register():
             C.remote = remote_exec
         register_class(C)
 
+    bpy.app.handlers.load_post.append(resetVariable)
+
 def unregister():
 
     for X in reversed(AR_UE4WS_OperatorArray):
@@ -148,3 +159,5 @@ def unregister():
 
     for C in reversed(AR_UE4WS_classes):
         unregister_class(C)
+
+    bpy.app.handlers.load_post.remove(resetVariable)
