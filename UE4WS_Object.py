@@ -147,20 +147,32 @@ class OP_MakeCollision(Operator):
         selected_verts = [verts for verts in context.active_object.data.vertices if verts.select]
         selected_verts = [verts.co for verts in selected_verts]
 
+        collection = bpy.data.collections.get("UE4CustomCollsion", False)
+        if (not collection):
+            collection = bpy.data.collections.new("UE4CustomCollsion")
+            context.scene.collection.children.link(collection)
+
         mesh = bpy.data.meshes.new(collName)
         obj = bpy.data.objects.new(collName,mesh)
-        context.collection.objects.link(obj)
+        collection.objects.link(obj)
         mesh.from_pydata(selected_verts, [], [])
 
         bpy.ops.object.mode_set(mode="OBJECT")
         obj.location = parentObj.location
         bpy.ops.object.select_all(action="DESELECT")
         obj.show_wire = True
+        obj.display_type = "SOLID"
+        obj.color = (0.15, 1.000000, 0, 0.200000)
+        context.space_data.shading.color_type = "OBJECT"
 
         context.view_layer.objects.active = obj
         bpy.ops.object.mode_set(mode="EDIT")
+        oldPivot = bpy.context.scene.tool_settings.transform_pivot_point
+        bpy.context.scene.tool_settings.transform_pivot_point = "MEDIAN_POINT"
+        bpy.ops.transform.resize(value=(1.015, 1.015, 1.015), orient_type="GLOBAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
         bpy.ops.mesh.convex_hull()
-        bpy.ops.mesh.delete(type="ONLY_FACE")
+        # bpy.ops.mesh.delete(type="ONLY_FACE")
+        bpy.context.scene.tool_settings.transform_pivot_point = oldPivot
 
         bpy.ops.object.mode_set(mode="OBJECT")
         bpy.ops.object.select_all(action="DESELECT")
