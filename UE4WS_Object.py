@@ -165,6 +165,20 @@ class OP_MakeCollision(Operator):
         obj.color = (0.15, 1.000000, 0, 0.200000)
         context.space_data.shading.color_type = "OBJECT"
 
+        mat = bpy.data.materials.get("MAT_UE4CustomCollision")
+        if mat is None:
+            mat = bpy.data.materials.new(name="MAT_UE4CustomCollision")
+            mat.blend_method = "BLEND"
+            mat.use_nodes = True
+            mat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (0.15, 1.000000, 0, 1)
+            mat.node_tree.nodes["Principled BSDF"].inputs[18].default_value = 0.1
+            mat.use_fake_user = True
+
+        if obj.data.materials:
+            obj.data.materials[0] = mat
+        else:
+            obj.data.materials.append(mat)
+
         context.view_layer.objects.active = obj
         bpy.ops.object.mode_set(mode="EDIT")
         oldPivot = bpy.context.scene.tool_settings.transform_pivot_point
