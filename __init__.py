@@ -132,6 +132,15 @@ def resetVariable(scene):
     preferences.CHAR_CharacterSkeleton = "NEW"
     remote_exec.stop()
 
+    for P in AR_UE4WS_PropsArray:
+        if hasattr(TypeProps.get(P.get("type")), P.get("name")) and P.get("resetVariable", False):
+            typeProp = P.get("type")
+            if (typeProp == "scene"):
+                bpy.context.scene.property_unset(P.get("name"))
+            elif (typeProp == "object"):
+                for obj in bpy.data.objects:
+                    obj.property_unset(P.get("name"))
+
 def register():
 
     for X in AR_UE4WS_OperatorArray:
