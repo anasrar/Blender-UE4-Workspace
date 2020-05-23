@@ -39,6 +39,7 @@ from . UE4WS_ExportOption import (
 )
 
 from . UE4WS_Object import (
+    Props as objectProps,
     PANEL as objectPanel,
     Ops as objectOperator
 )
@@ -85,8 +86,10 @@ remote_exec = RemoteExecution()
 
 AR_UE4WS_PropsArray = []
 # extend property to array, make sure you add from here
-# for x in []:
-#     AR_UE4WS_PropsArray.extend(x)
+for x in [
+    objectProps
+    ]:
+    AR_UE4WS_PropsArray.extend(x)
 
 AR_UE4WS_OperatorArray = []
 # extend operator to array, make sure you add from here
