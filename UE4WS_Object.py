@@ -1,31 +1,20 @@
 import bpy
-from bpy.props import (EnumProperty, StringProperty)
+from bpy.props import (EnumProperty, StringProperty, PointerProperty)
 from bpy.types import (Panel, Operator)
 
 # PROPS
 
 Props = [
-    # {
-    #     "type": "scene",
-    #     "name": "ExportOption",
-    #     "value": EnumProperty(
-    #         name="Export Type",
-    #         description="Select the way you want export",
-    #         items=[("FBX", "To FBX", "Export as FBX file"), ("UNREAL", "To Unreal", "Export directly to Unreal Engine Project")],
-    #         default="FBX"
-    #         )
-    # },
-    # {
-    #     "type": "scene",
-    #     "name": "ExportFBXFolder",
-    #     "value": StringProperty(
-    #         name="Export Folder",
-    #         description="Folder To Export Character, Must Have Write Permissions",
-    #         default="",
-    #         maxlen=1024,
-    #         subtype="DIR_PATH"
-    #         )
-    # }
+    {
+        "type": "scene",
+        "name": "SM_CollsionPicker",
+        "value": PointerProperty(
+            name="Collision Picker",
+            description="Make mesh into a custom collision",
+            type=bpy.types.Object,
+            ),
+        "resetVariable": True
+    }
 ]
 
 # PANEL
@@ -66,6 +55,20 @@ class PANEL(Panel):
                     row.scale_y = 1.5
                     row.operator("ue4workspace.makecollision",icon="OUTLINER_OB_MESH", text="Make Collision")
 
+                    if context.mode == "OBJECT" and context.active_object is not None and not context.active_object.name.startswith("UCX_"):
+                        col = layout.column()
+                        row = col.row()
+                        split = row.split(factor=0.6)
+                        col = split.column()
+                        col.alignment = "RIGHT"
+                        col.label(text="Collision Picker")
+                        split = split.split()
+                        col = split.column()
+                        col.prop(context.scene, "SM_CollsionPicker", text="")
+                        col = col.row()
+                        col.scale_y = 1.5
+                        col.operator("ue4workspace.smcollisionpicker",icon="MOD_SOLIDIFY", text="Convert")
+
                     collisionObjects = [obj for obj in context.scene.objects if obj.type == "MESH" and obj.name.startswith("UCX_" + context.active_object.name)]
 
                     if collisionObjects:
@@ -98,6 +101,62 @@ class PANEL(Panel):
                     row.operator("ue4workspace.characterremovetemporarybone",icon="BONE_DATA", text="Remove Preview Orient Bone")
 
 # OPERATOR
+
+class OP_SMCollisionPicker(Operator):
+    bl_idname = "ue4workspace.smcollisionpicker"
+    bl_label = "UE4Workspace Operator"
+    bl_description = "Make mesh into a custom collision"
+    bl_options = {"UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.scene.SM_CollsionPicker
+        if context.mode == "OBJECT":
+            if context.active_object is not None and obj is not None and obj.type == "MESH" and not obj.name.startswith("UCX_") and context.active_object is not obj:
+                return True
+        return False
+
+    def execute(self, context):
+        obj = context.scene.SM_CollsionPicker
+        context.scene.SM_CollsionPicker = None
+
+        obj.show_wire = True
+        obj.display_type = "SOLID"
+        obj.color = (0.15, 1.000000, 0, 0.200000)
+        context.space_data.shading.color_type = "OBJECT"
+
+        mat = bpy.data.materials.get("MAT_UE4CustomCollision")
+        if mat is None:
+            mat = bpy.data.materials.new(name="MAT_UE4CustomCollision")
+            mat.blend_method = "BLEND"
+            mat.use_nodes = True
+            mat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (0.15, 1.000000, 0, 1)
+            mat.node_tree.nodes["Principled BSDF"].inputs[18].default_value = 0.1
+            mat.use_fake_user = True
+
+        if obj.data.materials:
+            obj.data.materials[0] = mat
+        else:
+            obj.data.materials.append(mat)
+
+        oldCollections = obj.users_collection
+        collection = bpy.data.collections.get("UE4CustomCollsion", False)
+        if (not collection):
+            collection = bpy.data.collections.new("UE4CustomCollsion")
+            context.scene.collection.children.link(collection)
+
+        collection.objects.link(obj)
+        for coll in oldCollections:
+            coll.objects.unlink(obj)
+
+        # Collision name
+        collName = "UCX_" + context.active_object.name + "_"
+        # Collision filter from scene objects
+        collObjects = [obj for obj in context.scene.objects if obj.name.startswith(collName)]
+
+        obj.name = collName + ("", "0")[(len(collObjects) + 1) <= 9] + str((len(collObjects) + 1))
+
+        return {"FINISHED"}
 
 class OP_ToggleVisibilityObject(Operator):
     bl_idname = "ue4workspace.togglevisibilityobject"
@@ -147,6 +206,7 @@ class OP_MakeCollision(Operator):
         selected_verts = [verts for verts in context.active_object.data.vertices if verts.select]
         selected_verts = [verts.co for verts in selected_verts]
 
+        # create collection (UE4CustomCollision) if not exist
         collection = bpy.data.collections.get("UE4CustomCollsion", False)
         if (not collection):
             collection = bpy.data.collections.new("UE4CustomCollsion")
@@ -165,6 +225,7 @@ class OP_MakeCollision(Operator):
         obj.color = (0.15, 1.000000, 0, 0.200000)
         context.space_data.shading.color_type = "OBJECT"
 
+        # create material (MAT_UE4CustomCollision) if not exist
         mat = bpy.data.materials.get("MAT_UE4CustomCollision")
         if mat is None:
             mat = bpy.data.materials.new(name="MAT_UE4CustomCollision")
@@ -204,6 +265,7 @@ class OP_MakeCollision(Operator):
 # operator export
 
 Ops = [
+    OP_SMCollisionPicker,
     OP_ToggleVisibilityObject,
     OP_RemoveObject,
     OP_MakeCollision
