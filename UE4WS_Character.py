@@ -368,6 +368,101 @@ class OP_CharacteRemoveTemporaryBone(Operator):
 
         return {"FINISHED"}
 
+class OP_CharacteAddTwistBone(Operator):
+    bl_idname = "ue4workspace.addtwistbone"
+    bl_label = "Add Twist Bone"
+    bl_description = "Add Twist Bone"
+    bl_options = {"UNDO", "REGISTER"}
+
+    numberBone: bpy.props.IntProperty(
+        name="Number Bone",
+        min=1,
+        default=1
+        )
+
+    @classmethod
+    def poll(self, context):
+        return context.mode == "EDIT_ARMATURE" and context.active_bone is not None and context.active_bone.name.split("_")[0] in ["upperarm", "lowerarm", "thigh", "calf"]
+
+    def execute(self, context):
+        editBones = context.active_object.data.edit_bones
+        activeBone = context.active_bone
+        bpy.ops.armature.select_all(action="DESELECT")
+        for bone in [child for child in activeBone.children if child.name.split("_")[1] == "twist"]:
+            editBones.remove(bone)
+        if activeBone.parent is not None and activeBone.use_connect:
+            activeBone.parent.select_tail = True
+        else:
+            activeBone.select_head = True
+        activeBone.select = True
+        activeBone.select_tail = True
+        bpy.ops.armature.duplicate_move(ARMATURE_OT_duplicate={"do_flip_names":False}, TRANSFORM_OT_translate={"value":(0, 0, 0), "orient_type":"GLOBAL", "orient_matrix":((0, 0, 0), (0, 0, 0), (0, 0, 0)), "orient_matrix_type":"GLOBAL", "constraint_axis":(False, False, False), "mirror":False, "use_proportional_edit":False, "proportional_edit_falloff":"SMOOTH", "proportional_size":1, "use_proportional_connected":False, "use_proportional_projected":False, "snap":False, "snap_target":"CLOSEST", "snap_point":(0, 0, 0), "snap_align":False, "snap_normal":(0, 0, 0), "gpencil_strokes":False, "cursor_transform":False, "texture_space":False, "remove_on_cancel":False, "release_confirm":False, "use_accurate":False})
+        if self.numberBone == 1:
+            selectedBones = context.selected_bones
+            bpy.ops.armature.select_all(action="DESELECT")
+            for bone in selectedBones:
+                parent = editBones.get(bone.name.split(".")[0])
+                bone.parent = parent
+                bone.length = 0.25
+                arrBoneName = bone.name.split(".")[0].split("_")
+                bone.name = arrBoneName[0] + "_twist_01_" + arrBoneName[-1]
+                bone.select = True
+                bone.select_head = True
+                bone.select_tail = True
+                if not bone.name.startswith("upperarm"):
+                    bpy.ops.transform.translate(value=(0, parent.length/2, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+                bpy.ops.armature.select_all(action="DESELECT")
+        else:
+            isReverse = activeBone.name.split("_")[0] in ["lowerarm", "calf"]
+            bpy.ops.armature.subdivide(number_cuts=(self.numberBone-1, self.numberBone)[isReverse])
+            selectedBones = context.selected_bones
+            bpy.ops.armature.select_all(action="DESELECT")
+            arrBoneSide = {
+                "l": [bone for bone in selectedBones if bone.name.split(".")[1] == "001" and bone.name.split(".")[0].split("_")[-1] == "l"],
+                "r": [bone for bone in selectedBones if bone.name.split(".")[1] == "001" and bone.name.split(".")[0].split("_")[-1] == "r"]
+            }
+            for side in arrBoneSide:
+                for bone in arrBoneSide[side]:
+                    arrBoneName = bone.name.split(".")[0].split("_")
+                    parent = editBones.get(arrBoneName[0] + "_" + side)
+                    bone.use_connect = False
+                    bone.name = (arrBoneName[0] + "_twist_01_" + side, arrBoneName[0] + "_twist_temp_" + side)[isReverse]
+                    bone.parent = parent
+                    for index, bn in enumerate((bone.children_recursive, bone.children_recursive[::-1])[isReverse], start=2):
+                        if isReverse:
+                            index -= 1
+                        bn.use_connect = False
+                        bn.name = arrBoneName[0] + "_twist_" + ("", "0")[index < 10] + str(index) + "_" + side
+                        bn.parent = parent
+                    if isReverse:
+                        editBones.active = activeBone
+                        bpy.ops.armature.select_all(action="DESELECT")
+                        editBones.remove(bone)
+
+        return {"FINISHED"}
+
+class OP_CharacteRemoveTwistBone(Operator):
+    bl_idname = "ue4workspace.removetwistbone"
+    bl_label = "Remove Twist Bone"
+    bl_description = "Remove Twist Bone"
+    bl_options = {"UNDO"}
+
+    @classmethod
+    def poll(self, context):
+        return context.mode == "EDIT_ARMATURE" and context.active_bone is not None and context.active_bone.name.split("_")[0] in ["upperarm", "lowerarm", "thigh", "calf"] and len([child for child in context.active_bone.children if child.name.split("_")[1] == "twist"]) != 0
+
+    def execute(self, context):
+        editBones = context.active_object.data.edit_bones
+        activeBone = context.active_bone
+        bpy.ops.armature.select_all(action="DESELECT")
+        for bone in [child for child in activeBone.children if child.name.split("_")[1] == "twist"]:
+            editBones.remove(bone)
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Remove Twist Complete")
+        except Exception:
+            pass
+        return {"FINISHED"}
+
 class OP_ExportCharacter(Operator):
     bl_idname = "ue4workspace.exportcharacter"
     bl_label = "UE4Workspace Operator"
@@ -433,7 +528,7 @@ class OP_ExportCharacter(Operator):
                         bone.beforeExport()
 
                     obj.select_set(state=True)
-                    # select childern mesh
+                    # select children mesh
                     for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
                         mesh.select_set(state=True)
 
@@ -474,7 +569,7 @@ class OP_ExportCharacter(Operator):
                     })
 
                     obj.select_set(state=False)
-                    # deselect childern mesh
+                    # deselect children mesh
                     for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
                         mesh.select_set(state=False)
 
@@ -502,7 +597,7 @@ class OP_ExportCharacter(Operator):
                     # Check if file alredy exist and overwrite
                     if not os.path.isfile(os.path.join(directory, filename + ".fbx")) or preferences.CHAR_OverwriteFile:
                         obj.select_set(state=True)
-                        # select childern mesh
+                        # select children mesh
                         mesh.select_set(state=True)
 
                         # Export character option
@@ -542,7 +637,7 @@ class OP_ExportCharacter(Operator):
                         })
 
                         obj.select_set(state=False)
-                        # deselect childern mesh
+                        # deselect children mesh
                         mesh.select_set(state=False)
 
                 if obj.get("UE4RIG"):
@@ -622,6 +717,8 @@ Ops = [
     OP_UpdateListSkeleton,
     OP_CharacterRotateBone,
     OP_CharacteRemoveTemporaryBone,
+    OP_CharacteAddTwistBone,
+    OP_CharacteRemoveTwistBone,
     OP_CHARUpdateExportProfile,
     OP_CHARCreateExportProfile,
     OP_CHARRemoveExportProfile,
