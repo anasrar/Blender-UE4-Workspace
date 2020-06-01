@@ -382,7 +382,7 @@ class OP_CharacteAddTwistBone(Operator):
 
     @classmethod
     def poll(self, context):
-        return context.mode == "EDIT_ARMATURE" and context.active_bone is not None and context.active_bone.name.split("_")[0] in ["upperarm", "lowerarm", "thigh", "calf"]
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.mode == "EDIT_ARMATURE" and context.active_bone is not None and context.active_bone.name.split("_")[0] in ["upperarm", "lowerarm", "thigh", "calf"]
 
     def execute(self, context):
         editBones = context.active_object.data.edit_bones
@@ -449,7 +449,7 @@ class OP_CharacteRemoveTwistBone(Operator):
 
     @classmethod
     def poll(self, context):
-        return context.mode == "EDIT_ARMATURE" and context.active_bone is not None and context.active_bone.name.split("_")[0] in ["upperarm", "lowerarm", "thigh", "calf"] and len([child for child in context.active_bone.children if child.name.split("_")[1] == "twist"]) != 0
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.mode == "EDIT_ARMATURE" and context.active_bone is not None and context.active_bone.name.split("_")[0] in ["upperarm", "lowerarm", "thigh", "calf"] and len([child for child in context.active_bone.children if child.name.split("_")[1] == "twist"]) != 0
 
     def execute(self, context):
         editBones = context.active_object.data.edit_bones
