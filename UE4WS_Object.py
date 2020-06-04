@@ -100,7 +100,7 @@ class PANEL(Panel):
                     # operator location on UE4WS_Character.py
                     row.operator("ue4workspace.characterremovetemporarybone",icon="BONE_DATA", text="Remove Preview Orient Bone")
                 # add twist bone
-                if context.mode == "EDIT_ARMATURE" and context.active_bone is not None and context.active_bone.name.split("_")[0] in ["upperarm", "lowerarm", "thigh", "calf"] and not context.active_bone.name.split("_")[1] == "twist":
+                if context.mode == "EDIT_ARMATURE" and context.active_bone is not None and (context.active_bone.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"] or context.active_bone.parent is not None and context.active_bone.parent.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"]) and not "_twist_" in context.active_bone.name:
                     row = layout.row()
                     row.scale_y = 1.5
                     # operator location on UE4WS_Character.py
