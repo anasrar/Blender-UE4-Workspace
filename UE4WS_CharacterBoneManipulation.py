@@ -24,7 +24,7 @@ class BoneManipulation:
     addIKBone()
         add ik bone
     removeTemporaryBone()
-        remove temporary bone (bone that have "_temp" in name)
+        remove temporary bone (bone that have "TWEAK_" in name)
     rotateBone()
         make bone orient same as unreal engine mannequin
     beforeExport()
@@ -121,7 +121,7 @@ class BoneManipulation:
         bpy.ops.object.mode_set(mode=oldMode)
 
     def removeTemporaryBone(self):
-        """remove temporary bone (bone that have "_temp" in name)
+        """remove temporary bone (bone that have "TWEAK_" in name)
 
         :returns: None
         :rtype: None
@@ -135,7 +135,7 @@ class BoneManipulation:
         editBones = self.activeObject.data.edit_bones
 
         # remove temporary bone
-        for bone in [bone for bone in editBones if bone.name.endswith("_temp")]:
+        for bone in [bone for bone in editBones if bone.name.startswith("TWEAK_")]:
             editBones.remove(bone)
 
         bpy.ops.object.mode_set(mode=oldMode)
@@ -160,7 +160,7 @@ class BoneManipulation:
         self.context.scene.tool_settings.transform_pivot_point = "ACTIVE_ELEMENT"
 
         # remove temporary bone
-        for bone in [bone for bone in editBones if bone.name.endswith("_temp")]:
+        for bone in [bone for bone in editBones if bone.name.startswith("TWEAK_")]:
             editBones.remove(bone)
 
         # for check bone name purpose
@@ -216,9 +216,9 @@ class BoneManipulation:
 
         for boneName in bonesToAdd:
             bone = bonesToAdd[boneName]
-            if self.getBone(boneName + "_temp") is None:
+            if self.getBone("TWEAK_" + boneName) is None:
                 # create new temporary bone
-                newBone = editBones.new(boneName + "_temp")
+                newBone = editBones.new("TWEAK_" + boneName)
                 newBone.head = bone["copy"][0]
                 newBone.tail = bone["copy"][1]
                 newBone.roll = bone["copy"][2]
@@ -230,7 +230,7 @@ class BoneManipulation:
                 bpy.ops.object.mode_set(mode="POSE")
                 bpy.ops.object.mode_set(mode="EDIT")
 
-                boneTemp = self.getBone(boneName + "_temp")
+                boneTemp = self.getBone("TWEAK_" + boneName)
 
                 bpy.ops.transform.rotate(value=-bone["props"][0], orient_axis=bone["props"][2], orient_type="NORMAL", mirror=False)
 
@@ -253,12 +253,12 @@ class BoneManipulation:
                 # set parent
                 if "pelvis" != boneName:
                     parentBoneName = self.getBone(boneName).parent.name
-                    boneTemp.parent = self.getBone(parentBoneName + "_temp")
+                    boneTemp.parent = self.getBone("TWEAK_" + parentBoneName)
 
         bpy.ops.armature.select_all(action="DESELECT")
 
         for boneName in bonesToAdd:
-            bone = self.getBone(boneName + "_temp")
+            bone = self.getBone("TWEAK_" + boneName)
             if bone is not None:
                 bone.select = True
                 bone.select_head = True
@@ -294,12 +294,12 @@ class BoneManipulation:
 
         # uncheck deform bone and change bone name
         bonesName = ("pelvis", "spine", "neck", "head", "clavicle", "upperarm", "lowerarm", "hand", "thumb", "index", "middle", "ring", "pinky", "thigh", "calf", "foot", "ball")
-        for bone in [bone for bone in self.activeObject.data.edit_bones if bone.name.startswith(bonesName) and not bone.name.endswith("_temp")]:
+        for bone in [bone for bone in self.activeObject.data.edit_bones if bone.name.startswith(bonesName) and not bone.name.startswith("TWEAK_")]:
             bone.use_deform = False
             bone.name = bone.name + "_ORIGINAL"
         # rename temporary bone
-        for bone in [bone for bone in self.activeObject.data.edit_bones if bone.name.endswith("_temp")]:
-            bone.name = bone.name.replace("_temp", "")
+        for bone in [bone for bone in self.activeObject.data.edit_bones if bone.name.startswith("TWEAK_")]:
+            bone.name = bone.name.replace("TWEAK_", "")
         # rename vertex group (children mesh) because rename bone also affect vertex group name
         for mesh in [mesh for mesh in self.activeObject.children if mesh.type == "MESH"]:
             for group in [group for group in mesh.vertex_groups if group.name.endswith("_ORIGINAL")]:
@@ -347,15 +347,15 @@ class BoneManipulation:
         # rename temporary bone
         bonesName = ("pelvis", "spine", "neck", "head", "clavicle", "upperarm", "lowerarm", "hand", "thumb", "index", "middle", "ring", "pinky", "thigh", "calf", "foot", "ball")
         for bone in [bone for bone in self.activeObject.data.edit_bones if bone.name.startswith(bonesName) and not bone.name.endswith("_ORIGINAL")]:
-            bone.name = bone.name + "_temp"
+            bone.name = "TWEAK_" + bone.name
         # check deform bone and change bone name
         for bone in [bone for bone in self.activeObject.data.edit_bones if bone.name.startswith(bonesName) and bone.name.endswith("_ORIGINAL")]:
             bone.use_deform = True
             bone.name = bone.name.replace("_ORIGINAL", "")
         # rename vertex group (children mesh) because rename bone also affect vertex group name
         for mesh in [mesh for mesh in self.activeObject.children if mesh.type == "MESH"]:
-            for group in [group for group in mesh.vertex_groups if group.name.endswith("_temp")]:
-                group.name = group.name.replace("_temp", "")
+            for group in [group for group in mesh.vertex_groups if group.name.startswith("TWEAK_")]:
+                group.name = group.name.replace("TWEAK_", "")
 
         self.activeObject.data.use_mirror_x = oldMirror
 
