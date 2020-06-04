@@ -22,9 +22,19 @@ class PANEL(Panel):
         layout = self.layout
         preferences = context.preferences.addons[__package__].preferences
 
+        col = layout.column()
+        row = col.row()
+        split = row.split(factor=0.6)
+        col = split.column()
+        col.alignment = "RIGHT"
+        col.label(text="Skeleton Preset")
+        split = split.split()
+        col = split.column()
+        col.prop(preferences, "CHAR_SkeletonPreset", text="")
+
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("ue4workspace.importunrealenginerig",icon="ARMATURE_DATA", text="Import Unreal Engine Rig")
+        row.operator("ue4workspace.importunrealenginerig",icon="ARMATURE_DATA", text="Import Skeleton")
 
         col = layout.column()
         row = col.row()
@@ -266,22 +276,69 @@ class OP_CHARRemoveExportProfile(Operator):
 
 class OP_IMPORTARMATURE(Operator):
     bl_idname = "ue4workspace.importunrealenginerig"
-    bl_label = "UE4Workspace Operator"
-    bl_description = "Import Unreal Engine Rig"
-    bl_options = {"UNDO"}
+    bl_label = "Import Skeleton Preset"
+    bl_description = "Import Skeleton Preset"
+    bl_options = {"UNDO", "REGISTER"}
+
+    isImportCharacterPlacement: bpy.props.BoolProperty(
+        name="Import Character Placement",
+        default=True
+        )
 
     @classmethod
     def poll(self, context):
         return context.mode == "OBJECT"
 
     def execute(self, context):
-        path = os.path.dirname(os.path.realpath(__file__))
-        directory = os.path.join(path, "Data","BLEND.blend", "Object")
-        bpy.ops.wm.append(filename="CharacterPlacement", directory=directory, autoselect=False)
-        try:
-            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Import Unreal Engine Rig Done")
-        except Exception: 
-            pass
+        preferences = context.preferences.addons[__package__].preferences
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "skeletonPreset.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+
+        skeleton = jsonSetting["skeleton"].get(preferences.CHAR_SkeletonPreset, False)
+        if skeleton:
+            if skeleton.get("characterPlacement", False) and self.isImportCharacterPlacement:
+                path = os.path.dirname(os.path.realpath(__file__))
+                directory = os.path.join(path, "Data","BLEND.blend", "Object")
+                bpy.ops.wm.append(filename=skeleton["characterPlacement"], directory=directory, active_collection=True, autoselect=False)
+
+            oldMode = context.mode
+            armature = bpy.data.armatures.new(preferences.CHAR_SkeletonPreset)
+            armature_object = bpy.data.objects.new(preferences.CHAR_SkeletonPreset, armature)
+            armature_object.show_in_front = True
+            for key, val in skeleton["prop"].items():
+                armature_object[key] = val
+            armature_object.data.layers[31] = True
+            context.scene.collection.objects.link(armature_object)
+
+            context.view_layer.objects.active = armature_object
+            bpy.ops.object.select_all(action="DESELECT")
+            bpy.ops.object.mode_set(mode="EDIT")
+
+            parentList = {}
+            editBones = armature_object.data.edit_bones
+            boneLists = skeleton["bones"]
+            for (boneName, value) in boneLists.items():
+                newBone = editBones.new(boneName)
+                parentList[boneName] = newBone
+                newBone.head = value["head"]
+                newBone.tail = value["tail"]
+                newBone.roll = value["roll"]
+                newBone.parent = parentList[value["parent"]] if value["parent"] is not None else None
+                newBone.use_connect = value["connect"]
+
+                for key, propValue in value["prop"].items():
+                    if key == "boneOrient":
+                        newBone[key] = "|".join(str(x) for x in propValue)
+                    else:
+                        newBone[key] = propValue
+
+            bpy.ops.armature.select_all(action="DESELECT")
+            bpy.ops.object.mode_set(mode=oldMode)
+
+        # try:
+        #     bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Import Skeleton Success")
+        # except Exception: 
+        #     pass
 
         return {"FINISHED"}
 
