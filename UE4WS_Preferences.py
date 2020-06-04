@@ -588,7 +588,24 @@ class Preferences(AddonPreferences):
         default=True
     )
 
-    # Character 
+    # Character
+
+    def get_skeletonPreset(self, context):
+        result = []
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "skeletonPreset.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+
+        for key, setting in jsonSetting["skeleton"].items():
+            result += [(key, setting["name"], setting["description"])]
+
+        return result
+
+    CHAR_SkeletonPreset: EnumProperty(
+        name="Skeleton Preset",
+        description="Skeleton Preset",
+        items=get_skeletonPreset,
+        default=None
+    )
 
     CHAR_Subfolder: StringProperty(
         name="Subfolder",
