@@ -14,6 +14,10 @@ class PANEL(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
 
+    @classmethod
+    def poll(self, context):
+        return (context.mode == "OBJECT")
+
     def draw(self, context):
         layout = self.layout
         preferences = context.preferences.addons[__package__].preferences
@@ -343,7 +347,7 @@ class OP_CharacterRotateBone(Operator):
 
         return {"FINISHED"}
 
-class OP_CharacteRemoveTemporaryBone(Operator):
+class OP_CharacterRemoveTemporaryBone(Operator):
     bl_idname = "ue4workspace.characterremovetemporarybone"
     bl_label = "UE4Workspace Operator"
     bl_description = "Characte Remove Temporary Bone"
@@ -368,7 +372,7 @@ class OP_CharacteRemoveTemporaryBone(Operator):
 
         return {"FINISHED"}
 
-class OP_CharacteAddTwistBone(Operator):
+class OP_CharacterAddTwistBone(Operator):
     bl_idname = "ue4workspace.addtwistbone"
     bl_label = "Add Twist Bone"
     bl_description = "Add Twist Bone"
@@ -382,13 +386,13 @@ class OP_CharacteAddTwistBone(Operator):
 
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.mode == "EDIT_ARMATURE" and context.active_bone is not None and context.active_bone.name.split("_")[0] in ["upperarm", "lowerarm", "thigh", "calf"]
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.mode == "EDIT_ARMATURE" and context.active_bone is not None and (context.active_bone.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"] or context.active_bone.parent.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"])
 
     def execute(self, context):
         editBones = context.active_object.data.edit_bones
         activeBone = context.active_bone
         bpy.ops.armature.select_all(action="DESELECT")
-        for bone in [child for child in activeBone.children if child.name.split("_")[1] == "twist"]:
+        for bone in [child for child in activeBone.children if "_twist_" in child.name]:
             editBones.remove(bone)
         if activeBone.parent is not None and activeBone.use_connect:
             activeBone.parent.select_tail = True
@@ -400,20 +404,21 @@ class OP_CharacteAddTwistBone(Operator):
         if self.numberBone == 1:
             selectedBones = context.selected_bones
             bpy.ops.armature.select_all(action="DESELECT")
+            editBones.active = activeBone
             for bone in selectedBones:
                 parent = editBones.get(bone.name.split(".")[0])
                 bone.parent = parent
-                bone.length = 0.25
+                bone.length = activeBone.length / 2
                 arrBoneName = bone.name.split(".")[0].split("_")
                 bone.name = arrBoneName[0] + "_twist_01_" + arrBoneName[-1]
                 bone.select = True
                 bone.select_head = True
                 bone.select_tail = True
-                if not bone.name.startswith("upperarm"):
+                if not bone.get("UE4RIGTYPE") == "ARM_HUMAN":
                     bpy.ops.transform.translate(value=(0, parent.length/2, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
                 bpy.ops.armature.select_all(action="DESELECT")
         else:
-            isReverse = activeBone.name.split("_")[0] in ["lowerarm", "calf"]
+            isReverse = activeBone.parent.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"]
             bpy.ops.armature.subdivide(number_cuts=(self.numberBone-1, self.numberBone)[isReverse])
             selectedBones = context.selected_bones
             bpy.ops.armature.select_all(action="DESELECT")
@@ -434,14 +439,14 @@ class OP_CharacteAddTwistBone(Operator):
                         bn.use_connect = False
                         bn.name = arrBoneName[0] + "_twist_" + ("", "0")[index < 10] + str(index) + "_" + side
                         bn.parent = parent
+                    editBones.active = activeBone
+                    bpy.ops.armature.select_all(action="DESELECT")
                     if isReverse:
-                        editBones.active = activeBone
-                        bpy.ops.armature.select_all(action="DESELECT")
                         editBones.remove(bone)
 
         return {"FINISHED"}
 
-class OP_CharacteRemoveTwistBone(Operator):
+class OP_CharacterRemoveTwistBone(Operator):
     bl_idname = "ue4workspace.removetwistbone"
     bl_label = "Remove Twist Bone"
     bl_description = "Remove Twist Bone"
@@ -716,9 +721,9 @@ Ops = [
     OP_IMPORTARMATURE,
     OP_UpdateListSkeleton,
     OP_CharacterRotateBone,
-    OP_CharacteRemoveTemporaryBone,
-    OP_CharacteAddTwistBone,
-    OP_CharacteRemoveTwistBone,
+    OP_CharacterRemoveTemporaryBone,
+    OP_CharacterAddTwistBone,
+    OP_CharacterRemoveTwistBone,
     OP_CHARUpdateExportProfile,
     OP_CHARCreateExportProfile,
     OP_CHARRemoveExportProfile,
