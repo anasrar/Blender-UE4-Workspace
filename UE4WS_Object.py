@@ -53,7 +53,7 @@ class PANEL(Panel):
                     # Add Collision Button
                     row = layout.row()
                     row.scale_y = 1.5
-                    row.operator("ue4workspace.makecollision",icon="OUTLINER_OB_MESH", text="Make Collision")
+                    row.operator("ue4workspace.makecollision",icon="OUTLINER_OB_MESH", text="Create Collision")
 
                     if context.mode == "OBJECT" and context.active_object is not None and not context.active_object.name.startswith("UCX_"):
                         col = layout.column()
@@ -116,7 +116,7 @@ class PANEL(Panel):
 class OP_SMCollisionPicker(Operator):
     bl_idname = "ue4workspace.smcollisionpicker"
     bl_label = "UE4Workspace Operator"
-    bl_description = "Make mesh into a custom collision"
+    bl_description = "Create mesh into a custom collision"
     bl_options = {"UNDO"}
 
     @classmethod
@@ -197,8 +197,8 @@ class OP_RemoveObject(Operator):
 
 class OP_MakeCollision(Operator):
     bl_idname = "ue4workspace.makecollision"
-    bl_label = "Make Collsion From Vertices"
-    bl_description = "Make Custom Collision Mesh\nSelect a Mesh > Edit Mode > Select Edge"
+    bl_label = "Create Collsion From Vertices"
+    bl_description = "Create Custom Collision Mesh\nSelect a Mesh > Edit Mode > Select Edge"
     bl_options = {"UNDO", "REGISTER"}
 
     Size: bpy.props.FloatProperty(
