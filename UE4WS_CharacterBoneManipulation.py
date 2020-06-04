@@ -31,7 +31,7 @@ class BoneManipulation:
         do something before export character
         - uncheck deform bone and change bone name
         - rename temporary bone
-        - rename vertex group (childern mesh)
+        - rename vertex group (children mesh)
         - scale to unreal engine mannequin
         - rename armature to root
     afterExport():
@@ -39,7 +39,7 @@ class BoneManipulation:
         - remove IK bone
         - rename temporary bone
         - check deform bone and change bone name
-        - rename vertex group (childern mesh)
+        - rename vertex group (children mesh)
         - scale original
         - rename armature to original name
     """
@@ -276,7 +276,7 @@ class BoneManipulation:
         """do something before export character
         - uncheck deform bone and change bone name
         - rename temporary bone
-        - rename vertex group (childern mesh)
+        - rename vertex group (children mesh)
         - add IK bone
         - scale to unreal engine mannequin
         - rename armature to root
@@ -290,6 +290,7 @@ class BoneManipulation:
 
         bpy.ops.armature.select_all(action="DESELECT")
         oldMirror = self.activeObject.data.use_mirror_x
+        self.activeObject.data.use_mirror_x = False
 
         # uncheck deform bone and change bone name
         bonesName = ("pelvis", "spine", "neck", "head", "clavicle", "upperarm", "lowerarm", "hand", "thumb", "index", "middle", "ring", "pinky", "thigh", "calf", "foot", "ball")
@@ -299,7 +300,7 @@ class BoneManipulation:
         # rename temporary bone
         for bone in [bone for bone in self.activeObject.data.edit_bones if bone.name.endswith("_temp")]:
             bone.name = bone.name.replace("_temp", "")
-        # rename vertex group (childern mesh) because rename bone also affect vertex group name
+        # rename vertex group (children mesh) because rename bone also affect vertex group name
         for mesh in [mesh for mesh in self.activeObject.children if mesh.type == "MESH"]:
             for group in [group for group in mesh.vertex_groups if group.name.endswith("_ORIGINAL")]:
                 group.name = group.name.replace("_ORIGINAL", "")
@@ -325,7 +326,7 @@ class BoneManipulation:
         - remove IK bone
         - rename temporary bone
         - check deform bone and change bone name
-        - rename vertex group (childern mesh)
+        - rename vertex group (children mesh)
         - scale original
         - rename armature to original name
         """
@@ -351,7 +352,7 @@ class BoneManipulation:
         for bone in [bone for bone in self.activeObject.data.edit_bones if bone.name.startswith(bonesName) and bone.name.endswith("_ORIGINAL")]:
             bone.use_deform = True
             bone.name = bone.name.replace("_ORIGINAL", "")
-        # rename vertex group (childern mesh) because rename bone also affect vertex group name
+        # rename vertex group (children mesh) because rename bone also affect vertex group name
         for mesh in [mesh for mesh in self.activeObject.children if mesh.type == "MESH"]:
             for group in [group for group in mesh.vertex_groups if group.name.endswith("_temp")]:
                 group.name = group.name.replace("_temp", "")
