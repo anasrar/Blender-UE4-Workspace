@@ -197,9 +197,15 @@ class OP_RemoveObject(Operator):
 
 class OP_MakeCollision(Operator):
     bl_idname = "ue4workspace.makecollision"
-    bl_label = "UE4Workspace Operator"
+    bl_label = "Make Collsion From Vertices"
     bl_description = "Make Custom Collision Mesh\nSelect a Mesh > Edit Mode > Select Edge"
-    bl_options = {"UNDO"}
+    bl_options = {"UNDO", "REGISTER"}
+
+    Size: bpy.props.FloatProperty(
+        name="Size",
+        min=1,
+        default=1.015
+        )
 
     @classmethod
     def poll(cls, context):
@@ -255,7 +261,7 @@ class OP_MakeCollision(Operator):
         bpy.ops.object.mode_set(mode="EDIT")
         oldPivot = bpy.context.scene.tool_settings.transform_pivot_point
         bpy.context.scene.tool_settings.transform_pivot_point = "MEDIAN_POINT"
-        bpy.ops.transform.resize(value=(1.015, 1.015, 1.015), orient_type="GLOBAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+        bpy.ops.transform.resize(value=(self.Size, self.Size, self.Size), orient_type="GLOBAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
         bpy.ops.mesh.convex_hull()
         # bpy.ops.mesh.delete(type="ONLY_FACE")
         bpy.context.scene.tool_settings.transform_pivot_point = oldPivot
@@ -266,10 +272,10 @@ class OP_MakeCollision(Operator):
         parentObj.select_set(state=True)
         bpy.ops.object.mode_set(mode=mode)
 
-        try:
-            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Make Custom Collision Done")
-        except Exception: 
-            pass
+        # try:
+        #     bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Make Custom Collision Done")
+        # except Exception: 
+        #     pass
 
         return {"FINISHED"}
 
