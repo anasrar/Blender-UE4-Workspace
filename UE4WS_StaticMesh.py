@@ -13,6 +13,10 @@ class PANEL(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
 
+    @classmethod
+    def poll(self, context):
+        return (context.mode == "OBJECT")
+
     def draw(self, context):
         layout = self.layout
         preferences = context.preferences.addons[__package__].preferences
