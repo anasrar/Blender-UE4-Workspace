@@ -160,6 +160,7 @@
                     "roll": -3.0301096439361572,
                     "parent": "spine_03",
                     "prop": {
+                        "UE4RIGTYPE": "COPY_BONE",
                         "boneOrient": [
                             -1.5707963267948966,
                             3.141592653589793,
@@ -226,6 +227,7 @@
                     "connect": true,
                     "roll": 0.7739402055740356,
                     "parent": "lowerarm_l",
+                    "use_inherit_rotation": false,
                     "prop": {
                         "boneOrient": [
                             -1.5707963267948966,
@@ -584,6 +586,7 @@
                     "roll": 3.0301096439361572,
                     "parent": "spine_03",
                     "prop": {
+                        "UE4RIGTYPE": "COPY_BONE",
                         "boneOrient": [
                             -1.5707963267948966,
                             0.0,
@@ -650,11 +653,12 @@
                     "connect": true,
                     "roll": -0.7739402055740356,
                     "parent": "lowerarm_r",
+                    "use_inherit_rotation": false,
                     "prop": {
                         "boneOrient": [
                             1.5707963267948966,
                             -1.5707963267948966,
-                            "Z"
+                            "X"
                         ]
                     }
                 },
@@ -1052,6 +1056,7 @@
                     "connect": true,
                     "roll": 2.9952428340911865,
                     "parent": "calf_l",
+                    "use_inherit_rotation": false,
                     "prop": {
                         "boneOrient": [
                             3.141592653589793,
@@ -1141,6 +1146,7 @@
                     "connect": true,
                     "roll": -2.9952428340911865,
                     "parent": "calf_r",
+                    "use_inherit_rotation": false,
                     "prop": {
                         "boneOrient": [
                             0.0,
