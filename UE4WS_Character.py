@@ -325,6 +325,7 @@ class OP_IMPORTARMATURE(Operator):
                 newBone.roll = value["roll"]
                 newBone.parent = parentList[value["parent"]] if value["parent"] is not None else None
                 newBone.use_connect = value["connect"]
+                newBone.use_inherit_rotation = value.get("use_inherit_rotation", True)
 
                 for key, propValue in value["prop"].items():
                     if key == "boneOrient":
@@ -379,6 +380,33 @@ class OP_UpdateListSkeleton(Operator):
 
         return {"FINISHED"}
 
+class OP_CharacterGenerateRig(Operator):
+    bl_idname = "ue4workspace.generaterig"
+    bl_label = "Generate Rig"
+    bl_description = "Generate Rig"
+    bl_options = {"UNDO"}
+
+    @classmethod
+    def poll(self, context):
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.mode == "OBJECT"
+
+    def execute(self, context):
+        armature = context.active_object
+        bpy.ops.object.select_all(action="DESELECT")
+        armature.select_set(True)
+        bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":"TRANSLATION"}, TRANSFORM_OT_translate={"value":(0, 0, 0), "orient_type":"GLOBAL", "orient_matrix":((0, 0, 0), (0, 0, 0), (0, 0, 0)), "orient_matrix_type":"GLOBAL", "constraint_axis":(False, False, False), "mirror":False, "use_proportional_edit":False, "proportional_edit_falloff":"SMOOTH", "proportional_size":1, "use_proportional_connected":False, "use_proportional_projected":False, "snap":False, "snap_target":"CLOSEST", "snap_point":(0, 0, 0), "snap_align":False, "snap_normal":(0, 0, 0), "gpencil_strokes":False, "cursor_transform":False, "texture_space":False, "remove_on_cancel":False, "release_confirm":False, "use_accurate":False})
+        rig = context.active_object
+        rig.name = "RIGGED_" + armature.name
+        bone = BoneManipulation(context)
+        bone.rotateBone()
+        bone.generateRig()
+
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Generate Rig Complete")
+        except Exception:
+            pass
+        return {"FINISHED"}
+
 class OP_CharacterRotateBone(Operator):
     bl_idname = "ue4workspace.rotatebone"
     bl_label = "UE4Workspace Operator"
@@ -386,7 +414,7 @@ class OP_CharacterRotateBone(Operator):
     bl_options = {"UNDO"}
 
     remote = None
-    
+
     @classmethod
     def poll(self, context):
         return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG")
@@ -477,7 +505,7 @@ class OP_CharacterAddTwistBone(Operator):
                             del bone[key]
                     else:
                         bone[key] = activeBone[key]
-                if not bone.get("UE4RIGTYPE") == "ARM_HUMAN":
+                if not activeBone.get("UE4RIGTYPE") == "ARM_HUMAN":
                     bpy.ops.transform.translate(value=(0, parent.length/2, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
                 bpy.ops.armature.select_all(action="DESELECT")
         else:
@@ -574,7 +602,7 @@ class OP_ExportCharacter(Operator):
         oldActiveObject = context.active_object
         selectedObjects = context.selected_objects
         objects = (selectedObjects, context.scene.objects)[preferences.CHAR_ExportCharacterOption == "ALL"]
-        # Filter object for aramture
+        # Filter object for armture
         objects = [obj for obj in objects if obj.type == "ARMATURE"]
 
         # Deselect all object
@@ -602,10 +630,15 @@ class OP_ExportCharacter(Operator):
                 if not os.path.isfile(os.path.join(directory, filename + ".fbx")) or preferences.CHAR_OverwriteFile:
                     # set armature as active object
                     context.view_layer.objects.active = obj
+                    # original name
+                    originalName = obj.name
                     if obj.get("UE4RIG"):
                         bone = BoneManipulation(context)
                         bone.rotateBone()
                         bone.beforeExport()
+                    elif obj.get("UE4RIGGED"):
+                        # change name to "Armature"
+                        obj.name = "Armature"
 
                     obj.select_set(state=True)
                     # select children mesh
@@ -657,14 +690,19 @@ class OP_ExportCharacter(Operator):
                         bone.afterExport()
                         if not obj.get("UE4RIGHASTEMPBONE"):
                             bone.removeTemporaryBone()
+                    elif obj.get("UE4RIGGED"):
+                        # change name to original name
+                        obj.name = originalName
             else:
                 context.view_layer.objects.active = obj
+                armatureName = obj.name
                 if obj.get("UE4RIG"):
-                    # save armature name because will rename to root on bone.beforeExport()
-                    armatureName = obj.name
                     bone = BoneManipulation(context)
                     bone.rotateBone()
                     bone.beforeExport()
+                elif obj.get("UE4RIGGED"):
+                    # change name to "Armature"
+                    obj.name = "Armature"
 
                 for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
                     # Remove invalid character for filename
@@ -724,6 +762,9 @@ class OP_ExportCharacter(Operator):
                     bone.afterExport()
                     if not obj.get("UE4RIGHASTEMPBONE"):
                         bone.removeTemporaryBone()
+                elif obj.get("UE4RIGGED"):
+                    # change name to original name
+                    obj.name = armatureName
 
         # Select all object after export
         for obj in selectedObjects:
@@ -796,6 +837,7 @@ Ops = [
     OP_IMPORTARMATURE,
     OP_UpdateListSkeleton,
     OP_CharacterRotateBone,
+    OP_CharacterGenerateRig,
     OP_CharacterRemoveTemporaryBone,
     OP_CharacterAddTwistBone,
     OP_CharacterRemoveTwistBone,
