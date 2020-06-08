@@ -499,12 +499,12 @@ class OP_CharacterAddTwistBone(Operator):
                 bone.select = True
                 bone.select_head = True
                 bone.select_tail = True
-                for key in activeBone.keys():
+                for key in parent.keys():
                     if key == "UE4RIGTYPE":
                         if bone.get(key, False):
                             del bone[key]
                     else:
-                        bone[key] = activeBone[key]
+                        bone[key] = parent[key]
                 if not activeBone.get("UE4RIGTYPE") == "ARM_HUMAN":
                     bpy.ops.transform.translate(value=(0, parent.length/2, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
                 bpy.ops.armature.select_all(action="DESELECT")
@@ -524,12 +524,12 @@ class OP_CharacterAddTwistBone(Operator):
                     bone.use_connect = False
                     bone.name = (arrBoneName[0] + "_twist_01_" + side, arrBoneName[0] + "_twist_temp_" + side)[isReverse]
                     bone.parent = parent
-                    for key in activeBone.keys():
+                    for key in parent.keys():
                         if key == "UE4RIGTYPE":
                             if bone.get(key, False):
                                 del bone[key]
                         else:
-                            bone[key] = activeBone[key]
+                            bone[key] = parent[key]
                     for index, bn in enumerate((bone.children_recursive, bone.children_recursive[::-1])[isReverse], start=2):
                         if isReverse:
                             index -= 1
