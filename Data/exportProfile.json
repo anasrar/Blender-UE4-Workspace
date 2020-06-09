@@ -139,5 +139,61 @@
                 "CHAR_ReorderMaterialToFBXOrder": true
             }
         }
+    },
+    "animation": {
+        "UNREAL_ENGINE": {
+            "name": "UNREAL ENGINE",
+            "description": "Default setting for export compatibility to unreal engine",
+            "lock": true,
+            "FBX": {
+                "ANIM_FBXGlobalScale": 1.0,
+                "ANIM_FBXApplyScaleOptions": "FBX_SCALE_NONE",
+                "ANIM_FBXAxisForward": "-Z",
+                "ANIM_FBXAxisUp": "Y",
+                "ANIM_FBXApplyUnitScale": true,
+                "ANIM_FBXBakeSpaceTransform": false,
+                "ANIM_FBXPrimaryBoneAxis": "Y",
+                "ANIM_FBXSecondaryBoneAxis": "X",
+                "ANIM_FBXArmatureFBXNodeType": "NULL",
+                "ANIM_FBXOnlyDeformBones": true,
+                "ANIM_FBXAddLeafBones": false,
+                "ANIM_FBXKeyAllBones": true,
+                "ANIM_FBXForceStartEndKeying": true,
+                "ANIM_FBXSamplingRate": 1.0,
+                "ANIM_FBXSimplify": 1.0
+            },
+            "UNREALENGINE": {
+                "ANIM_AnimationLength": "FBXALIT_EXPORTED_TIME",
+                "ANIM_ImportMeshesInBoneHierarchy": true,
+                "ANIM_FrameImportRangeMin": 0,
+                "ANIM_FrameImportRangeMax": 0,
+                "ANIM_UseDefaultSampleRate": false,
+                "ANIM_CustomSampleRate": 0,
+                "ANIM_ImportCustomAttribute": true,
+                "ANIM_DeleteExistingCustomAttributeCurves": false,
+                "ANIM_ImportBoneTracks": true,
+                "ANIM_SetMaterialDriveParameterOnCustomAttribute": false,
+                "ANIM_MaterialCurveSuffixes": "_mat",
+                "ANIM_RemoveRedundantKeys": true,
+                "ANIM_DeleteExistingMorphTargetCurves": false,
+                "ANIM_DoNotImportCurveWithZero": true,
+                "ANIM_PreserveLocalTransform": false,
+                "ANIM_ImportTranslation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "ANIM_ImportRotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "ANIM_ImportUniformScale": 1.0,
+                "ANIM_ConvertScene": true,
+                "ANIM_ForceFrontXAxis": false,
+                "ANIM_ConvertSceneUnit": false,
+                "ANIM_OverrideFullName": true
+            }
+        }
     }
 }
