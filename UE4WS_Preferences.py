@@ -1104,6 +1104,421 @@ class Preferences(AddonPreferences):
         default=True
     )
 
+    # animation export setting
+
+    ANIM_Subfolder: StringProperty(
+        name="Subfolder",
+        description="Subfolder for animation export folder, leave it blank if you want to export to root project folder",
+        default=""
+    )
+
+    ANIM_OverwriteFile: BoolProperty(
+        name="Overwrite File",
+        description="Overwrite file if filename exist, if false will not export",
+        default=True
+    )
+
+    def anim_skeleton(self, context):
+        return [("NONE", "None", "You Have To Update Skeleton List")] + self.skeleton
+
+    ANIM_CharacterSkeleton: EnumProperty(
+        name="Character Skeleton",
+        description="Character Skeleton",
+        items=anim_skeleton,
+        default=None
+    )
+
+    ## Export Profile
+
+    def ANIM_GetExportProfile(self, context):
+        result = []
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+
+        for key, setting in jsonSetting["animation"].items():
+            result += [(key, setting["name"], setting["description"])]
+
+        return result
+
+    def ANIM_UpdateExportProfile(self, context):
+        jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "exportProfile.json"), "r").read()
+        jsonSetting = json.loads(jsonSetting)
+        setting = jsonSetting["animation"].get(self.ANIM_ExportProfile, False)
+        if(setting):
+            fbx = setting.get("FBX", False)
+            unrealengine = setting.get("UNREALENGINE", False)
+            if(fbx):
+                for key, value in fbx.items():
+                    if(hasattr(self, key)):
+                        setattr(self, key, value)
+            if(unrealengine):
+                for key, value in unrealengine.items():
+                    if(hasattr(self, key)):
+                        setattr(self, key, value)
+            self.ANIM_IsProfileLock = setting.get("lock", False)
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Change export setting success")
+        except Exception:
+            pass
+
+    ANIM_ExportProfile: EnumProperty(
+        name="Export Profile",
+        description="Save your export setting into a profile",
+        items=ANIM_GetExportProfile,
+        update=ANIM_UpdateExportProfile,
+        default=None
+    )
+
+    ANIM_IsProfileLock: BoolProperty(
+        name="Is Profile Lock",
+        description="check if the current profile is lock",
+        default=True
+    )
+
+    ## FBX Option
+
+    ## Transform
+
+    ANIM_FBXTabTransform: BoolProperty(
+        name="Transform",
+        description="Transform Tab",
+        default=False
+    )
+
+    ANIM_FBXGlobalScale: FloatProperty(
+        name="Scale",
+        description="Scale all data (Some importers do not support scaled armatures!)",
+        default=1.0,
+        min=0.001,
+        max=1000
+    )
+
+    ANIM_FBXApplyScaleOptions: EnumProperty(
+        name="Apply Scalings",
+        description="How to apply custom and units scalings in generated FBX file (Blender uses FBX scale to detect units on import, but many other applications do not handle the same way)",
+        items=[
+            ("FBX_SCALE_NONE", "All Local", "Apply custom scaling and units scaling to each object transformation, FBX scale remains at 1.0"),
+            ("FBX_SCALE_UNITS", "FBX Units Scale", "Apply custom scaling to each object transformation, and units scaling to FBX scale"),
+            ("FBX_SCALE_CUSTOM", "FBX Custom Scale", "Apply custom scaling to FBX scale, and units scaling to each object transformation"),
+            ("FBX_SCALE_ALL", "FBX All", "Apply custom scaling and units scaling to FBX scale")
+        ],
+        default="FBX_SCALE_NONE"
+    )
+
+    ANIM_FBXAxisForward: EnumProperty(
+        name="Forward",
+        description="Forward",
+        items=[
+            ("X", "X Forward", "X Forward"),
+            ("Y", "Y Forward", "Y Forward"),
+            ("Z", "Z Forward", "Z Forward"),
+            ("-X", "-X Forward", "-X Forward"),
+            ("-Y", "-Y Forward", "-Y Forward"),
+            ("-Z", "-Z Forward", "-Z Forward")
+        ],
+        default="-Z"
+    )
+
+    ANIM_FBXAxisUp: EnumProperty(
+        name="Up",
+        description="Up",
+        items=[
+            ("X", "X Up", "X Up"),
+            ("Y", "Y Up", "Y Up"),
+            ("Z", "Z Up", "Z Up"),
+            ("-X", "-X Up", "-X Up"),
+            ("-Y", "-Y Up", "-Y Up"),
+            ("-Z", "-Z Up", "-Z Up")
+        ],
+        default="Y"
+    )
+
+    ANIM_FBXApplyUnitScale: BoolProperty(
+        name="Apply Unit",
+        description="Take into account current Blender units settings (if unset, raw Blender Units values are used as-is)",
+        default=True
+    )
+
+    ANIM_FBXBakeSpaceTransform: BoolProperty(
+        name="!EXPERIMENTAL! Apply Transform",
+        description="Bake space transform into object data, avoids getting unwanted rotations to objects when target space is not aligned with Blender’s space (WARNING! experimental option, use at own risks, known broken with armatures/animations)",
+        default=False
+    )
+
+    ## Armature
+
+    ANIM_FBXTabArmature: BoolProperty(
+        name="Armature",
+        description="Armature Tab",
+        default=False
+    )
+
+    ANIM_FBXPrimaryBoneAxis: EnumProperty(
+        name="Primary Bone Axis",
+        description="Primary Bone Axis",
+        items=[
+            ("X", "X Axis", "X Axis"),
+            ("Y", "Y Axis", "Y Axis"),
+            ("Z", "Z Axis", "Z Axis"),
+            ("-X", "-X Axis", "-X Axis"),
+            ("-Y", "-Y Axis", "-Y Axis"),
+            ("-Z", "-Z Axis", "-Z Axis")
+        ],
+        default="Y"
+    )
+
+    ANIM_FBXSecondaryBoneAxis: EnumProperty(
+        name="Secondary Bone Axis",
+        description="Secondary Bone Axis",
+        items=[
+            ("X", "X Axis", "X Axis"),
+            ("Y", "Y Axis", "Y Axis"),
+            ("Z", "Z Axis", "Z Axis"),
+            ("-X", "-X Axis", "-X Axis"),
+            ("-Y", "-Y Axis", "-Y Axis"),
+            ("-Z", "-Z Axis", "-Z Axis")
+        ],
+        default="X"
+    )
+
+    ANIM_FBXArmatureFBXNodeType: EnumProperty(
+        name="Armature FBXNode Type",
+        description="FBX type of node (object) used to represent Blender’s armatures (use Null one unless you experience issues with other app, other choices may no import back perfectly in Blender…)",
+        items=[
+            ("NULL", "Null", "‘Null’ FBX node, similar to Blender’s Empty (default)"),
+            ("ROOT", "Root", "‘Root’ FBX node, supposed to be the root of chains of bones"),
+            ("LIMBNODE", "LimbNode", "‘LimbNode’ FBX node, regular joint between two bones")
+        ],
+        default="NULL"
+    )
+
+    ANIM_FBXOnlyDeformBones: BoolProperty(
+        name="Only Deform Bones",
+        description="Only write deforming bones (and non-deforming ones when they have deforming children)",
+        default=False
+    )
+
+    ANIM_FBXAddLeafBones: BoolProperty(
+        name="Add Leaf Bones",
+        description="Only write deforming bones (and non-deforming ones when they have deforming children)",
+        default=True
+    )
+
+    ## Animation
+
+    ANIM_FBXTabBakeAnimation: BoolProperty(
+        name="Bake Animation",
+        description="Bake Animation Tab",
+        default=False
+    )
+
+    ANIM_FBXKeyAllBones: BoolProperty(
+        name="Key All Bones",
+        description="Force exporting at least one key of animation for all bones (needed with some target applications, like UE4)",
+        default=True
+    )
+
+    ANIM_FBXForceStartEndKeying: BoolProperty(
+        name="Force Start/End Keying",
+        description="Always add a keyframe at start and end of actions for animated channels",
+        default=True
+    )
+
+    ANIM_FBXSamplingRate: FloatProperty(
+        name="Sampling Rate",
+        description="How often to evaluate animated values (in frames)",
+        default=1.0,
+        min=0.01,
+        max=100
+    )
+
+    ANIM_FBXSimplify: FloatProperty(
+        name="Simplify",
+        description="How much to simplify baked values (0.0 to disable, the higher the more simplified)",
+        default=1.0,
+        min=0,
+        max=100
+    )
+
+    ## Unreal Engine Option
+
+    ## Animation
+
+    ANIM_TabAnimation: BoolProperty(
+        name="Animation",
+        description="Animation Tab",
+        default=False
+    )
+
+    ANIM_AnimationLength: EnumProperty(
+        name="Animation Length",
+        description="Which animation range to import. The one defined at Exported, at Animated time or define a range manually",
+        items=[
+            ("FBXALIT_EXPORTED_TIME", "Exported Time", "This option imports animation frames based on what is defined at the time of export"),
+            ("FBXALIT_ANIMATED_KEY", "Animated Time", "Will import the range of frames that have animation. Can be useful if the exported range is longer than the actual animation in the FBX file"),
+            ("FBXALIT_SET_RANGE", "Set Range", "This will enable the Start Frame and End Frame properties for you to define the frames of animation to import")
+        ],
+        default="FBXALIT_EXPORTED_TIME"
+    )
+
+    ANIM_ImportMeshesInBoneHierarchy: BoolProperty(
+        name="Import Meshes in Bone Hierarchy",
+        description="If checked, meshes nested in bone hierarchies will be imported instead of being converted to bones",
+        default=True
+    )
+
+    def ANIM_UpdateRangeMin(self, context):
+        if self.ANIM_FrameImportRangeMin > self.ANIM_FrameImportRangeMax:
+            self.ANIM_FrameImportRangeMax = self.ANIM_FrameImportRangeMin
+
+    ANIM_FrameImportRangeMin: IntProperty(
+        name="Frame Import Range",
+        description="Frame range used when Set Range is used in Animation Length",
+        default=0,
+        min=0,
+        update=ANIM_UpdateRangeMin
+    )
+
+    def ANIM_UpdateRangeMax(self, context):
+        if self.ANIM_FrameImportRangeMax < self.ANIM_FrameImportRangeMin:
+            self.ANIM_FrameImportRangeMin = self.ANIM_FrameImportRangeMax
+
+    ANIM_FrameImportRangeMax: IntProperty(
+        name="Frame Import Range",
+        description="Frame range used when Set Range is used in Animation Length",
+        default=0,
+        min=0,
+        update=ANIM_UpdateRangeMax
+    )
+
+    ANIM_UseDefaultSampleRate: BoolProperty(
+        name="Use Default Sample Rate",
+        description="If enabled, samples all animation curves to 30 FPS",
+        default=False
+    )
+
+    ANIM_CustomSampleRate: IntProperty(
+        name="Custom Sample Rate",
+        description="Sample fbx animation data at the specified sample rate, 0 find automaticaly the best sample rate",
+        default=0,
+        min=0,
+        max=60
+    )
+
+    ANIM_ImportCustomAttribute: BoolProperty(
+        name="Import Custom Attribute",
+        description="Import if custom attribute as a curve within the animation",
+        default=True
+    )
+
+    ANIM_DeleteExistingCustomAttributeCurves: BoolProperty(
+        name="Delete Existing Custom Attribute Curves",
+        description="If true, all previous custom attribute curves will be deleted when doing a re-import",
+        default=False
+    )
+
+    ANIM_ImportBoneTracks: BoolProperty(
+        name="Import Bone Tracks",
+        description="Import bone transform tracks. If false, this will discard any bone transform tracks. (useful for curves only animations)",
+        default=True
+    )
+
+    ANIM_SetMaterialDriveParameterOnCustomAttribute: BoolProperty(
+        name="Set Material Curve Type",
+        description="Set Material Curve Type for all custom attributes that exists",
+        default=False
+    )
+
+    ANIM_MaterialCurveSuffixes: StringProperty(
+        name="Material Curve Suffixes",
+        description="Set Material Curve Type for the custom attribute with the following suffixes. This doesn’t matter if Set Material Curve Type is true",
+        default="_mat"
+    )
+
+    ANIM_RemoveRedundantKeys: BoolProperty(
+        name="Remove Redundant Keys",
+        description="When importing custom attribute as curve, remove redundant keys",
+        default=True
+    )
+
+    ANIM_DeleteExistingMorphTargetCurves: BoolProperty(
+        name="Delete Existing Morph Target Curves",
+        description="If enabled, this will delete this type of asset from the FBX",
+        default=False
+    )
+
+    ANIM_DoNotImportCurveWithZero:  BoolProperty(
+        name="Do not Import Curve With 0 Values",
+        description="When importing custom attribute or morphtarget as curve, do not import if it doens’t have any value other than zero. This is to avoid adding extra curves to evaluate",
+        default=True
+    )
+
+    ANIM_PreserveLocalTransform: BoolProperty(
+        name="Preserve Local Transform",
+        description="If enabled, this will import a curve within the animation",
+        default=False
+    )
+
+    ## Transform
+
+    ANIM_TabTransform: BoolProperty(
+        name="Transform",
+        description="Transform Tab",
+        default=False
+    )
+
+    ANIM_ImportTranslation: FloatVectorProperty(
+        name="Import Translation",
+        description="Import Translation",
+        subtype="XYZ",
+        default=(0.0, 0.0, 0.0)
+    )
+
+    ANIM_ImportRotation: FloatVectorProperty(
+        name="Import Rotation",
+        description="Import Rotation",
+        subtype="XYZ",
+        default=(0.0, 0.0, 0.0)
+    )
+
+    ANIM_ImportUniformScale: FloatProperty(
+        name="Import Uniform Scale",
+        description="Import Uniform Scale",
+        default=1.0
+    )
+
+    ## Misc.
+
+    ANIM_TabMisc: BoolProperty(
+        name="Misc.",
+        description="Miscellaneous Tab",
+        default=False
+    )
+
+    ANIM_ConvertScene: BoolProperty(
+        name="Convert Scene",
+        description="Convert the scene from FBX coordinate system to UE4 coordinate system",
+        default=True
+    )
+
+    ANIM_ForceFrontXAxis: BoolProperty(
+        name="Force Front XAxis",
+        description="Convert the scene from FBX coordinate system to UE4 coordinate system with front X axis instead of -Y",
+        default=False
+    )
+
+    ANIM_ConvertSceneUnit: BoolProperty(
+        name="Convert Scene Unit",
+        description="Convert the scene from FBX unit to UE4 unit (centimeter)",
+        default=False
+    )
+
+    ANIM_OverrideFullName: BoolProperty(
+        name="Override Full Name",
+        description="Use the string in “Name” field as full name of mesh. The option only works when the scene contains one mesh",
+        default=True
+    )
+
     def draw(self, context):
         layout = self.layout
         
