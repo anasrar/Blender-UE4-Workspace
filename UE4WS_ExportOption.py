@@ -98,6 +98,7 @@ class OP_ConnectToUnrealEngine(Operator):
             # clear all skeleton list
             preferences.skeleton.clear()
             preferences.CHAR_CharacterSkeleton = "NEW"
+            preferences.ANIM_CharacterSkeleton = "NONE"
             self.remote.stop()
         return {"FINISHED"}
 
