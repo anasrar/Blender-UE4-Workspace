@@ -62,16 +62,31 @@ from . UE4WS_Character import (
     Ops as characterOperator
 )
 
-from . UE4WS_Credit import (
-    PANEL as creditPanel
-)
-
 from . UE4WS_CharacterFBXOption import (
     PANEL as CharacterFBXOptionPanel
 )
 
 from . UE4WS_CharacterUnrealEngine import (
     PANEL as CharacterUnrealEnginePanel
+)
+
+from . UE4WS_Animation import (
+    ANIM_UL_actionList,
+    Props as animationProps,
+    PANEL as animationPanel,
+    Ops as animationOperator
+)
+
+from . UE4WS_AnimationFBXOption import (
+    PANEL as AnimationFBXOptionPanel
+)
+
+from . UE4WS_AnimationUnrealEngine import (
+    PANEL as AnimationUnrealEnginePanel
+)
+
+from . UE4WS_Credit import (
+    PANEL as creditPanel
 )
 
 from . remote_execute import (
@@ -87,7 +102,8 @@ remote_exec = RemoteExecution()
 AR_UE4WS_PropsArray = []
 # extend property to array, make sure you add from here
 for x in [
-    objectProps
+    objectProps,
+    animationProps
     ]:
     AR_UE4WS_PropsArray.extend(x)
 
@@ -97,7 +113,8 @@ for x in [
     objectOperator,
     exportOptionOperator,
     staticMeshOperator,
-    characterOperator
+    characterOperator,
+    animationOperator
     ]:
     AR_UE4WS_OperatorArray.extend(x)
 
@@ -116,6 +133,11 @@ AR_UE4WS_classes = (
     characterPanel,
     CharacterFBXOptionPanel,
     CharacterUnrealEnginePanel,
+    ## Animation
+    ANIM_UL_actionList,
+    animationPanel,
+    AnimationFBXOptionPanel,
+    AnimationUnrealEnginePanel,
     ## Credit
     creditPanel,
     ## Misc.
@@ -124,7 +146,8 @@ AR_UE4WS_classes = (
 
 TypeProps = {
     "scene": bpy.types.Scene,
-    "object": bpy.types.Object
+    "object": bpy.types.Object,
+    "action": bpy.types.Action
 }
 
 @persistent
@@ -133,6 +156,7 @@ def resetVariable(scene):
     preferences = bpy.context.preferences.addons[__package__].preferences
     preferences.skeleton.clear()
     preferences.CHAR_CharacterSkeleton = "NEW"
+    preferences.ANIM_CharacterSkeleton = "NONE"
     remote_exec.stop()
 
     for P in AR_UE4WS_PropsArray:
@@ -143,6 +167,9 @@ def resetVariable(scene):
             elif (typeProp == "object"):
                 for obj in bpy.data.objects:
                     obj.property_unset(P.get("name"))
+            elif (typeProp == "action"):
+                for action in bpy.data.actions:
+                    action.property_unset(P.get("name"))
 
 def register():
 
