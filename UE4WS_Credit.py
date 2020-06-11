@@ -22,7 +22,7 @@ class PANEL(Panel):
         row.label(text="Workspace")
         row = col.row()
         row.alignment = "CENTER"
-        row.label(text= "Version : 1.0.1")
+        row.label(text= "Version : 1.2.1")
         # Big Button Documentation
         row = layout.row(align=True)
         row.scale_y = 1.5

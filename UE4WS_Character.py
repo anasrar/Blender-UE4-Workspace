@@ -308,6 +308,7 @@ class OP_IMPORTARMATURE(Operator):
             for key, val in skeleton["prop"].items():
                 armature_object[key] = val
             armature_object.data.layers[31] = True
+            armature_object["UE4RIGVERSION"] = "1.2.1"
             context.scene.collection.objects.link(armature_object)
 
             context.view_layer.objects.active = armature_object
