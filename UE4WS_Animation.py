@@ -73,15 +73,16 @@ class PANEL(Panel):
         col = split.column()
         col.prop(context.scene.render, "fps", text="")
 
-        row = layout.row()
-        row.enabled = (context.active_object is not None and context.active_object.type == "ARMATURE")
-        row.template_list("ANIM_UL_actionList", "", bpy.data, "actions", context.active_object, "ANIM_index_action")
+        if context.active_object is not None:
+            row = layout.row()
+            row.enabled = (context.active_object is not None and context.active_object.type == "ARMATURE")
+            row.template_list("ANIM_UL_actionList", "", bpy.data, "actions", context.active_object, "ANIM_index_action")
 
-        row = layout.row(align=True)
-        row.scale_y = 1.5
-        row.operator("ue4workspace.selectanimation", text="SELECT").type="SELECT"
-        row.operator("ue4workspace.selectanimation", text="DESELECT").type="DESELECT"
-        row.operator("ue4workspace.selectanimation", text="INVERT").type="INVERT"
+            row = layout.row(align=True)
+            row.scale_y = 1.5
+            row.operator("ue4workspace.selectanimation", text="SELECT").type="SELECT"
+            row.operator("ue4workspace.selectanimation", text="DESELECT").type="DESELECT"
+            row.operator("ue4workspace.selectanimation", text="INVERT").type="INVERT"
 
         if preferences.exportOption in ["BOTH", "UNREAL"]:
             col = layout.column()
