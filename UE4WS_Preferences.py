@@ -32,6 +32,14 @@ class Preferences(AddonPreferences):
         default=False
     )
 
+    def updateExportOption(self, context):
+        if self.remote._broadcast_connection is not None:
+            # clear all skeleton list
+            self.skeleton.clear()
+            self.CHAR_CharacterSkeleton = "NEW"
+            self.ANIM_CharacterSkeleton = "NONE"
+            self.remote.stop()
+
     exportOption: EnumProperty(
         name="Export Type",
         description="Select the way you want export",
@@ -40,7 +48,8 @@ class Preferences(AddonPreferences):
             ("UNREAL", "To Unreal Engine", "Export directly to Unreal Engine project"),
             ("BOTH", "To FBX and Unreal Engine", "Export as FBX file and directly export to Unreal Engine Project")
             ],
-        default="BOTH"
+        default="BOTH",
+        update=updateExportOption
     )
 
     ExportFBXFolder: StringProperty(
