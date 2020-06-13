@@ -34,6 +34,8 @@ class PANEL(Panel):
             return True
         elif context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.mode != "POSE":
             return True
+        elif context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIGGED") and context.mode == "POSE":
+            return True
         return False 
 
     def draw(self, context):
@@ -114,6 +116,26 @@ class PANEL(Panel):
                         row.scale_y = 1.5
                         # operator location on UE4WS_Character.py
                         row.operator("ue4workspace.removetwistbone",icon="BONE_DATA", text="Remove Twist Bone")
+            elif context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIGGED") and context.mode == "POSE":
+                # UE4RIGGED POSE
+                poseBones = context.active_object.pose.bones
+                IKBones = [b for b in poseBones if "IK" in b.constraints.keys()]
+                if IKBones:
+                    row = layout.row()
+                    row.alignment = "RIGHT"
+                    row.label(text="IK influence")
+                    for b in IKBones:
+                        label = b.child.name.replace("TWEAK_", "") if b.child else b.name.replace("TWEAK_", "")
+                        IK = b.constraints.get("IK")
+                        col = layout.column()
+                        row = col.row()
+                        split = row.split(factor=0.5)
+                        col = split.column()
+                        col.alignment = "RIGHT"
+                        col.label(text=label)
+                        split = split.split()
+                        col = split.column()
+                        col.prop(IK, "influence", text="")
 
 # OPERATOR
 
