@@ -40,7 +40,7 @@ for file in jsonSetting["files"]:
         importOptions.static_mesh_import_data.set_editor_property("remove_degenerates", jsonSetting["remove_degenerates"])
         importOptions.static_mesh_import_data.set_editor_property("build_adjacency_buffer", jsonSetting["build_adjacency_buffer"])
         importOptions.static_mesh_import_data.set_editor_property("build_reversed_index_buffer", jsonSetting["build_reversed_index_buffer"])
-        importOptions.static_mesh_import_data.set_editor_property("generate_lightmap_u_vs", (jsonSetting["generate_lightmaps_uvs"], True)[file["custom_uv"]])
+        importOptions.static_mesh_import_data.set_editor_property("generate_lightmap_u_vs", (jsonSetting["generate_lightmaps_uvs"], False)[file["custom_uv"]])
         importOptions.static_mesh_import_data.set_editor_property("one_convex_hull_per_ucx", jsonSetting["one_convex_hull_perucx"])
         importOptions.static_mesh_import_data.set_editor_property("combine_meshes", jsonSetting["combine_meshes"])
         importOptions.static_mesh_import_data.set_editor_property("transform_vertex_to_absolute", jsonSetting["transform_vertex_to_absolute"])
