@@ -79,4 +79,9 @@ for file in jsonSetting["files"]:
         AssetToolsHelpers.get_asset_tools().import_asset_tasks([importTask])
 
         if jsonSetting["temporary"]:
-            os.remove(sourceFile)
+            # when you try to export temporary and with create material setting, unreal engine can not handle remove file because still using for compiling material
+            # https://github.com/anasrar/Blender-UE4-Workspace/issues/6
+            try:
+                os.remove(sourceFile)
+            except:
+                print("Failed to Remove Temporary File, Location : " + sourceFile)
