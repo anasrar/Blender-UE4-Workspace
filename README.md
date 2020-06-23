@@ -16,17 +16,33 @@ Export for Static Mesh.
 
 ![Static Mesh Tab](https://user-images.githubusercontent.com/38805204/84418086-d3d41f00-ac40-11ea-9d5b-6579843b3f3e.png)
 
+- Export to FBX and Unreal Engine
+- Custom collision from vertices
+- Custom collision from mesh - **v1.2**
+- Custom lightmaps
+- Export profile - **v.1.2**
+
 ### Character
 
 Export for Character (Skeletal Mesh).
 
 ![Character Tab](https://user-images.githubusercontent.com/38805204/84418157-efd7c080-ac40-11ea-9be6-004c7b0ae70d.png)
 
+- Export to FBX and Unreal Engine  
+- Modular character
+- Skeleton preset (Epic skeleton)
+- Add twist bone for skeleton preset - **v1.2**
+- Generate rig for skeleton preset - **v1.2**
+- Export profile - **v.1.2**
+
 ### Animation
 
 Export for Animation.
 
 ![Animation](https://user-images.githubusercontent.com/38805204/84418187-ffefa000-ac40-11ea-8303-a76a378a98cc.png)
+
+- Export to FBX and Unreal Engine - **v1.2**  
+- Export profile - **v.1.2**
 
 **Feature and Tutorial** in [wiki page](https://github.com/anasrar/Blender-UE4-Workspace/wiki) or [youtube playlist](https://www.youtube.com/playlist?list=PLolnhUV-ZzXrXx1gJunoknuni8klsy0wH)
 
