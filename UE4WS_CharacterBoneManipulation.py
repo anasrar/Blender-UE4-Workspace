@@ -481,12 +481,9 @@ class BoneManipulation:
         if (not collection):
             collection = bpy.data.collections.new("UE4WSBoneShape")
             self.context.scene.collection.children.link(collection)
-        # reset active collection
-        self.context.layer_collection.exclude = True
-        self.context.layer_collection.exclude = True
         # exclude bone shape collection and hide
         collection.hide_viewport = True
-        self.context.layer_collection.children.get(collection.name).exclude = True
+        self.context.view_layer.layer_collection.children.get(collection.name).exclude = True
 
         self.activeObject.data.use_mirror_x = False
         oldPivot = self.context.scene.tool_settings.transform_pivot_point
