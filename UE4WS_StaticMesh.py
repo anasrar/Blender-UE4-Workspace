@@ -41,6 +41,16 @@ class PANEL(Panel):
         col = split.column()
         col.prop(preferences, "SM_CustomCollision", text="")
 
+        col = layout.column()
+        row = col.row()
+        split = row.split(factor=0.6)
+        col = split.column()
+        col.alignment = "RIGHT"
+        col.label(text="Socket")
+        split = split.split()
+        col = split.column()
+        col.prop(preferences, "SM_Socket", text="")
+
         if preferences.devMode:
             col = layout.column()
             row = col.row()
@@ -316,8 +326,8 @@ class OP_ExportStaticMesh(Operator):
         preferences = context.preferences.addons[__package__].preferences
         selectedObjects = context.selected_objects
         objects = (selectedObjects, context.scene.objects)[preferences.SM_ExportMeshOption == "ALL"]
-        # Filter object for mesh, object name not start with UCX_, and mesh does not have ARMATURE modifiers
-        objects = [obj for obj in objects if obj.type == "MESH" and not obj.name.startswith("UCX_") and not "ARMATURE" in [mod.type for mod in obj.modifiers]]
+        # Filter object for mesh, object is not collision, and mesh does not have ARMATURE modifiers
+        objects = [obj for obj in objects if obj.type == "MESH" and not obj.get("isCollision") and not "ARMATURE" in [mod.type for mod in obj.modifiers]]
 
         # Deselect all object
         bpy.ops.object.select_all(action="DESELECT")
@@ -330,6 +340,32 @@ class OP_ExportStaticMesh(Operator):
         # Check Subfolder if exist, if not will make new folder
         if not os.path.isdir(directory) and subFolder:
             os.mkdir(directory)
+
+        # Collision Collection
+        collisionCollection = bpy.data.collections.get("UE4CustomCollision", False)
+        collisionHideProp = {
+            "render": None,
+            "select": None,
+            "viewport": None
+        }
+        # Unhide collision collection
+        if (collisionCollection and preferences.SM_CustomCollision):
+            for key in collisionHideProp:
+                collisionHideProp[key] = getattr(collisionCollection, "hide_" + key)
+                setattr(collisionCollection, "hide_" + key, False)
+
+        # Socket Collection
+        socketCollection = bpy.data.collections.get("UE4Socket", False)
+        socketHideProp = {
+            "render": None,
+            "select": None,
+            "viewport": None
+        }
+        # Unhide socket collection
+        if (socketCollection and preferences.SM_Socket):
+            for key in socketHideProp:
+                socketHideProp[key] = getattr(socketCollection, "hide_" + key)
+                setattr(socketCollection, "hide_" + key, False)
 
         for obj in objects:
             # Remove invalid character for filename
@@ -345,15 +381,16 @@ class OP_ExportStaticMesh(Operator):
                 # Collision name
                 collName = "UCX_" + obj.name + "_"
                 # Collision filter from scene objects
-                collObjects = [obj for obj in context.scene.objects if obj.name.startswith(collName)]
-                # Collision array for information [name, location, disable select]
+                collObjects = [obj for obj in context.scene.objects if obj.get("isCollision")]
+                # Collision array for information [name, location, disable select, hide_viewport]
                 collArrInfo = []
 
                 if preferences.SM_CustomCollision and collObjects:
                     for index, collObj in enumerate(collObjects, start=1):
-                        collArrInfo.append([collObj.name, collObj.location.copy(), collObj.hide_select])
+                        collArrInfo.append([collObj.name, collObj.location.copy(), collObj.hide_select, collObj.hide_viewport])
                         # Select object
                         collObj.hide_select = False
+                        collObj.hide_viewport = False
                         collObj.select_set(state=True)
                         # Rename object
                         collObj.name = collName + ("", "0")[index <= 9] + str(index)
@@ -362,7 +399,34 @@ class OP_ExportStaticMesh(Operator):
                                 # Reset location
                                 collObj.location = (0, 0, 0)
 
-                
+                # Socket filter from children objects
+                socketObjects = [obj for obj in obj.children if obj.type == "EMPTY" and obj.get("isSocket")]
+                # Socket array for information [disable select, hide_viewport]
+                socketArrInfo = []
+
+                if preferences.SM_Socket and socketObjects:
+                    for index, socketObj in enumerate(socketObjects, start=1):
+                        socketArrInfo.append([socketObj.hide_select, socketObj.hide_viewport])
+                        # Select object
+                        socketObj.hide_select = False
+                        socketObj.hide_viewport = False
+                        socketObj.select_set(state=True)
+                        # Scale
+                        for index, val in enumerate(socketObj.scale):
+                            socketObj.scale[index] = val / 100
+                        # Rotate
+                        socketObj.rotation_euler[0] = abs(socketObj.rotation_euler[0]) if (socketObj.rotation_euler[0] < 0) else -abs(socketObj.rotation_euler[0])
+                        socketObj.rotation_euler[1] = abs(socketObj.rotation_euler[1]) if (socketObj.rotation_euler[1] < 0) else -abs(socketObj.rotation_euler[1])
+                        socketObj.rotation_euler[2] -= 3.14159
+                        # Rename object
+                        socketObj.name = "SOCKET_" + socketObj.name
+
+                # attach constraint
+                constraint = obj.constraints.get("AttachTo")
+                constraintMute = False
+                if constraint:
+                    constraintMute = constraint.mute
+                    constraint.mute = True
 
                 # Copy original location for mesh origin by object
                 originalLocation = obj.location.copy()
@@ -413,14 +477,50 @@ class OP_ExportStaticMesh(Operator):
                 # Deselect current object
                 obj.select_set(state=False)
 
+                # restore collision
                 if preferences.SM_CustomCollision and collObjects:
                     for index, collObj in enumerate(collObjects, start=0):
                         # deselect object
                         collObj.select_set(state=False)
                         collObj.hide_select = collArrInfo[index][2]
+                        collObj.hide_viewport = collArrInfo[index][3]
                         # Rename object
                         collObj.name = collArrInfo[index][0]
-                        collObj.location = collArrInfo[index][1]
+                        if collObj.parent is None or collObj.parent is not obj:
+                            if preferences.SM_MeshOrigin == "OBJECT":
+                                # Reset location
+                                collObj.location = collArrInfo[index][1]
+
+                # restore socket
+                if preferences.SM_Socket and socketObjects:
+                    for index, socketObj in enumerate(socketObjects, start=0):
+                        # deselect object
+                        socketObj.select_set(state=False)
+                        socketObj.hide_select = socketArrInfo[index][0]
+                        socketObj.hide_viewport = socketArrInfo[index][1]
+                        # Scale
+                        for index, val in enumerate(socketObj.scale):
+                            socketObj.scale[index] = val * 100
+                        # Rotate
+                        socketObj.rotation_euler[0] = abs(socketObj.rotation_euler[0]) if (socketObj.rotation_euler[0] < 0) else -abs(socketObj.rotation_euler[0])
+                        socketObj.rotation_euler[1] = abs(socketObj.rotation_euler[1]) if (socketObj.rotation_euler[1] < 0) else -abs(socketObj.rotation_euler[1])
+                        socketObj.rotation_euler[2] += 3.14159
+                        # Rename object
+                        socketObj.name = socketObj.name[7:]
+
+                # restore attach constraint
+                if constraint:
+                    constraint.mute = constraintMute
+
+        # Restore hide attribute of collision collection
+        if (collisionCollection and preferences.SM_CustomCollision):
+            for key, val in collisionHideProp.items():
+                setattr(collisionCollection, "hide_" + key, val)
+
+        # Restore hide attribute of socket collection
+        if (socketCollection and preferences.SM_Socket):
+            for key, val in socketHideProp.items():
+                setattr(socketCollection, "hide_" + key, val)
 
         # Select all object after export
         for obj in selectedObjects:
