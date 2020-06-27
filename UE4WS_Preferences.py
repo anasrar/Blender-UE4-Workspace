@@ -83,9 +83,33 @@ class Preferences(AddonPreferences):
         default=False
     )
 
+    SM_OBJTabSocket: BoolProperty(
+        name="Socket",
+        description="Socket Tab",
+        default=False
+    )
+
     SM_OBJTabLOD: BoolProperty(
         name="Level of Detail",
         description="Level of Detail Tab",
+        default=False
+    )
+
+    CHAR_OBJTabSocket: BoolProperty(
+        name="Socket",
+        description="Socket Tab",
+        default=False
+    )
+
+    CHAR_OBJTabSkeletonPreset: BoolProperty(
+        name="Skeleton Preset",
+        description="Skeleton Preset Tab",
+        default=False
+    )
+
+    CHAR_OBJTabContolRig: BoolProperty(
+        name="Control Rig",
+        description="Control Rig Tab",
         default=False
     )
 
@@ -101,6 +125,12 @@ class Preferences(AddonPreferences):
     SM_CustomCollision: BoolProperty(
         name="Custom Collision",
         description="Export mesh with custom collision (if exist)",
+        default=True
+    )
+
+    SM_Socket: BoolProperty(
+        name="Socket",
+        description="Export mesh with socket (if exist)",
         default=True
     )
 
@@ -625,6 +655,12 @@ class Preferences(AddonPreferences):
     CHAR_OverwriteFile: BoolProperty(
         name="Overwrite File",
         description="Overwrite file if filename exist, if false will not export",
+        default=True
+    )
+
+    CHAR_Socket: BoolProperty(
+        name="Socket",
+        description="Export character with socket (if exist)",
         default=True
     )
 
