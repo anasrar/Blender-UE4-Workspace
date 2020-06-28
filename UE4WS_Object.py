@@ -98,6 +98,16 @@ class PANEL(Panel):
                 col = split.column()
                 col.prop(obj, "empty_display_size", text="")
 
+                col = box.column()
+                row = col.row()
+                split = row.split(factor=0.6)
+                col = split.column()
+                col.alignment = "RIGHT"
+                col.label(text="Show Name")
+                split = split.split()
+                col = split.column()
+                col.prop(obj, "show_name", text="")
+
                 # Socket parent bone for character
                 if obj.parent_type == "BONE":
                     col = box.column()
@@ -496,6 +506,7 @@ class OP_CreateSocket(Operator):
         socket["isSocket"]  = True
         socket.rotation_euler = self.Rotation
         socket.location = context.scene.cursor.location
+        socket.show_name = True
 
         socket.empty_display_type = "ARROWS"
         socket.empty_display_size = self.Size
