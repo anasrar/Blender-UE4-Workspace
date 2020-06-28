@@ -421,7 +421,7 @@ class OP_AttachObject(Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None and context.active_object.attachTo is not None
+        return context.active_object is not None and context.active_object.attachTo is not None and context.active_object.attachTo.parent is not context.active_object
 
     def execute(self, context):
         obj = context.active_object
