@@ -121,9 +121,6 @@ class PANEL(Panel):
                 # Static mesh
                 layout.prop(preferences, "SM_OBJTabCustomCollision", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_OBJTabCustomCollision], emboss=False)
                 if preferences.SM_OBJTabCustomCollision:
-                    row = layout.row()
-                    row.scale_y = 1.5
-                    row.operator("wm.url_open",icon="INFO", text="FBX Static Mesh Pipeline").url="https://docs.unrealengine.com/en-US/Engine/Content/Importing/FBX/StaticMeshes/#collision"
                     # Add Collision Button
                     row = layout.row()
                     row.scale_y = 1.5
@@ -138,7 +135,7 @@ class PANEL(Panel):
                         col.label(text="Collision Picker")
                         split = split.split()
                         col = split.column()
-                        col.prop(context.scene, "SM_CollsionPicker", text="")
+                        col.prop(context.scene, "SM_CollsionPicker", icon="MOD_SOLIDIFY", text="")
                         col = col.row()
                         col.scale_y = 1.5
                         col.operator("ue4workspace.smcollisionpicker",icon="MOD_SOLIDIFY", text="Convert")
