@@ -3,6 +3,7 @@ import json
 import time
 import re
 import bpy
+from mathutils import Matrix
 from bpy.types import (Panel, Operator)
 from bpy.props import (EnumProperty, StringProperty)
 from . UE4WS_CharacterBoneManipulation import (BoneManipulation)
@@ -55,6 +56,17 @@ class PANEL(Panel):
         split = split.split()
         col = split.column()
         col.prop(preferences, "CHAR_OverwriteFile", text="")
+
+        # UE4 Python still not support add socket using python for skeletal mesh
+        # col = layout.column()
+        # row = col.row()
+        # split = row.split(factor=0.6)
+        # col = split.column()
+        # col.alignment = "RIGHT"
+        # col.label(text="Socket")
+        # split = split.split()
+        # col = split.column()
+        # col.prop(preferences, "CHAR_Socket", text="")
 
         col = layout.column()
         row = col.row()
@@ -401,6 +413,20 @@ class OP_CharacterGenerateRig(Operator):
         bone = BoneManipulation(context)
         bone.rotateBone()
         bone.generateRig()
+        # move socket
+        socketObjects = [obj for obj in armature.children if obj.type == "EMPTY" and obj.get("isSocket")]
+        for socketObj in socketObjects:
+            parentType = socketObj.parent_type
+            parentBone = socketObj.parent_bone
+            socketObj.parent = rig
+            socketObj.parent_type = parentType
+            if parentType == "BONE":
+                socketObj.parent_bone = parentBone
+                bone = rig.pose.bones.get(parentBone)
+                if bone:
+                    socketObj.matrix_parent_inverse = (rig.matrix_world @ Matrix.Translation(bone.tail - bone.head) @ bone.matrix).inverted()
+            else:
+                socketObj.matrix_parent_inverse = rig.matrix_world.inverted()
 
         try:
             bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Generate Rig Complete")
@@ -618,6 +644,19 @@ class OP_ExportCharacter(Operator):
         if not os.path.isdir(directory) and subFolder:
             os.mkdir(directory)
 
+        # Socket Collection
+        socketCollection = bpy.data.collections.get("UE4Socket", False)
+        socketHideProp = {
+            "render": None,
+            "select": None,
+            "viewport": None
+        }
+        # Unhide socket collection
+        if (socketCollection and preferences.CHAR_Socket):
+            for key in socketHideProp:
+                socketHideProp[key] = getattr(socketCollection, "hide_" + key)
+                setattr(socketCollection, "hide_" + key, False)
+
         for obj in objects:
             if preferences.CHAR_CharacterOption == "COMBINE":
                 # Remove invalid character for filename
@@ -640,6 +679,35 @@ class OP_ExportCharacter(Operator):
                     elif obj.get("UE4RIGGED"):
                         # change name to "Armature"
                         obj.name = "Armature"
+
+                    # Socket filter from children objects
+                    socketObjects = [obj for obj in obj.children if obj.type == "EMPTY" and obj.get("isSocket")]
+                    # Socket array for information [disable select, hide_viewport]
+                    socketArrInfo = []
+
+                    if preferences.CHAR_Socket and socketObjects:
+                        for index, socketObj in enumerate(socketObjects, start=1):
+                            socketArrInfo.append([socketObj.hide_select, socketObj.hide_viewport])
+                            # Select object
+                            socketObj.hide_select = False
+                            socketObj.hide_viewport = False
+                            socketObj.select_set(state=True)
+                            # Scale
+                            for index, val in enumerate(socketObj.scale):
+                                socketObj.scale[index] = val / 100
+                            # Rotate
+                            socketObj.rotation_euler[0] = abs(socketObj.rotation_euler[0]) if (socketObj.rotation_euler[0] < 0) else -abs(socketObj.rotation_euler[0])
+                            socketObj.rotation_euler[1] = abs(socketObj.rotation_euler[1]) if (socketObj.rotation_euler[1] < 0) else -abs(socketObj.rotation_euler[1])
+                            socketObj.rotation_euler[2] -= 3.14159
+                            # Rename object
+                            socketObj.name = "SOCKET_" + socketObj.name
+
+                    # attach constraint
+                    constraint = obj.constraints.get("AttachTo")
+                    constraintMute = False
+                    if constraint:
+                        constraintMute = constraint.mute
+                        constraint.mute = True
 
                     obj.select_set(state=True)
                     # select children mesh
@@ -694,6 +762,27 @@ class OP_ExportCharacter(Operator):
                     elif obj.get("UE4RIGGED"):
                         # change name to original name
                         obj.name = originalName
+
+                    # restore socket
+                    if preferences.CHAR_Socket and socketObjects:
+                        for index, socketObj in enumerate(socketObjects, start=0):
+                            # deselect object
+                            socketObj.select_set(state=False)
+                            socketObj.hide_select = socketArrInfo[index][0]
+                            socketObj.hide_viewport = socketArrInfo[index][1]
+                            # Scale
+                            for index, val in enumerate(socketObj.scale):
+                                socketObj.scale[index] = val * 100
+                            # Rotate
+                            socketObj.rotation_euler[0] = abs(socketObj.rotation_euler[0]) if (socketObj.rotation_euler[0] < 0) else -abs(socketObj.rotation_euler[0])
+                            socketObj.rotation_euler[1] = abs(socketObj.rotation_euler[1]) if (socketObj.rotation_euler[1] < 0) else -abs(socketObj.rotation_euler[1])
+                            socketObj.rotation_euler[2] += 3.14159
+                            # Rename object
+                            socketObj.name = socketObj.name[7:]
+
+                    # restore attach constraint
+                    if constraint:
+                        constraint.mute = constraintMute
             else:
                 context.view_layer.objects.active = obj
                 armatureName = obj.name
@@ -704,6 +793,35 @@ class OP_ExportCharacter(Operator):
                 elif obj.get("UE4RIGGED"):
                     # change name to "Armature"
                     obj.name = "Armature"
+
+                # Socket filter from children objects
+                socketObjects = [obj for obj in obj.children if obj.type == "EMPTY" and obj.get("isSocket")]
+                # Socket array for information [disable select, hide_viewport]
+                socketArrInfo = []
+
+                if preferences.CHAR_Socket and socketObjects:
+                    for index, socketObj in enumerate(socketObjects, start=1):
+                        socketArrInfo.append([socketObj.hide_select, socketObj.hide_viewport])
+                        # Select object
+                        socketObj.hide_select = False
+                        socketObj.hide_viewport = False
+                        socketObj.select_set(state=True)
+                        # Scale
+                        for index, val in enumerate(socketObj.scale):
+                            socketObj.scale[index] = val / 100
+                        # Rotate
+                        socketObj.rotation_euler[0] = abs(socketObj.rotation_euler[0]) if (socketObj.rotation_euler[0] < 0) else -abs(socketObj.rotation_euler[0])
+                        socketObj.rotation_euler[1] = abs(socketObj.rotation_euler[1]) if (socketObj.rotation_euler[1] < 0) else -abs(socketObj.rotation_euler[1])
+                        socketObj.rotation_euler[2] -= 3.14159
+                        # Rename object
+                        socketObj.name = "SOCKET_" + socketObj.name
+
+                # attach constraint
+                constraint = obj.constraints.get("AttachTo")
+                constraintMute = False
+                if constraint:
+                    constraintMute = constraint.mute
+                    constraint.mute = True
 
                 for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
                     # Remove invalid character for filename
@@ -766,6 +884,32 @@ class OP_ExportCharacter(Operator):
                 elif obj.get("UE4RIGGED"):
                     # change name to original name
                     obj.name = armatureName
+
+                # restore socket
+                if preferences.CHAR_Socket and socketObjects:
+                    for index, socketObj in enumerate(socketObjects, start=0):
+                        # deselect object
+                        socketObj.select_set(state=False)
+                        socketObj.hide_select = socketArrInfo[index][0]
+                        socketObj.hide_viewport = socketArrInfo[index][1]
+                        # Scale
+                        for index, val in enumerate(socketObj.scale):
+                            socketObj.scale[index] = val * 100
+                        # Rotate
+                        socketObj.rotation_euler[0] = abs(socketObj.rotation_euler[0]) if (socketObj.rotation_euler[0] < 0) else -abs(socketObj.rotation_euler[0])
+                        socketObj.rotation_euler[1] = abs(socketObj.rotation_euler[1]) if (socketObj.rotation_euler[1] < 0) else -abs(socketObj.rotation_euler[1])
+                        socketObj.rotation_euler[2] += 3.14159
+                        # Rename object
+                        socketObj.name = socketObj.name[7:]
+
+                # restore attach constraint
+                if constraint:
+                    constraint.mute = constraintMute
+
+        # Restore hide attribute of socket collection
+        if (socketCollection and preferences.CHAR_Socket):
+            for key, val in socketHideProp.items():
+                setattr(socketCollection, "hide_" + key, val)
 
         # Select all object after export
         for obj in selectedObjects:
