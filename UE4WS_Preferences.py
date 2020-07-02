@@ -658,10 +658,11 @@ class Preferences(AddonPreferences):
         default=True
     )
 
+    # UE4 Python still not support add socket using python for skeletal mesh
     CHAR_Socket: BoolProperty(
         name="Socket",
         description="Export character with socket (if exist)",
-        default=True
+        default=False
     )
 
     CHAR_ExportCharacterOption: EnumProperty(
