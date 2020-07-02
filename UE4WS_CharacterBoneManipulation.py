@@ -1,4 +1,5 @@
 import bpy, math
+from mathutils import Matrix
 
 class BoneManipulation:
     """
@@ -29,18 +30,23 @@ class BoneManipulation:
         make bone orient same as unreal engine mannequin
     beforeExport()
         do something before export character
+        - unparent socket
         - uncheck deform bone and change bone name
         - rename temporary bone
         - rename vertex group (children mesh)
+        - add IK bone
         - scale to unreal engine mannequin
+        - restore socket
         - rename armature to root
     afterExport():
         do something after export character
+        - unparent socket
         - remove IK bone
         - rename temporary bone
         - check deform bone and change bone name
         - rename vertex group (children mesh)
         - scale original
+        - restore socket
         - rename armature to original name
     spineRecursiveBone(children : bpy.types.PoseBone, collection : bpy.types.Collection, vertices : list tuple, edges : list tuple, group : bpy.types.BoneGroup):
         recursive function to make custom shape to spine
@@ -245,11 +251,13 @@ class BoneManipulation:
 
     def beforeExport(self):
         """do something before export character
+        - unparent socket
         - uncheck deform bone and change bone name
         - rename temporary bone
         - rename vertex group (children mesh)
         - add IK bone
         - scale to unreal engine mannequin
+        - restore socket
         - rename armature to root
 
         :returns: None
@@ -262,6 +270,18 @@ class BoneManipulation:
         bpy.ops.armature.select_all(action="DESELECT")
         oldMirror = self.activeObject.data.use_mirror_x
         self.activeObject.data.use_mirror_x = False
+
+        # unparent socket
+        socketObjects = [obj for obj in self.activeObject.children if obj.type == "EMPTY" and obj.get("isSocket")]
+        # socket info for restore (dict {socketObj, parent_type, parent_bone})
+        socketArrInfo = []
+        for socketObj in socketObjects:
+            socketArrInfo.append({
+                "socketObj": socketObj,
+                "parent_type": socketObj.parent_type,
+                "parent_bone": socketObj.parent_bone
+            })
+            socketObj.parent = None
 
         # uncheck deform bone and change bone name
         for bone in [bone for bone in self.activeObject.data.edit_bones if bone.get("boneOrient", False)]:
@@ -288,22 +308,50 @@ class BoneManipulation:
         bpy.ops.object.transform_apply(location = False, scale = True, rotation = False)
         self.activeObject.scale = (0.01, 0.01, 0.01)
         self.activeObject.select_set(state=False)
+
+        # restore socket
+        for socketDict in socketArrInfo:
+            socketObj = socketDict["socketObj"]
+            socketObj.parent = self.activeObject
+            socketObj.parent_type = socketDict["parent_type"]
+            if socketDict["parent_type"] == "BONE":
+                socketObj.parent_bone = socketDict["parent_bone"]
+                bone = self.poseBone(socketDict["parent_bone"])
+                if bone:
+                    socketObj.matrix_parent_inverse = (self.activeObject.matrix_world @ Matrix.Translation(bone.tail - bone.head) @ bone.matrix).inverted() @ Matrix.Scale(100, 4)
+            else:
+                socketObj.matrix_parent_inverse = self.activeObject.matrix_world.inverted()
+
         # rename armature to root
         self.activeObject.name = "root"
         bpy.ops.object.mode_set(mode=oldMode)
 
     def afterExport(self):
         """do something after export character
+        - unparent socket
         - remove IK bone
         - rename temporary bone
         - check deform bone and change bone name
         - rename vertex group (children mesh)
         - scale original
+        - restore socket
         - rename armature to original name
         """
 
         oldMode = self.activeObject.mode
         bpy.ops.object.mode_set(mode="EDIT")
+
+        # unparent socket
+        socketObjects = [obj for obj in self.activeObject.children if obj.type == "EMPTY" and obj.get("isSocket")]
+        # socket info for restore (dict {socketObj, parent_type, parent_bone})
+        socketArrInfo = []
+        for socketObj in socketObjects:
+            socketArrInfo.append({
+                "socketObj": socketObj,
+                "parent_type": socketObj.parent_type,
+                "parent_bone": socketObj.parent_bone
+            })
+            socketObj.parent = None
 
         editBones = self.activeObject.data.edit_bones
         oldMirror = self.activeObject.data.use_mirror_x
@@ -336,6 +384,20 @@ class BoneManipulation:
         self.activeObject.select_set(state=True)
         bpy.ops.object.transform_apply(location = False, scale = True, rotation = False)
         self.activeObject.select_set(state=False)
+
+        # restore socket
+        for socketDict in socketArrInfo:
+            socketObj = socketDict["socketObj"]
+            socketObj.parent = self.activeObject
+            socketObj.parent_type = socketDict["parent_type"]
+            if socketDict["parent_type"] == "BONE":
+                socketObj.parent_bone = socketDict["parent_bone"]
+                bone = self.poseBone(socketDict["parent_bone"])
+                if bone:
+                    socketObj.matrix_parent_inverse = (self.activeObject.matrix_world @ Matrix.Translation(bone.tail - bone.head) @ bone.matrix).inverted()
+            else:
+                socketObj.matrix_parent_inverse = self.activeObject.matrix_world.inverted()
+
         # rename armature to original name
         self.activeObject.name = self.armatureName
 
@@ -506,9 +568,9 @@ class BoneManipulation:
             collection.objects.link(objRootShape)
             mesh.from_pydata(vertices, edges, [])
             bpy.ops.object.mode_set(mode="POSE")
-            poseBone = self.poseBone(root.name)
+            poseBone = self.poseBone("root")
             if poseBone is None:
-               poseBone = self.poseBone(root.name)
+               poseBone = self.poseBone("root")
             poseBone.custom_shape = objRootShape
             poseBone.bone_group = redGroup
             bpy.ops.object.mode_set(mode="EDIT")
