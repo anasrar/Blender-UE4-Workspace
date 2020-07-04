@@ -1,4 +1,5 @@
 import os
+import inspect
 import json
 
 from unreal import (
@@ -18,7 +19,11 @@ from unreal import (
     MaterialSearchLocation
 )
 
-jsonSetting = open(os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "Data", "unrealenginesetting.json")), "r").read()
+# Fix Python PATH Script Issue #9
+filename = inspect.getframeinfo(inspect.currentframe()).filename
+currentPath = os.path.dirname(os.path.abspath(filename))
+
+jsonSetting = open(os.path.normpath(os.path.join(currentPath, "..", "Data", "unrealenginesetting.json")), "r").read()
 jsonSetting = json.loads(jsonSetting)
 
 targetFolder = "/" + os.path.join("Game", "Blender", jsonSetting["subfolder"]).replace(os.sep, "/")

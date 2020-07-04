@@ -580,7 +580,9 @@ class OP_ExportStaticMesh(Operator):
             for node_id in [user["node_id"] for user in self.remote.remote_nodes]:
             # tell unreal engine tor run python script
                 self.remote.open_command_connection(node_id)
-                self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "StaticMesh.py"), exec_mode="ExecuteFile")
+                # self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "StaticMesh.py"), exec_mode="ExecuteFile")
+                # Fix Python PATH Script Issue #9
+                self.remote.run_command("execfile(\"" + os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "StaticMesh.py").replace(os.sep, "/") +"\")", exec_mode="ExecuteStatement")
                 self.remote.close_command_connection()
 
         try:

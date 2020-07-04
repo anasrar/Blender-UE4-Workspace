@@ -1,4 +1,5 @@
 import os
+import inspect
 import json
 
 ## NOT TESTED YET, BECAUSE GROOM STILL NOT STABLE IN UNREAL ENGINE AND I"M NOT YET UPGRADE TO 25 (LOL)
@@ -14,7 +15,11 @@ from unreal import (
     GroomInterpolationWeight
 )
 
-jsonSetting = open(os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "Data", "unrealenginesetting.json")), "r").read()
+# Fix Python PATH Script Issue #9
+filename = inspect.getframeinfo(inspect.currentframe()).filename
+currentPath = os.path.dirname(os.path.abspath(filename))
+
+jsonSetting = open(os.path.normpath(os.path.join(currentPath, "..", "Data", "unrealenginesetting.json")), "r").read()
 jsonSetting = json.loads(jsonSetting)
 
 targetFolder = "/" + os.path.join("Game", "Blender", jsonSetting["subfolder"]).replace(os.sep, "/")

@@ -378,7 +378,9 @@ class OP_UpdateListSkeleton(Operator):
 
         for node_id in [user["node_id"] for user in self.remote.remote_nodes]:
             self.remote.open_command_connection(node_id)
-            output = self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "GetAllSkeleton.py"), exec_mode="ExecuteFile")
+            # output = self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "GetAllSkeleton.py"), exec_mode="ExecuteFile")
+            # Fix Python PATH Script Issue #9
+            output = self.remote.run_command("execfile(\"" + os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "GetAllSkeleton.py").replace(os.sep, "/") +"\")", exec_mode="ExecuteStatement")
             self.remote.close_command_connection()
             skeletonList += json.loads(output["output"][0]["output"])
 
@@ -966,7 +968,9 @@ class OP_ExportCharacter(Operator):
             for node_id in [user["node_id"] for user in self.remote.remote_nodes]:
             # tell unreal engine tor run python script
                 self.remote.open_command_connection(node_id)
-                self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "Character.py"), exec_mode="ExecuteFile")
+                # self.remote.run_command(os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "Character.py"), exec_mode="ExecuteFile")
+                # Fix Python PATH Script Issue #9
+                self.remote.run_command("execfile(\"" + os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "Character.py").replace(os.sep, "/") +"\")", exec_mode="ExecuteStatement")
                 self.remote.close_command_connection()
 
         try:
