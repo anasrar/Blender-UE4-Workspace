@@ -8,6 +8,8 @@ class PANEL(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
 
+    addonVersion = None
+
     def draw(self, context):
         layout = self.layout
 
@@ -22,7 +24,7 @@ class PANEL(Panel):
         row.label(text="Workspace")
         row = col.row()
         row.alignment = "CENTER"
-        row.label(text= "Version : 1.2.1")
+        row.label(text= "Version : " + (".".join(str(x) for x in self.addonVersion)))
         # Big Button Documentation
         row = layout.row(align=True)
         row.scale_y = 1.5

@@ -16,7 +16,7 @@ bl_info = {
     "author" : "Anas RAR",
     "description" : "Addon For UE4 Workspace",
     "blender" : (2, 81, 0),
-    "version" : (1, 0, 1),
+    "version" : (1, 3, 2),
     "location" : "3D View > Tools",
     "warning" : "",
     "wiki_url": "https://github.com/anasrar",
@@ -176,6 +176,8 @@ def register():
     for X in AR_UE4WS_OperatorArray:
         if hasattr(X, "remote"):
             X.remote = remote_exec
+        if hasattr(X, "addonVersion"):
+            X.addonVersion = bl_info["version"]
         register_class(X)
 
     for P in AR_UE4WS_PropsArray:
@@ -184,6 +186,8 @@ def register():
     for C in AR_UE4WS_classes:
         if hasattr(C, "remote"):
             C.remote = remote_exec
+        if hasattr(C, "addonVersion"):
+            C.addonVersion = bl_info["version"]
         register_class(C)
 
     bpy.app.handlers.load_post.append(resetVariable)
