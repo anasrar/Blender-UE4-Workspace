@@ -16,7 +16,7 @@ bl_info = {
     "author" : "Anas RAR",
     "description" : "Addon For UE4 Workspace",
     "blender" : (2, 81, 0),
-    "version" : (1, 3, 2),
+    "version" : (1, 3, 0),
     "location" : "3D View > Tools",
     "warning" : "",
     "wiki_url": "https://github.com/anasrar",
