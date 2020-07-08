@@ -341,6 +341,7 @@ class OP_IMPORTARMATURE(Operator):
                 newBone.parent = parentList[value["parent"]] if value["parent"] is not None else None
                 newBone.use_connect = value["connect"]
                 newBone.use_inherit_rotation = value.get("use_inherit_rotation", True)
+                newBone.use_deform = value.get("use_deform", True)
 
                 for key, propValue in value["prop"].items():
                     if key == "boneOrient":
