@@ -240,7 +240,8 @@ class BoneManipulation:
 
                 # set parent
                 if bone.parent:
-                    newBone.parent = self.getBone("ORIENT_" + bone.parent.name)
+                    orientBone = self.getBone("ORIENT_" + bone.parent.name)
+                    newBone.parent = orientBone if orientBone else self.getBone(bone.parent.name)
 
         bpy.ops.armature.select_all(action="DESELECT")
         self.activeObject.data.layers[31] = True
