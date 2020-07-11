@@ -969,6 +969,62 @@ class BoneManipulation:
             bone.select_tail = True
             bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
             bpy.ops.armature.select_all(action="DESELECT")
+            # BONE FOR LOOK CONTROL
+            eyeControl = (editBones.get(faceAttach["BONE_LOOK_CONTROL"]), True) if faceAttach.get("BONE_LOOK_CONTROL") else (editBones.new("LOOK_CONTROL"), False)
+            if eyeControl[1]:
+                eyeControl = eyeControl[0]
+            else:
+                eyeControl = eyeControl[0]
+                eyeControl.use_deform = False
+                eyeControl.head = faceAttach.head
+                eyeControl.tail = faceAttach.tail
+                eyeControl.roll = faceAttach.roll
+                eyeControl.length = 0.05
+                eyeControl["UE4RIGTYPE"] = "FACE_LOOK_CONTROL_HUMAN"
+                eyeControl.select = True
+                eyeControl.select_head = True
+                eyeControl.select_tail = True
+                bpy.ops.transform.translate(value=(0, -0.5, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+                bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
+                eyeControl.select = False
+                eyeControl.select_head = False
+                eyeControl.select_tail = False
+
+                faceAttach["BONE_LOOK_CONTROL"] = eyeControl.name
+                poseBone = self.poseBone(faceAttach.name)
+                if poseBone is not None:
+                    poseBone["BONE_LOOK_CONTROL"] = eyeControl.name
+
+            # CONTROL BONE
+            boneName = bone.name
+            control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
+            control.use_deform = False
+            control.head = bone.head
+            control.tail = bone.tail
+            control.roll = bone.roll
+            control.length = 0.05
+            control.parent = eyeControl
+            control.select = True
+            control.select_head = True
+            control.select_tail = True
+            bpy.ops.transform.translate(value=(0, 0.25, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
+            control.select = False
+            control.select_head = False
+            control.select_tail = False
+
+            poseBone = self.poseBone(boneName)
+            if poseBone is not None:
+                poseBone["BONE_CONTROL"] = boneName.replace("TWEAK_", "") + "_CONTROL"
+
+        def SC_FaceTeethHuman(bone, faceAttach):
+            """FACE TEETH CONTROL"""
+            # move to third layer
+            bone.select = True
+            bone.select_head = True
+            bone.select_tail = True
+            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
+            bpy.ops.armature.select_all(action="DESELECT")
             # CONTROL BONE
             boneName = bone.name
             control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
@@ -981,7 +1037,36 @@ class BoneManipulation:
             control.select = True
             control.select_head = True
             control.select_tail = True
-            bpy.ops.transform.translate(value=(0, 0.25, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
+            control.select = False
+            control.select_head = False
+            control.select_tail = False
+
+            poseBone = self.poseBone(boneName)
+            if poseBone is not None:
+                poseBone["BONE_CONTROL"] = boneName.replace("TWEAK_", "") + "_CONTROL"
+
+        def SC_FaceTongueHuman(bone, faceAttach):
+            """FACE TONGUE CONTROL"""
+            # move to third layer
+            bone.select = True
+            bone.select_head = True
+            bone.select_tail = True
+            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
+            bpy.ops.armature.select_all(action="DESELECT")
+            # CONTROL BONE
+            boneName = bone.name
+            control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
+            control.use_deform = False
+            control.head = bone.head
+            control.tail = bone.tail
+            control.roll = bone.roll
+            control.length = 0.05
+            control.parent = bone.parent
+            control.select = True
+            control.select_head = True
+            control.select_tail = True
+            bpy.ops.transform.translate(value=(0, 0, 0.01), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
             bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
             control.select = False
             control.select_head = False
@@ -1037,8 +1122,8 @@ class BoneManipulation:
                 "FACE_CONTROL_HUMAN": SC_FaceControlHuman,
                 "FACE_NOSE_HUMAN": SC_FaceNoseHuman,
                 "FACE_EYE_HUMAN": SC_FaceEyeHuman,
-                "FACE_TEETH_HUMAN": None,
-                "FACE_TONGUE_HUMAN": None,
+                "FACE_TEETH_HUMAN": SC_FaceTeethHuman,
+                "FACE_TONGUE_HUMAN": SC_FaceTongueHuman,
                 "FACE_EYELID_UPPER_HUMAN": SC_FaceEyelidHuman,
                 "FACE_EYELID_LOWER_HUMAN": SC_FaceEyelidHuman
             }
@@ -1717,6 +1802,94 @@ class BoneManipulation:
             boneControl.custom_shape = objFaceNoseControl
             boneControl.bone_group= yellowGroup
 
+        # Generate Face Eye Control Bone Humanoid
+        faceEyeControlHumanoidVertices = [(-0.3058179020881653, 0.0, -0.07159699499607086), (-0.03911216929554939, 0.0, -0.167062908411026), (0.03911216929554939, 0.0, -0.167062908411026), (0.3058179020881653, 0.0, -0.07159699499607086), (-0.3058179020881653, 0.0, 0.07159699499607086), (-0.03911216929554939, 0.0, 0.167062908411026), (0.3058179020881653, 0.0, 0.07159699499607086), (0.03911216929554939, 0.0, 0.167062908411026), (0.0, -6.119594164744058e-09, 0.14000000059604645), (-0.07000000029802322, -5.29972377094623e-09, 0.12124355137348175), (-0.12124356627464294, -3.059796860327424e-09, 0.06999999284744263), (-0.14000000059604645, 2.6749596935822344e-16, -6.119594164744058e-09), (-0.12124355137348175, 3.0597975264612387e-09, -0.07000000774860382), (-0.07000000774860382, 5.29972377094623e-09, -0.12124355137348175), (-2.1139411998660762e-08, 6.119594164744058e-09, -0.14000000059604645), (0.06999997049570084, 5.299725103213859e-09, -0.12124357372522354), (0.12124352902173996, 3.059799080773473e-09, -0.0700000450015068), (0.14000000059604645, 2.845074614335236e-15, -6.508771832614002e-08), (0.12124359607696533, -3.05979397374756e-09, 0.06999992579221725), (0.07000008225440979, -5.2997224386786e-09, 0.12124351412057877)]
+        faceEyeControlHumanoidEdges = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 4), (1, 2), (3, 6), (5, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (16, 15), (17, 16), (18, 17), (19, 18), (8, 19)]
+        # FACE_EYE_HUMAN
+        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_EYE_HUMAN" and bone.get("BONE_CONTROL")]:
+            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
+            # constraint
+            constraints = bone.constraints.new(type="TRACK_TO")
+            constraints.name = "LOOK_TO"
+            constraints.show_expanded = False
+            constraints.target = self.activeObject
+            constraints.subtarget = bone.get("BONE_CONTROL")
+            constraints.target_space = "POSE"
+            constraints.owner_space = "POSE"
+            # custom shape
+            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
+            objFaceEyeControl = bpy.data.objects.new(mesh.name,mesh)
+            collection.objects.link(objFaceEyeControl)
+            mesh.from_pydata(faceEyeControlHumanoidVertices, faceEyeControlHumanoidEdges, [])
+            boneControl.custom_shape = objFaceEyeControl
+            boneControl.bone_group= blueGroup
+
+        # Generate Face Look Control Bone Humanoid
+        faceLookControlHumanoidVertices = [(-0.25, -0.25, -0.25), (-0.25, -0.25, 0.25), (-0.25, 0.25, -0.25), (-0.25, 0.25, 0.25), (0.25, -0.25, -0.25), (0.25, -0.25, 0.25), (0.25, 0.25, -0.25), (0.25, 0.25, 0.25)]
+        faceLookControlHumanoidEdges = [(2, 0), (0, 1), (1, 3), (3, 2), (6, 2), (3, 7), (7, 6), (4, 6), (7, 5), (5, 4), (0, 4), (5, 1)]
+        # BONE_LOOK_CONTROL
+        for bone, faceAttach in [(self.poseBone(bone.get("BONE_LOOK_CONTROL")), bone) for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_HUMAN" and bone.get("BONE_LOOK_CONTROL")]:
+            bone["UE4RIGTYPE"]= "FACE_LOOK_CONTROL"
+            # constraint
+            constraints = bone.constraints.new(type="CHILD_OF")
+            constraints.name = "LOOK_CONTROL_PARENT"
+            constraints.show_expanded = False
+            constraints.target = self.activeObject
+            constraints.subtarget = faceAttach.name
+            # custom shape
+            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
+            objFaceLookControl = bpy.data.objects.new(mesh.name,mesh)
+            collection.objects.link(objFaceLookControl)
+            mesh.from_pydata(faceLookControlHumanoidVertices, faceLookControlHumanoidEdges, [])
+            bone.custom_shape = objFaceLookControl
+            bone.bone_group= greenGroup
+
+        # Generate Face Teeth Control Bone Humanoid
+        faceTeethControlHumanoidVertices = [(-0.42000001668930054, 1.8358782938321383e-08, -0.12920930981636047), (0.42000001668930054, 1.8358782938321383e-08, -0.12920930981636047), (-0.42000001668930054, -1.8358782938321383e-08, 0.12920930981636047), (0.42000001668930054, -1.8358782938321383e-08, 0.12920930981636047), (-0.42000001668930054, 0.23703818023204803, -0.12920930981636047), (0.42000001668930054, 0.23703818023204803, -0.12920930981636047), (-0.42000001668930054, 0.23703815042972565, 0.12920930981636047), (0.42000001668930054, 0.23703815042972565, 0.12920930981636047)]
+        faceTeethControlHumanoidEdges = [(2, 0), (0, 1), (1, 3), (3, 2), (6, 4), (4, 5), (5, 7), (7, 6), (2, 6), (7, 3), (1, 5), (4, 0)]
+        # FACE_TEETH_HUMAN
+        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_TEETH_HUMAN" and bone.get("BONE_CONTROL")]:
+            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
+            # constraint
+            constraints = bone.constraints.new(type="COPY_TRANSFORMS")
+            constraints.name = "TRANSFORM"
+            constraints.show_expanded = False
+            constraints.target = self.activeObject
+            constraints.subtarget = bone.get("BONE_CONTROL")
+            constraints.mix_mode = "REPLACE"
+            constraints.target_space = "LOCAL"
+            constraints.owner_space = "LOCAL"
+            # custom shape
+            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
+            objFaceTeethControl = bpy.data.objects.new(mesh.name,mesh)
+            collection.objects.link(objFaceTeethControl)
+            mesh.from_pydata(faceTeethControlHumanoidVertices, faceTeethControlHumanoidEdges, [])
+            boneControl.custom_shape = objFaceTeethControl
+            boneControl.bone_group= yellowGroup
+
+        # Generate Face Tongue Control Bone Humanoid
+        faceTongueControlHumanoidVertices = [(-0.3256967067718506, 0.47867369651794434, 0.0), (0.3256967067718506, 0.47867369651794434, 0.0), (0.0, 0.47867369651794434, 0.0), (-0.3039208650588989, -0.2570299506187439, 0.0), (-0.07561969757080078, -0.47867369651794434, 0.0), (-0.23433561623096466, -0.41375574469566345, 0.0), (0.3039208650588989, -0.2570299506187439, 0.0), (0.07561969757080078, -0.47867369651794434, 0.0), (0.23433561623096466, -0.41375574469566345, 0.0), (0.0, -0.15590238571166992, 0.0)]
+        faceTongueControlHumanoidEdges = [(2, 1), (0, 2), (3, 5), (5, 4), (6, 8), (8, 7), (3, 0), (4, 7), (6, 1), (2, 9)]
+        # FACE_TONGUE_HUMAN
+        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_TONGUE_HUMAN" and bone.get("BONE_CONTROL")]:
+            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
+            # constraint
+            constraints = bone.constraints.new(type="COPY_TRANSFORMS")
+            constraints.name = "TRANSFORM"
+            constraints.show_expanded = False
+            constraints.target = self.activeObject
+            constraints.subtarget = bone.get("BONE_CONTROL")
+            constraints.mix_mode = "REPLACE"
+            constraints.target_space = "LOCAL"
+            constraints.owner_space = "LOCAL"
+            # custom shape
+            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
+            objFaceTeethControl = bpy.data.objects.new(mesh.name,mesh)
+            collection.objects.link(objFaceTeethControl)
+            mesh.from_pydata(faceTongueControlHumanoidVertices, faceTongueControlHumanoidEdges, [])
+            boneControl.custom_shape = objFaceTeethControl
+            boneControl.bone_group= yellowGroup
+
         # Generate Face Eyelid Control Bone Humanoid
         EyelidUpperControlHumanoidVertices = [(0.2574883699417114, 2.849847078323364e-07, 1.8610592178447405e-07), (-0.25748831033706665, 2.849847078323364e-07, -6.331407575999037e-07), (0.08769719302654266, 2.849847078323364e-07, 0.22647202014923096), (0.2574883699417114, 2.849847078323364e-07, 0.05668110400438309), (-0.08769707381725311, 2.849847078323364e-07, 0.22647172212600708), (-0.25748831033706665, 2.849847078323364e-07, 0.056680239737033844)]
         EyelidLowerControlHumanoidVertices = [(-0.2574883699417114, 2.849847078323364e-07, -2.086162567138672e-07), (0.25748831033706665, 2.849847078323364e-07, 6.556510925292969e-07), (-0.08769716322422028, 2.849847078323364e-07, -0.22647202014923096), (-0.2574883699417114, 2.849847078323364e-07, -0.05668112635612488), (0.0876971036195755, 2.849847078323364e-07, -0.22647172212600708), (0.25748831033706665, 2.849847078323364e-07, -0.05668021738529205)]
@@ -1760,7 +1933,6 @@ class BoneManipulation:
             constraints.subtarget = bone.get("BONE_CONTROL")
             constraints.target_space = "LOCAL"
             constraints.owner_space = "LOCAL"
-            # constraints.use_offset = True
 
             constraints = bone.constraints.new(type="COPY_ROTATION")
             constraints.name = "ROTATION"
@@ -1791,9 +1963,18 @@ class BoneManipulation:
         self.activeObject.scale = (0.01, 0.01, 0.01)
         self.activeObject.select_set(state=False)
 
-        # set inverse for eyelid
+        # set inverse for eyelid and look control
         bpy.ops.object.mode_set(mode="POSE")
         for pbone, constraint in [(bone, bone.constraints.get("LID_PARENT")) for bone in poseBones if bone.get("UE4RIGTYPE") in ["FACE_EYELID_UPPER_HUMAN", "FACE_EYELID_LOWER_HUMAN"] and bone.constraints.get("LID_PARENT")]:
+            # show third layer
+            self.activeObject.data.layers[2] = True
+            context_copy = bpy.context.copy()
+            context_copy["constraint"] = constraint
+            self.activeObject.data.bones.active = pbone.bone
+            bpy.ops.constraint.childof_set_inverse(context_copy, constraint=constraint.name, owner="BONE")
+            # hide third layer
+            self.activeObject.data.layers[2] = False
+        for pbone, constraint in [(bone, bone.constraints.get("LOOK_CONTROL_PARENT")) for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_LOOK_CONTROL" and bone.constraints.get("LOOK_CONTROL_PARENT")]:
             # show third layer
             self.activeObject.data.layers[2] = True
             context_copy = bpy.context.copy()
