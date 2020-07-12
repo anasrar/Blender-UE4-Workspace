@@ -2375,7 +2375,7 @@
                         "UE4RIGTYPE": "FACE_HUMAN",
                         "boneOrient": [
                             0,
-                            0,
+                            -0.785398,
                             "X"
                         ]
                     }
