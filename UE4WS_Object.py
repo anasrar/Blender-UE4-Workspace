@@ -214,25 +214,42 @@ class PANEL(Panel):
                 if context.active_object.get("UE4RIGGED") and context.mode == "POSE":
                     # UE4RIGGED POSE
                     poseBones = context.active_object.pose.bones
-                    IKBones = [b for b in poseBones if "IK" in b.constraints.keys()]
-                    if IKBones:
+                    IKBones = [key for key in context.active_object.keys() if key.startswith("CR_IK_")]
+                    lookControlBones = [key for key in context.active_object.keys() if key.startswith("CR_LOOK_")]
+                    if IKBones or lookControlBones:
                         layout.prop(preferences, "CHAR_OBJTabContolRig", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.CHAR_OBJTabContolRig], emboss=False)
                         if preferences.CHAR_OBJTabContolRig:
-                            row = layout.row()
-                            row.alignment = "RIGHT"
-                            row.label(text="IK influence")
-                            for b in IKBones:
-                                label = b.child.name.replace("TWEAK_", "") if b.child else b.name.replace("TWEAK_", "")
-                                IK = b.constraints.get("IK")
-                                col = layout.column()
-                                row = col.row()
-                                split = row.split(factor=0.5)
-                                col = split.column()
-                                col.alignment = "RIGHT"
-                                col.label(text=label)
-                                split = split.split()
-                                col = split.column()
-                                col.prop(IK, "influence", text="")
+                            if IKBones:
+                                row = layout.row()
+                                row.alignment = "RIGHT"
+                                row.label(text="IK influence")
+                                for key in IKBones:
+                                    label = key.replace("CR_IK_", "")
+                                    col = layout.column()
+                                    row = col.row()
+                                    split = row.split(factor=0.5)
+                                    col = split.column()
+                                    col.alignment = "RIGHT"
+                                    col.label(text=label)
+                                    split = split.split()
+                                    col = split.column()
+                                    col.prop(context.active_object, "[\"" + key + "\"]", text="")
+
+                            if lookControlBones:
+                                row = layout.row()
+                                row.alignment = "RIGHT"
+                                row.label(text="Look Inherit Rotation From Head")
+                                for key in lookControlBones:
+                                    label = key.replace("CR_LOOK_", "")
+                                    col = layout.column()
+                                    row = col.row()
+                                    split = row.split(factor=0.5)
+                                    col = split.column()
+                                    col.alignment = "RIGHT"
+                                    col.label(text=label)
+                                    split = split.split()
+                                    col = split.column()
+                                    col.prop(context.active_object, "[\"" + key + "\"]", text="")
 
 # OPERATOR
 
