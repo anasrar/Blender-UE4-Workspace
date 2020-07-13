@@ -1296,6 +1296,7 @@ class BoneManipulation:
                     constraints.pole_angle = (0, -3.14159)[bone.get("BoneSide") < 0]
                     ikBone = poseBones.get(bone.get("IKTarget"))
                     poleBone = poseBones.get(bone.get("IKPole"))
+                    IKInfluenceDrive = constraints.driver_add("influence").driver
                     if poleBone is not None:
                         if objPole is None:
                             mesh = bpy.data.meshes.new("UE4WSBoneShape_Pole")
@@ -1333,6 +1334,8 @@ class BoneManipulation:
                     fk.mix_mode = "REPLACE"
                     fk.target_space = "LOCAL"
                     fk.owner_space = "LOCAL"
+                    fk.influence = 0.0
+                    FK1InfluenceDrive = fk.driver_add("influence").driver
 
                     # Generate Custom Shape
                     mesh = bpy.data.meshes.new("UE4WSBoneShape_FK_" + bone.name.replace("TWEAK_", ""))
@@ -1352,6 +1355,8 @@ class BoneManipulation:
                     fk.mix_mode = "REPLACE"
                     fk.target_space = "LOCAL"
                     fk.owner_space = "LOCAL"
+                    fk.influence = 0.0
+                    FK2InfluenceDrive = fk.driver_add("influence").driver
 
                     # Generate Custom Shape
                     mesh = bpy.data.meshes.new("UE4WSBoneShape_FK_" + calf.name.replace("TWEAK_", ""))
@@ -1362,6 +1367,48 @@ class BoneManipulation:
                     FKBone = poseBones.get("FK_" + calf.name.replace("TWEAK_", ""))
                     FKBone.custom_shape = objFKShape
                     FKBone.bone_group = greenGroup
+
+                    # CONTROL RIG
+                    if not self.activeObject.get("_RNA_UI"): # set RNA UI
+                        self.activeObject["_RNA_UI"] = {}
+
+                    # IK and FK influence
+                    customPropertyName = foot.name.replace("TWEAK", "CR_IK") if foot is not None else calf.name.replace("TWEAK", "CR_IK")
+                    self.activeObject[customPropertyName] = 1.0
+                    self.activeObject["_RNA_UI"][customPropertyName] = {
+                        "description": "Influence For Use IK",
+                        "default": 1.0,
+                        "min": 0.0,
+                        "max": 1.0,
+                        "soft_min": 0.0,
+                        "soft_max": 1.0,
+                    }
+
+                    # IK Driver
+                    IKInfluenceDrive.type = "SCRIPTED"
+                    var = IKInfluenceDrive.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id = self.activeObject
+                    target.data_path = "[\""+ customPropertyName + "\"]"
+                    IKInfluenceDrive.expression = var.name
+
+                    # FK Driver
+                    FK1InfluenceDrive.type = "SCRIPTED"
+                    var = FK1InfluenceDrive.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id = self.activeObject
+                    target.data_path = "[\""+ customPropertyName + "\"]"
+                    FK1InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
+
+                    FK2InfluenceDrive.type = "SCRIPTED"
+                    var = FK2InfluenceDrive.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id = self.activeObject
+                    target.data_path = "[\""+ customPropertyName + "\"]"
+                    FK2InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
 
                 if foot is not None:
                     constraints = foot.constraints.new(type="COPY_ROTATION")
@@ -1579,6 +1626,7 @@ class BoneManipulation:
                         ikBone.lock_rotation = [True, True, True]
                         ikBone.lock_location = [True, True, True]
                     poleBone = poseBones.get(bone.get("IKPole"))
+                    IKInfluenceDrive = constraints.driver_add("influence").driver
                     if poleBone is not None:
                         if objPole is None:
                             mesh = bpy.data.meshes.new("UE4WSBoneShape_Pole")
@@ -1597,6 +1645,8 @@ class BoneManipulation:
                     fk.mix_mode = "REPLACE"
                     fk.target_space = "LOCAL"
                     fk.owner_space = "LOCAL"
+                    fk.influence = 0.0
+                    FK1InfluenceDrive = fk.driver_add("influence").driver
 
                     # Generate Custom Shape
                     mesh = bpy.data.meshes.new("UE4WSBoneShape_FK_" + bone.name.replace("TWEAK_", ""))
@@ -1616,6 +1666,8 @@ class BoneManipulation:
                     fk.mix_mode = "REPLACE"
                     fk.target_space = "LOCAL"
                     fk.owner_space = "LOCAL"
+                    fk.influence = 0.0
+                    FK2InfluenceDrive = fk.driver_add("influence").driver
 
                     # Generate Custom Shape
                     mesh = bpy.data.meshes.new("UE4WSBoneShape_FK_" + lowerarm.name.replace("TWEAK_", ""))
@@ -1626,6 +1678,48 @@ class BoneManipulation:
                     FKBone = poseBones.get("FK_" + lowerarm.name.replace("TWEAK_", ""))
                     FKBone.custom_shape = objFKShape
                     FKBone.bone_group = greenGroup
+
+                    # CONTROL RIG
+                    if not self.activeObject.get("_RNA_UI"): # set RNA UI
+                        self.activeObject["_RNA_UI"] = {}
+
+                    # IK and FK influence
+                    customPropertyName = hand.name.replace("TWEAK", "CR_IK") if hand is not None else lowerarm.name.replace("TWEAK", "CR_IK")
+                    self.activeObject[customPropertyName] = 1.0
+                    self.activeObject["_RNA_UI"][customPropertyName] = {
+                        "description": "Influence For Use IK",
+                        "default": 1.0,
+                        "min": 0.0,
+                        "max": 1.0,
+                        "soft_min": 0.0,
+                        "soft_max": 1.0,
+                    }
+
+                    # IK Driver
+                    IKInfluenceDrive.type = "SCRIPTED"
+                    var = IKInfluenceDrive.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id = self.activeObject
+                    target.data_path = "[\""+ customPropertyName + "\"]"
+                    IKInfluenceDrive.expression = var.name
+
+                    # FK Driver
+                    FK1InfluenceDrive.type = "SCRIPTED"
+                    var = FK1InfluenceDrive.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id = self.activeObject
+                    target.data_path = "[\""+ customPropertyName + "\"]"
+                    FK1InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
+
+                    FK2InfluenceDrive.type = "SCRIPTED"
+                    var = FK2InfluenceDrive.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id = self.activeObject
+                    target.data_path = "[\""+ customPropertyName + "\"]"
+                    FK2InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
 
                 if hand is not None:
                     constraints = hand.constraints.new(type="COPY_ROTATION")
@@ -1836,6 +1930,7 @@ class BoneManipulation:
             constraints.show_expanded = False
             constraints.target = self.activeObject
             constraints.subtarget = faceAttach.name
+            LookInfluenceDrive = constraints.driver_add("influence").driver
             # custom shape
             mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
             objFaceLookControl = bpy.data.objects.new(mesh.name,mesh)
@@ -1843,6 +1938,31 @@ class BoneManipulation:
             mesh.from_pydata(faceLookControlHumanoidVertices, faceLookControlHumanoidEdges, [])
             bone.custom_shape = objFaceLookControl
             bone.bone_group= greenGroup
+
+            # CONTROL RIG
+            if not self.activeObject.get("_RNA_UI"): # set RNA UI
+                self.activeObject["_RNA_UI"] = {}
+
+            # LOOK influence
+            customPropertyName = "CR_LOOK_" + bone.name
+            self.activeObject[customPropertyName] = 1.0
+            self.activeObject["_RNA_UI"][customPropertyName] = {
+                "description": "Influence For Look Head Rotation",
+                "default": 1.0,
+                "min": 0.0,
+                "max": 1.0,
+                "soft_min": 0.0,
+                "soft_max": 1.0,
+            }
+
+            # LOOK Driver
+            LookInfluenceDrive.type = "SCRIPTED"
+            var = LookInfluenceDrive.variables.new()
+            var.type = "SINGLE_PROP"
+            target = var.targets[0]
+            target.id = self.activeObject
+            target.data_path = "[\""+ customPropertyName + "\"]"
+            LookInfluenceDrive.expression = var.name
 
         # Generate Face Teeth Control Bone Humanoid
         faceTeethControlHumanoidVertices = [(-0.42000001668930054, 1.8358782938321383e-08, -0.12920930981636047), (0.42000001668930054, 1.8358782938321383e-08, -0.12920930981636047), (-0.42000001668930054, -1.8358782938321383e-08, 0.12920930981636047), (0.42000001668930054, -1.8358782938321383e-08, 0.12920930981636047), (-0.42000001668930054, 0.23703818023204803, -0.12920930981636047), (0.42000001668930054, 0.23703818023204803, -0.12920930981636047), (-0.42000001668930054, 0.23703815042972565, 0.12920930981636047), (0.42000001668930054, 0.23703815042972565, 0.12920930981636047)]
