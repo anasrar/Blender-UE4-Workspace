@@ -113,7 +113,7 @@ class PANEL(Panel):
         col = split.column()
         col.prop(preferences, "CHAR_ExportProfile", text="")
         split = split.split()
-        row = split.row()
+        row = split.row(align=True)
         row.alignment = "RIGHT"
         row.operator("ue4workspace.charupdateexportprofile",icon="GREASEPENCIL", text="")
         row.operator("ue4workspace.charcreateexportprofile",icon="FILE_NEW", text="")

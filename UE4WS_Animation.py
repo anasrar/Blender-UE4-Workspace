@@ -110,7 +110,7 @@ class PANEL(Panel):
         col = split.column()
         col.prop(preferences, "ANIM_ExportProfile", text="")
         split = split.split()
-        row = split.row()
+        row = split.row(align=True)
         row.alignment = "RIGHT"
         row.operator("ue4workspace.animupdateexportprofile",icon="GREASEPENCIL", text="")
         row.operator("ue4workspace.animcreateexportprofile",icon="FILE_NEW", text="")

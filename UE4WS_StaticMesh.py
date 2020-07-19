@@ -102,7 +102,7 @@ class PANEL(Panel):
         col = split.column()
         col.prop(preferences, "SM_ExportProfile", text="")
         split = split.split()
-        row = split.row()
+        row = split.row(align=True)
         row.alignment = "RIGHT"
         row.operator("ue4workspace.smupdateexportprofile",icon="GREASEPENCIL", text="")
         row.operator("ue4workspace.smcreateexportprofile",icon="FILE_NEW", text="")
