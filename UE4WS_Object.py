@@ -233,7 +233,7 @@ class PANEL(Panel):
                                     col.label(text=label)
                                     split = split.split()
                                     col = split.column()
-                                    col.prop(context.active_object, "[\"" + key + "\"]", text="")
+                                    col.prop(context.active_object, "[\"" + key + "\"]", text="", slider=True)
 
                             if lookControlBones:
                                 row = layout.row()
@@ -249,7 +249,7 @@ class PANEL(Panel):
                                     col.label(text=label)
                                     split = split.split()
                                     col = split.column()
-                                    col.prop(context.active_object, "[\"" + key + "\"]", text="")
+                                    col.prop(context.active_object, "[\"" + key + "\"]", text="", slider=True)
 
 # OPERATOR
 
