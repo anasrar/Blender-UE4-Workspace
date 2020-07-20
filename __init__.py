@@ -39,9 +39,28 @@ from . UE4WS_ExportOption import (
 )
 
 from . UE4WS_Object import (
-    Props as objectProps,
     PANEL as objectPanel,
     Ops as objectOperator
+)
+
+from . UE4WS_ObjectCustomCollision import (
+    Props as objectCustomCollisionProps,
+    PANEL as objectCustomCollisionPanel,
+    Ops as objectCustomCollisionOperator
+)
+
+from . UE4WS_ObjectSocket import (
+    Props as objectSocketProps,
+    PANEL as objectSocketPanel,
+    Ops as objectSocketOperator
+)
+
+from . UE4WS_ObjectControlRig import (
+    PANEL as objectControlRigPanel
+)
+
+from . UE4WS_ObjectSkeletonPreset import (
+    PANEL as objectSkeletonPresetPanel
 )
 
 from . UE4WS_StaticMesh import (
@@ -85,6 +104,13 @@ from . UE4WS_AnimationUnrealEngine import (
     PANEL as AnimationUnrealEnginePanel
 )
 
+from . UE4WS_RetargetAnimation import (
+    Props as retargetAnimationProps,
+    PANEL_RetargetMannequin as retargetAnimationMannequinPanel,
+    PANEL_RetargetMixamo as retargetAnimationMixamoPanel,
+    Ops as retargetAnimationOperator
+)
+
 from . UE4WS_Credit import (
     PANEL as creditPanel
 )
@@ -102,8 +128,10 @@ remote_exec = RemoteExecution()
 AR_UE4WS_PropsArray = []
 # extend property to array, make sure you add from here
 for x in [
-    objectProps,
-    animationProps
+    objectCustomCollisionProps,
+    objectSocketProps,
+    animationProps,
+    retargetAnimationProps
     ]:
     AR_UE4WS_PropsArray.extend(x)
 
@@ -111,10 +139,13 @@ AR_UE4WS_OperatorArray = []
 # extend operator to array, make sure you add from here
 for x in [
     objectOperator,
+    objectCustomCollisionOperator,
+    objectSocketOperator,
     exportOptionOperator,
     staticMeshOperator,
     characterOperator,
-    animationOperator
+    animationOperator,
+    retargetAnimationOperator
     ]:
     AR_UE4WS_OperatorArray.extend(x)
 
@@ -125,6 +156,10 @@ AR_UE4WS_classes = (
     exportOptionPanel,
     # Object
     objectPanel,
+    objectCustomCollisionPanel,
+    objectSocketPanel,
+    objectSkeletonPresetPanel,
+    objectControlRigPanel,
     ## Static Mesh
     staticMeshPanel,
     staticMeshFBXOptionPanel,
@@ -138,6 +173,9 @@ AR_UE4WS_classes = (
     animationPanel,
     AnimationFBXOptionPanel,
     AnimationUnrealEnginePanel,
+    ## Retarget Animation
+    retargetAnimationMannequinPanel,
+    retargetAnimationMixamoPanel,
     ## Credit
     creditPanel,
     ## Misc.
