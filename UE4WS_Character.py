@@ -14,6 +14,7 @@ class PANEL(Panel):
     bl_category = "UE4Workspace"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+    bl_options = {"DEFAULT_CLOSED"}
 
     @classmethod
     def poll(self, context):
