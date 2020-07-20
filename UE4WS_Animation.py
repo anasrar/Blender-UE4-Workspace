@@ -159,9 +159,22 @@ class OP_ExportAnimation(Operator):
         bpy.ops.object.select_all(action="DESELECT")
         # select armature
         armature.select_set(state=True)
+        # copy location
+        originalLocation = armature.location.copy()
+        # reset location
+        armature.location = [0, 0, 0]
+        # check root bone
+        isHaveRootBone = armature.data.bones.get("root", False)
         if armature.get("UE4RIGGED"):
             # change name to "Armature" if armature is ue4 rigged
             armature.name = "Armature"
+        else:
+            # change name to "Armature" if have root bone or "root" if doesn't have root bone
+            if isHaveRootBone:
+                armature.name = "Armature"
+            else:
+                armature.name = "root"
+
         # get bone name from armature
         boneNames = [bone.name for bone in armature.pose.bones]
         # filter action
@@ -225,8 +238,13 @@ class OP_ExportAnimation(Operator):
                     "skeleton": preferences.ANIM_CharacterSkeleton
                 })
 
+        # restore location
+        armature.location = originalLocation
+
         if armature.get("UE4RIGGED"):
             # change name to original name if armature is ue4 rigged
+            armature.name = originalName
+        else:
             armature.name = originalName
 
         armature.animation_data.action = originalAction
