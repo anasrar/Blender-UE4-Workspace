@@ -620,14 +620,23 @@ class BoneManipulation:
             # POLE BONE
             canCreatePole = [bn for bn in bone.children if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name]
             if canCreatePole:
+                calfBone = canCreatePole[0]
                 pole = editBones.new("IKPOLE_" + boneName.replace("TWEAK_", ""))
                 pole.use_deform = False
-                pole.head = [bone.tail[0], bone.head[1] - bone.length -0.5, bone.tail[2]]
-                pole.tail = [bone.tail[0], bone.tail[1], bone.tail[2]]
-                pole.roll = 0
+                pole.head = [calfBone.head[0], calfBone.head[1], calfBone.head[2]]
+                pole.tail = [calfBone.tail[0], calfBone.tail[1], calfBone.tail[2]]
+                pole.roll = calfBone.roll
                 pole.length = 0.25
+                bpy.ops.armature.select_all(action="DESELECT")
+                pole.select = True
+                pole.select_head = True
+                pole.select_tail = True
+                bpy.ops.transform.translate(value=(-0.5 if calfBone.roll < 0.0 else 0.5, -0.15, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+                pole.roll = 0
+                pole.select = False
+                pole.select_head = False
+                pole.select_tail = False
                 # IK TARGET BONE
-                calfBone = canCreatePole[0]
                 ikTarget = editBones.new("IKTARGET_" + calfBone.name.replace("TWEAK_", ""))
                 ikTarget.use_deform = False
                 ikTarget.head = [calfBone.tail[0], calfBone.tail[1], calfBone.tail[2]]
@@ -694,7 +703,7 @@ class BoneManipulation:
                 if poseBone is not None:
                     poseBone["IKTarget"] = ikTarget.name
                     poseBone["IKPole"] = pole.name
-                    poseBone["BoneSide"] = pole.head[0]
+                    poseBone["BoneSide"] = calfBone.roll
                 # CHECK IF FOOT EXIST
                 isFootExist = [bn for bn in calfBone.children if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name]
                 if isFootExist:
@@ -763,20 +772,22 @@ class BoneManipulation:
             # POLE BONE
             canCreatePole = [bn for bn in bone.children if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name]
             if canCreatePole:
+                lowerarmBone = canCreatePole[0]
                 pole = editBones.new("IKPOLE_" + boneName.replace("TWEAK_", ""))
                 pole.use_deform = False
-                pole.head = [bone.tail[0], bone.head[1] + bone.length + 0.2, bone.tail[2]]
-                pole.tail = [bone.tail[0], bone.tail[1] + bone.length + 0.2, bone.tail[2]]
-                pole.roll = 0
+                pole.head = [lowerarmBone.head[0], lowerarmBone.head[1], lowerarmBone.head[2]]
+                pole.tail = [lowerarmBone.tail[0], lowerarmBone.tail[1], lowerarmBone.tail[2]]
+                pole.roll = lowerarmBone.roll
                 pole.length = 0.25
                 bpy.ops.armature.select_all(action="DESELECT")
                 pole.select = True
                 pole.select_head = True
                 pole.select_tail = True
+                bpy.ops.transform.translate(value=(0.5 if lowerarmBone.roll < 0.0 else -0.5, -0.15, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+                pole.roll = 0
                 bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
                 bpy.ops.armature.select_all(action="DESELECT")
                 # IK TARGET BONE
-                lowerarmBone = canCreatePole[0]
                 ikTarget = editBones.new("IKTARGET_" + lowerarmBone.name.replace("TWEAK_", ""))
                 ikTarget.use_deform = False
                 ikTarget.head = [lowerarmBone.tail[0], lowerarmBone.tail[1], lowerarmBone.tail[2]]
@@ -868,7 +879,7 @@ class BoneManipulation:
                 if poseBone is not None:
                     poseBone["IKTarget"] = ikTarget.name
                     poseBone["IKPole"] = pole.name
-                    poseBone["BoneSide"] = pole.head[0]
+                    poseBone["BoneSide"] = 1.0 if lowerarmBone.roll < 0.0 else -1.0
 
         # switch case function for face bone
         def SC_FaceJawHuman(bone, faceAttach):
