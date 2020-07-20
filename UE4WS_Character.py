@@ -678,6 +678,12 @@ class OP_ExportCharacter(Operator):
                     context.view_layer.objects.active = obj
                     # original name
                     originalName = obj.name
+                    # copy location
+                    originalLocation = obj.location.copy()
+                    # reset location
+                    obj.location = [0, 0, 0]
+                    # check root bone
+                    isHaveRootBone = obj.data.bones.get("root", False)
                     if obj.get("UE4RIG"):
                         bone = BoneManipulation(context)
                         bone.rotateBone()
@@ -685,6 +691,12 @@ class OP_ExportCharacter(Operator):
                     elif obj.get("UE4RIGGED"):
                         # change name to "Armature"
                         obj.name = "Armature"
+                    else:
+                        # change name to "Armature" if have root bone or "root" if doesn't have root bone
+                        if isHaveRootBone:
+                            obj.name = "Armature"
+                        else:
+                            obj.name = "root"
 
                     # Socket filter from children objects
                     socketObjects = [obj for obj in obj.children if obj.type == "EMPTY" and obj.get("isSocket")]
@@ -761,12 +773,17 @@ class OP_ExportCharacter(Operator):
                     for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
                         mesh.select_set(state=False)
 
+                    # restore location
+                    obj.location = originalLocation
+
                     if obj.get("UE4RIG"):
                         bone.afterExport()
                         if not obj.get("UE4RIGHASTEMPBONE"):
                             bone.removeTemporaryBone()
                     elif obj.get("UE4RIGGED"):
                         # change name to original name
+                        obj.name = originalName
+                    else:
                         obj.name = originalName
 
                     # restore socket
@@ -792,6 +809,12 @@ class OP_ExportCharacter(Operator):
             else:
                 context.view_layer.objects.active = obj
                 armatureName = obj.name
+                # copy location
+                originalLocation = obj.location.copy()
+                # reset location
+                obj.location = [0, 0, 0]
+                # check root bone
+                isHaveRootBone = obj.data.bones.get("root", False)
                 if obj.get("UE4RIG"):
                     bone = BoneManipulation(context)
                     bone.rotateBone()
@@ -799,6 +822,12 @@ class OP_ExportCharacter(Operator):
                 elif obj.get("UE4RIGGED"):
                     # change name to "Armature"
                     obj.name = "Armature"
+                else:
+                    # change name to "Armature" if have root bone or "root" if doesn't have root bone
+                    if isHaveRootBone:
+                        obj.name = "Armature"
+                    else:
+                        obj.name = "root"
 
                 # Socket filter from children objects
                 socketObjects = [obj for obj in obj.children if obj.type == "EMPTY" and obj.get("isSocket")]
@@ -883,12 +912,17 @@ class OP_ExportCharacter(Operator):
                         # deselect children mesh
                         mesh.select_set(state=False)
 
+                # restore location
+                obj.location = originalLocation
+
                 if obj.get("UE4RIG"):
                     bone.afterExport()
                     if not obj.get("UE4RIGHASTEMPBONE"):
                         bone.removeTemporaryBone()
                 elif obj.get("UE4RIGGED"):
                     # change name to original name
+                    obj.name = armatureName
+                else:
                     obj.name = armatureName
 
                 # restore socket
