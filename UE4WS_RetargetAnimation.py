@@ -703,6 +703,11 @@ class OP_BakeActionMannequin(Operator):
             constraint = poseBone.constraints.get("RETARGET_PARENT")
             constraint.mute = False
 
+        # change interpolation to LINEAR
+        for fcurve in action.fcurves:
+            for keyFramePoints in fcurve.keyframe_points:
+                keyFramePoints.interpolation = "LINEAR"
+
         # unassign action from armature
         targetObj.animation_data.action = None
 
@@ -948,6 +953,11 @@ class OP_BakeActionMixamo(Operator):
             poseBone = poseBones.get(boneName)
             constraint = poseBone.constraints.get("RETARGET_PARENT")
             constraint.mute = False
+
+        # change interpolation to LINEAR
+        for fcurve in action.fcurves:
+            for keyFramePoints in fcurve.keyframe_points:
+                keyFramePoints.interpolation = "LINEAR"
 
         # unassign action from armature
         targetObj.animation_data.action = None
