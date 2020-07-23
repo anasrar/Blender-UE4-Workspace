@@ -1,6 +1,6 @@
 # Blender Unreal Engine Workspace
 
-![Blender Unreal Engine Workspace](https://user-images.githubusercontent.com/38805204/82159825-4f99b080-98bb-11ea-8124-1437bb877022.png)
+![Blender Unreal Engine Workspace](https://repository-images.githubusercontent.com/259026402/3ce99f00-cd76-11ea-9dc6-db0929afbbb2)
 
 Blender **2.8x** add-on for export directly to Unreal Engine 4 with all setting in Blender (inspired by **send to unreal** add-on).
 
@@ -14,37 +14,33 @@ and yeah, I don't really have any future plan. so if you have any suggest just o
 
 Export for Static Mesh.
 
-![Static Mesh Tab](https://user-images.githubusercontent.com/38805204/84418086-d3d41f00-ac40-11ea-9d5b-6579843b3f3e.png)
-
 - Export to FBX and Unreal Engine
 - Custom collision from vertices
-- Custom collision from mesh - **v1.2**
+- Custom collision from mesh - ```v.1.2```
 - Custom lightmaps
-- Export profile - **v.1.2**
+- Export profile - ```v.1.2```
 
 ### Character
 
 Export for Character (Skeletal Mesh).
 
-![Character Tab](https://user-images.githubusercontent.com/38805204/84418157-efd7c080-ac40-11ea-9be6-004c7b0ae70d.png)
-
 - Export to FBX and Unreal Engine  
 - Modular character
 - Skeleton preset (Epic skeleton)
-- Add twist bone for skeleton preset - **v1.2**
-- Generate rig for skeleton preset - **v1.2**
-- Export profile - **v.1.2**
+- Add twist bone for skeleton preset - ```v.1.2```
+- Generate rig for skeleton preset - ```v.1.2```
+- Export profile - ```v.1.2```
 
 ### Animation
 
 Export for Animation.
 
-![Animation](https://user-images.githubusercontent.com/38805204/84418187-ffefa000-ac40-11ea-8303-a76a378a98cc.png)
+- Export to FBX and Unreal Engine - ```v.1.2```  
+- Export profile - ```v.1.2```
 
-- Export to FBX and Unreal Engine - **v1.2**  
-- Export profile - **v.1.2**
+## Tutorial
 
-**Feature and Tutorial** in [wiki page](https://github.com/anasrar/Blender-UE4-Workspace/wiki) or [youtube playlist](https://www.youtube.com/playlist?list=PLolnhUV-ZzXrXx1gJunoknuni8klsy0wH)
+[wiki page](https://github.com/anasrar/Blender-UE4-Workspace/wiki) or [youtube playlist](https://www.youtube.com/playlist?list=PLolnhUV-ZzXrXx1gJunoknuni8klsy0wH)
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/anasrar/Blender-UE4-Workspace?style=flat-square)
 
