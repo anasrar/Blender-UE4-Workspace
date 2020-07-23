@@ -698,6 +698,10 @@ class OP_ExportCharacter(Operator):
                         else:
                             obj.name = "root"
 
+                    # pop "UE4RIGVERSION"
+                    # its because blender do not support array in custom property to export
+                    rigVersion = obj.pop("UE4RIGVERSION", None)
+
                     # Socket filter from children objects
                     socketObjects = [obj for obj in obj.children if obj.type == "EMPTY" and obj.get("isSocket")]
                     # Socket array for information [disable select, hide_viewport]
@@ -786,6 +790,10 @@ class OP_ExportCharacter(Operator):
                     else:
                         obj.name = originalName
 
+                    # restore "UE4RIGVERSION" if exist
+                    if rigVersion is not None:
+                        obj["UE4RIGVERSION"] = rigVersion
+
                     # restore socket
                     if preferences.CHAR_Socket and socketObjects:
                         for index, socketObj in enumerate(socketObjects, start=0):
@@ -828,6 +836,10 @@ class OP_ExportCharacter(Operator):
                         obj.name = "Armature"
                     else:
                         obj.name = "root"
+
+                # pop "UE4RIGVERSION"
+                # its because blender do not support array in custom property to export
+                rigVersion = obj.pop("UE4RIGVERSION", None)
 
                 # Socket filter from children objects
                 socketObjects = [obj for obj in obj.children if obj.type == "EMPTY" and obj.get("isSocket")]
@@ -924,6 +936,10 @@ class OP_ExportCharacter(Operator):
                     obj.name = armatureName
                 else:
                     obj.name = armatureName
+
+                # restore "UE4RIGVERSION" if exist
+                if rigVersion is not None:
+                    obj["UE4RIGVERSION"] = rigVersion
 
                 # restore socket
                 if preferences.CHAR_Socket and socketObjects:

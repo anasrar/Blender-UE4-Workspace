@@ -175,6 +175,10 @@ class OP_ExportAnimation(Operator):
             else:
                 armature.name = "root"
 
+        # pop "UE4RIGVERSION"
+        # its because blender do not support array in custom property to export
+        rigVersion = armature.pop("UE4RIGVERSION", None)
+
         # get bone name from armature
         boneNames = [bone.name for bone in armature.pose.bones]
         # filter action
@@ -240,6 +244,10 @@ class OP_ExportAnimation(Operator):
 
         # restore location
         armature.location = originalLocation
+
+        # restore "UE4RIGVERSION" if exist
+        if rigVersion is not None:
+            armature["UE4RIGVERSION"] = rigVersion
 
         if armature.get("UE4RIGGED"):
             # change name to original name if armature is ue4 rigged
