@@ -1245,7 +1245,7 @@ class BoneManipulation:
                 constraints.name = "fingerROTATION"
                 constraints.show_expanded = False
                 constraints.target = self.activeObject
-                constraints.subtarget = bn.parent.name
+                constraints.subtarget = bone.get("subtargetRotation")
                 constraints.mix_mode = "ADD"
                 constraints.target_space = "LOCAL"
                 constraints.owner_space = "LOCAL"
