@@ -169,6 +169,8 @@ class BoneManipulation:
 
         # remove temporary bone
         for bone in [bone for bone in editBones if bone.name.startswith("ORIENT_")]:
+            for chidlBone in [chidlBone for chidlBone in bone.children if not chidlBone.name.startswith("ORIENT_")]:
+                chidlBone.parent = editBones.get(bone.name.replace("ORIENT_", ""))
             editBones.remove(bone)
 
         bpy.ops.object.mode_set(mode=oldMode)
@@ -194,7 +196,12 @@ class BoneManipulation:
 
         # remove temporary bone
         for bone in [bone for bone in editBones if bone.name.startswith("ORIENT_")]:
+            for chidlBone in [chidlBone for chidlBone in bone.children if not chidlBone.name.startswith("ORIENT_")]:
+                chidlBone.parent = editBones.get(bone.name.replace("ORIENT_", ""))
             editBones.remove(bone)
+
+        # filter bone and parent for custom bone, tuple: (bone: editBones, parentName: str)
+        customBones = [(editBone, editBone.parent.name) for editBone in editBones if editBone.get("boneOrient", None) is None and editBone.parent is not None and editBone.parent.get("boneOrient", False)]
 
         for bone in [editBone for editBone in editBones if editBone.get("boneOrient", False)]:
             if self.getBone("ORIENT_" + bone.name) is None:
@@ -247,7 +254,11 @@ class BoneManipulation:
                 # set parent
                 if bone.parent:
                     orientBone = self.getBone("ORIENT_" + bone.parent.name)
-                    newBone.parent = orientBone if orientBone else self.getBone(bone.parent.name)
+                    newBone.parent = orientBone if orientBone else bone.parent
+
+        # restore custom bone parent
+        for editBone, parentName in customBones:
+            editBone.parent = editBones.get("ORIENT_" + parentName)
 
         bpy.ops.armature.select_all(action="DESELECT")
         self.activeObject.data.layers[31] = True
