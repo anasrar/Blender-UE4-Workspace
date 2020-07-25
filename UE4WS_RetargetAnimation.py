@@ -145,6 +145,7 @@ mannequinBoneMaps = [{
     "expression": "({var}) + {offset}"
 }]
 
+# Y bot
 mixamoBoneMaps = [{
     # enum["LOCATION", "ROTATION", "SCALE"]
     "copy": ["LOCATION"],
@@ -292,6 +293,155 @@ mixamoBoneMaps = [{
     "axis": [("X", "-Z"), ("Y", "-X"), ("Z", "Y")],
     "expression": "({var}) + {offset}"
 }]
+
+# mannequin from mixamo
+# mixamoBoneMaps = [{
+#     # enum["LOCATION", "ROTATION", "SCALE"]
+#     "copy": ["LOCATION"],
+#     "target": "root",
+#     "source": "mixamorig1:Hips",
+#     # axis format (target: enum("X", "Y", "Z"), source: enum("X", "Y", "Z", "-X", "-Y", "-Z"))
+#     "axis": [("X", "X"), ("Y", "-Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION"],
+#     "target": "TWEAK_pelvis",
+#     "source": "mixamorig1:Hips",
+#     "axis": [("Y", "Y")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["ROTATION"],
+#     "target": "TWEAK_pelvis",
+#     "source": "mixamorig1:Hips",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["ROTATION"],
+#     "target": "TWEAK_spine_01",
+#     "source": "mixamorig1:Spine",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["ROTATION"],
+#     "target": "TWEAK_spine_02",
+#     "source": "mixamorig1:Spine1",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["ROTATION"],
+#     "target": "TWEAK_spine_03",
+#     "source": "mixamorig1:Spine2",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["ROTATION"],
+#     "target": "TWEAK_neck_01",
+#     "source": "mixamorig1:Neck",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["ROTATION"],
+#     "target": "TWEAK_head",
+#     "source": "mixamorig1:Head",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "FK_thigh_l",
+#     "source": "mixamorig1:LeftUpLeg",
+#     "axis": [("X", "Z"), ("Y", "Y"), ("Z", "-X")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "FK_calf_l",
+#     "source": "mixamorig1:LeftLeg",
+#     "axis": [("X", "Z"), ("Y", "Y"), ("Z", "-X")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "TWEAK_foot_l",
+#     "source": "mixamorig1:LeftFoot",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "CONTROL_ball_l",
+#     "source": "mixamorig1:LeftToeBase",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "FK_thigh_r",
+#     "source": "mixamorig1:RightUpLeg",
+#     "axis": [("X", "-Z"), ("Y", "Y"), ("Z", "X")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "FK_calf_r",
+#     "source": "mixamorig1:RightLeg",
+#     "axis": [("X", "-Z"), ("Y", "Y"), ("Z", "X")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "TWEAK_foot_r",
+#     "source": "mixamorig1:RightFoot",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "CONTROL_ball_r",
+#     "source": "mixamorig1:RightToeBase",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "TWEAK_clavicle_l",
+#     "source": "mixamorig1:LeftShoulder",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "FK_upperarm_l",
+#     "source": "mixamorig1:LeftArm",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "FK_lowerarm_l",
+#     "source": "mixamorig1:LeftForeArm",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "TWEAK_hand_l",
+#     "source": "mixamorig1:LeftHand",
+#     "axis": [("X", "-X"), ("Y", "Y"), ("Z", "-Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "TWEAK_clavicle_r",
+#     "source": "mixamorig1:RightShoulder",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "FK_upperarm_r",
+#     "source": "mixamorig1:RightArm",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "FK_lowerarm_r",
+#     "source": "mixamorig1:RightForeArm",
+#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
+#     "expression": "({var}) + {offset}"
+# },{
+#     "copy": ["LOCATION", "ROTATION"],
+#     "target": "TWEAK_hand_r",
+#     "source": "mixamorig1:RightHand",
+#     "axis": [("X", "-X"), ("Y", "Y"), ("Z", "-Z")],
+#     "expression": "({var}) + {offset}"
+# }]
 
 copyMaps = {
     "LOCATION": "location",
