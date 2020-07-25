@@ -19,7 +19,9 @@ bl_info = {
     "version" : (1, 3, 0),
     "location" : "3D View > Tools",
     "warning" : "",
-    "wiki_url": "https://github.com/anasrar",
+    "wiki_url": "https://github.com/anasrar/Blender-UE4-Workspace", # 2.82 below
+    "doc_url": "https://github.com/anasrar/Blender-UE4-Workspace", # 2.83 above
+    "tracker_url": "https://github.com/anasrar/Blender-UE4-Workspace/issues",
     "support": "COMMUNITY",
     "category" : "Workspace"
 }
