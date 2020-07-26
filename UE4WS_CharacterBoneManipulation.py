@@ -222,7 +222,7 @@ class BoneManipulation:
                 # bug on blender version 2.83
                 # https://github.com/anasrar/Blender-UE4-Workspace/issues/5
                 # https://blenderartists.org/t/why-i-got-difference-rotate-bone-result-in-version-2-82-and-2-83/1234794
-                rotationRadian = float(orient[0]) if bpy.app.version in [(2, 83, 0), (2, 83, 1)] else -float(orient[0])
+                rotationRadian = float(orient[0]) if bpy.app.version in [(2, 83, 0), (2, 83, 1), (2, 83, 2), (2, 83, 3)] else -float(orient[0])
                 bpy.ops.transform.rotate(value=rotationRadian, orient_axis=orient[2], orient_type="NORMAL", mirror=False)
                 # add roll
                 newBone.roll += float(orient[1])
