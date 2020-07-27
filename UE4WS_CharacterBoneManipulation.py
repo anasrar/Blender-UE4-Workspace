@@ -1930,6 +1930,8 @@ class BoneManipulation:
             constraints.show_expanded = False
             constraints.target = self.activeObject
             constraints.subtarget = bone.get("BONE_CONTROL")
+            constraints.track_axis = "TRACK_Y"
+            constraints.up_axis = "UP_Z"
             constraints.target_space = "POSE"
             constraints.owner_space = "POSE"
             # custom shape
