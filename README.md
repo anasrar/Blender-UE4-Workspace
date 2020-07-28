@@ -19,6 +19,7 @@ Export for Static Mesh.
 - Custom collision from mesh - ```v.1.2```
 - Custom lightmaps
 - Export profile - ```v.1.2```
+- Socket System - ```v.1.3```
 
 ### Character
 
@@ -30,6 +31,7 @@ Export for Character (Skeletal Mesh).
 - Add twist bone for skeleton preset - ```v.1.2```
 - Generate rig for skeleton preset - ```v.1.2```
 - Export profile - ```v.1.2```
+- Socket System (**Not Support Export**) - ```v.1.3```
 
 ### Animation
 
@@ -37,6 +39,10 @@ Export for Animation.
 
 - Export to FBX and Unreal Engine - ```v.1.2```  
 - Export profile - ```v.1.2```
+
+### Retarget Animation (Experimental)
+
+Retarget Animation to another skeleton - ```v.1.3```
 
 ## Tutorial
 
