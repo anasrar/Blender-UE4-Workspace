@@ -84,10 +84,12 @@ Press **N** on Blender for open the tab menu.
 
 tested with blender version
 
-- **2.81**
+- **2.81** - **DROP** from version ```v.1.3```
 - **2.82**
 - **2.83** (make sure export folder path is absolute)
-- **2.90 Alpha** (make sure export folder path is absolute)
+- **2.90 Beta** (make sure export folder path is absolute)
+
+using Blender latest version for better compatibility
 
 ## Support
 
