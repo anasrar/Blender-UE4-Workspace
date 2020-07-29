@@ -58,7 +58,8 @@ from . UE4WS_ObjectSocket import (
 )
 
 from . UE4WS_ObjectControlRig import (
-    PANEL as objectControlRigPanel
+    PANEL as objectControlRigPanel,
+    Ops as objectControlRigOperator
 )
 
 from . UE4WS_ObjectSkeletonPreset import (
@@ -143,6 +144,7 @@ for x in [
     objectOperator,
     objectCustomCollisionOperator,
     objectSocketOperator,
+    objectControlRigOperator,
     exportOptionOperator,
     staticMeshOperator,
     characterOperator,
