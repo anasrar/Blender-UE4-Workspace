@@ -1394,6 +1394,14 @@ class BoneManipulation:
                     if not self.activeObject.get("_RNA_UI"): # set RNA UI
                         self.activeObject["_RNA_UI"] = {}
 
+                    # SNAP bone property
+                    # SNAP to FK
+                    boneListPropertyName = foot.name.replace("TWEAK", "CR_SNAPFK") if foot is not None else calf.name.replace("TWEAK", "CR_SNAPFK")
+                    self.activeObject[boneListPropertyName] = bone.name + "|" + calf.name
+                    # SNAP to IK
+                    boneListPropertyName = foot.name.replace("TWEAK", "CR_SNAPIK") if foot is not None else calf.name.replace("TWEAK", "CR_SNAPIK")
+                    self.activeObject[boneListPropertyName] = calf.name + "|" + bone.get("IKPole") + "|" + boneListPropertyName.replace("CR_SNAPIK", "CONTROL")
+
                     # IK and FK influence
                     customPropertyName = foot.name.replace("TWEAK", "CR_IK") if foot is not None else calf.name.replace("TWEAK", "CR_IK")
                     self.activeObject[customPropertyName] = 1.0
@@ -1704,6 +1712,14 @@ class BoneManipulation:
                     # CONTROL RIG
                     if not self.activeObject.get("_RNA_UI"): # set RNA UI
                         self.activeObject["_RNA_UI"] = {}
+
+                    # SNAP bone property
+                    # SNAP to FK
+                    boneListPropertyName = hand.name.replace("TWEAK", "CR_SNAPFK") if foot is not None else lowerarm.name.replace("TWEAK", "CR_SNAPFK")
+                    self.activeObject[boneListPropertyName] = bone.name + "|" + lowerarm.name
+                    # SNAP to IK
+                    boneListPropertyName = hand.name.replace("TWEAK", "CR_SNAPIK") if foot is not None else lowerarm.name.replace("TWEAK", "CR_SNAPIK")
+                    self.activeObject[boneListPropertyName] = lowerarm.name + "|" + bone.get("IKPole") + "|" + boneListPropertyName.replace("CR_SNAPIK", "CONTROL")
 
                     # IK and FK influence
                     customPropertyName = hand.name.replace("TWEAK", "CR_IK") if hand is not None else lowerarm.name.replace("TWEAK", "CR_IK")
