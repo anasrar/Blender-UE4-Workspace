@@ -1,8 +1,85 @@
 import os
 import json
+import time
 import bpy
-from bpy.types import (AddonPreferences)
+from bpy.types import (AddonPreferences, PropertyGroup, Operator)
 from bpy.props import (StringProperty, BoolProperty, BoolVectorProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty, CollectionProperty)
+from bpy_extras.io_utils import (ImportHelper, ExportHelper)
+
+# PROPERTY GROUP
+
+class RETARGET_AxisMapGroup(PropertyGroup):
+    name: StringProperty(default="Bone")
+    show_expanded: BoolProperty(default=False)
+    transform: BoolVectorProperty(
+        name="",
+        description="",
+        default=(False, False, False),
+        size=3
+    )
+    boneTarget: StringProperty(default="Bone")
+    boneSource: StringProperty(default="Bone")
+    axisX: EnumProperty(
+        name="Axis Map",
+        items=[
+            ("X", "X", ""),
+            ("Y", "Y", ""),
+            ("Z", "Z", ""),
+            ("-X", "-X", ""),
+            ("-Y", "-Y", ""),
+            ("-Z", "-Z", "")
+            ],
+        default="X"
+    )
+    axisY: EnumProperty(
+        name="Axis Map",
+        items=[
+            ("X", "X", ""),
+            ("Y", "Y", ""),
+            ("Z", "Z", ""),
+            ("-X", "-X", ""),
+            ("-Y", "-Y", ""),
+            ("-Z", "-Z", "")
+            ],
+        default="Y"
+    )
+    axisZ: EnumProperty(
+        name="Axis Map",
+        items=[
+            ("X", "X", ""),
+            ("Y", "Y", ""),
+            ("Z", "Z", ""),
+            ("-X", "-X", ""),
+            ("-Y", "-Y", ""),
+            ("-Z", "-Z", "")
+            ],
+        default="Z"
+    )
+    expression: StringProperty(default="({var}) + {offset}")
+
+class RETARGET_ParentConstraintGroup(PropertyGroup):
+    name: StringProperty(default="Bone")
+    show_expanded: BoolProperty(default=False)
+    bone: StringProperty(default="Bone2")
+    parent: StringProperty(default="Bone")
+
+class RETARGET_PresetGroup(PropertyGroup):
+    name: StringProperty(default="Preset")
+    description: StringProperty(default="Description Here")
+    flag: IntProperty(default=0)
+    show_expanded: BoolProperty(default=False)
+    ParentBonesShowExpanded: BoolProperty(default=False)
+    ParentBones: CollectionProperty(type=RETARGET_ParentConstraintGroup)
+    AxisMapsShowExpanded: BoolProperty(default=False)
+    AxisMaps: CollectionProperty(type=RETARGET_AxisMapGroup)
+
+# group export
+
+Groups = [
+    RETARGET_AxisMapGroup,
+    RETARGET_ParentConstraintGroup,
+    RETARGET_PresetGroup
+]
 
 class Preferences(AddonPreferences):
     bl_idname = __package__
@@ -15,6 +92,7 @@ class Preferences(AddonPreferences):
         name="Preferences Tab",
         items=[
             ("EXPORT", "Export", "Export Tab"),
+            ("RETARGET", "Retarget Preset", "Retarget Tab"),
             ("MISC", "Misc", "Misc Tab")
             ],
         default="EXPORT"
@@ -1580,6 +1658,10 @@ class Preferences(AddonPreferences):
         default=True
     )
 
+    # Retarget Animation
+
+    RETARGET_Presets: CollectionProperty(type=RETARGET_PresetGroup)
+
     def drawExportTab(self, context):
         layout = self.layout
         box = layout.box()
@@ -1629,6 +1711,204 @@ class Preferences(AddonPreferences):
         # row.operator("wm.url_open",icon="IMPORT", text="Import")
         # row.operator("wm.url_open",icon="EXPORT", text="Export")
 
+    def drawRetargetTab(self, context):
+        layout = self.layout
+        preferences = context.preferences.addons[__package__].preferences
+        box = layout.box()
+
+        col = box.column()
+        row = col.row()
+        split = row.split(factor=0.5)
+        col = split.column()
+        # label
+        col.label(text="Retarget Preset", icon="FRAME_NEXT")
+
+        split = split.split()
+        col = split.row(align=True)
+        # prop
+        col.operator("ue4workspace.addretargetpreset", text="New", icon="PRESET_NEW")
+        col.operator("ue4workspace.importretargetpreset", text="Import", icon="IMPORT")
+
+        for indexPreset, preset in enumerate(preferences.RETARGET_Presets):
+            col = box.column()
+            row = col.row()
+            split = row.split(factor=0.5)
+            col = split.column()
+            # label
+            row = col.row(align=True)
+            row.label(text="", icon="DECORATE")
+            row.prop(preset, "show_expanded", icon=("TRIA_RIGHT", "TRIA_DOWN")[preset.show_expanded], emboss=False, text="")
+            row.prop(preset, "name", text="")
+            split = split.split()
+            col = split.row(align=True)
+            # prop
+            col.operator("ue4workspace.duplicateretargetpreset", text="Duplicate", icon="DUPLICATE").index = indexPreset
+            col.operator("ue4workspace.exportretargetpreset", text="Export", icon="EXPORT").index = indexPreset
+            col.operator("ue4workspace.removeretargetpreset", text="Remove", icon="TRASH").index = indexPreset
+
+            if preset.show_expanded:
+                row = box.row(align=True)
+                row.label(text="", icon="DECORATE")
+                row.label(text="", icon="DECORATE")
+                row.scale_y = 2
+                row.prop(preset, "description", text="")
+
+                col = box.column()
+                row = col.row()
+                split = row.split(factor=0.5)
+                col = split.column()
+                # label
+                row = col.row(align=True)
+                row.label(text="", icon="DECORATE")
+                row.label(text="", icon="DECORATE")
+                row.prop(preset, "ParentBonesShowExpanded", icon=("TRIA_RIGHT", "TRIA_DOWN")[preset.ParentBonesShowExpanded], emboss=False, text="")
+                row.label(text="Parent Bone")
+                split = split.split()
+                col = split.row(align=True)
+                # prop
+                col.operator("ue4workspace.addparentboneretargetpreset", text="Add Bone", icon="BONE_DATA").indexPreset = indexPreset
+                col.operator("ue4workspace.clearparentboneretargetpreset", text="Clear", icon="TRASH")
+
+                parentBones = preset.ParentBones
+                if preset.ParentBonesShowExpanded:
+                    if not parentBones:
+                        box.box().operator("ue4workspace.addparentboneretargetpreset", text="Add Bone", icon="BONE_DATA").indexPreset = indexPreset
+                    else:
+                        for indexBone, parentBone in enumerate(parentBones):
+                            subBox = box.box()
+                            col = subBox.column()
+                            row = col.row()
+                            split = row.split(factor=0.5)
+                            col = split.column()
+                            # label
+                            row = col.row(align=True)
+                            row.prop(parentBone, "show_expanded", icon=("TRIA_RIGHT", "TRIA_DOWN")[parentBone.show_expanded], emboss=False, text="")
+                            row.prop(parentBone, "name", text="")
+                            split = split.split()
+                            col = split.row(align=True)
+                            # prop
+                            op = col.operator("ue4workspace.removeparentboneretargetpreset", text="Remove", icon="TRASH")
+                            op.indexPreset = indexPreset
+                            op.indexBone = indexBone
+                            col.operator("ue4workspace.addparentboneretargetpreset", text="Add Bone", icon="BONE_DATA").indexPreset = indexPreset
+
+                            if parentBone.show_expanded:
+                                col = subBox.column()
+                                row = col.row()
+                                split = row.split(factor=0.5)
+                                col = split.column()
+                                # label
+                                col = col.column()
+                                row = col.row(align=True)
+                                row.label(text="", icon="DECORATE")
+                                row.label(text="Bone")
+
+                                row = col.row(align=True)
+                                row.label(text="", icon="DECORATE")
+                                row.label(text="Parent")
+
+                                split = split.split()
+                                col = split.column()
+                                # prop
+                                row = col.row(align=True)
+                                row.prop(parentBone, "bone", text="", icon="BONE_DATA")
+                                row = col.row(align=True)
+                                row.prop(parentBone, "parent", text="", icon="BONE_DATA")
+
+                col = box.column()
+                row = col.row()
+                split = row.split(factor=0.5)
+                col = split.column()
+                # label
+                row = col.row(align=True)
+                row.label(text="", icon="DECORATE")
+                row.label(text="", icon="DECORATE")
+                row.prop(preset, "AxisMapsShowExpanded", icon=("TRIA_RIGHT", "TRIA_DOWN")[preset.AxisMapsShowExpanded], emboss=False, text="")
+                row.label(text="Bone Map")
+                split = split.split()
+                col = split.row(align=True)
+                # prop
+                col.operator("ue4workspace.addboneretargetpreset", text="Add Bone", icon="BONE_DATA").indexPreset = indexPreset
+                col.operator("ue4workspace.clearboneretargetpreset", text="Clear", icon="TRASH")
+
+                bones = preset.AxisMaps
+                if preset.AxisMapsShowExpanded:
+                    if not bones:
+                        box.box().operator("ue4workspace.addboneretargetpreset", text="Add Bone", icon="BONE_DATA").indexPreset = indexPreset
+                    else:
+                        for indexBone, bone in enumerate(bones):
+                            subBox = box.box()
+                            col = subBox.column()
+                            row = col.row()
+                            split = row.split(factor=0.5)
+                            col = split.column()
+                            # label
+                            row = col.row(align=True)
+                            row.prop(bone, "show_expanded", icon=("TRIA_RIGHT", "TRIA_DOWN")[bone.show_expanded], emboss=False, text="")
+                            row.prop(bone, "name", text="")
+                            split = split.split()
+                            col = split.row(align=True)
+                            # prop
+                            col.operator("ue4workspace.addboneretargetpreset", text="Duplicate", icon="DUPLICATE").indexPreset = indexPreset
+                            col.operator("ue4workspace.addboneretargetpreset", text="Add Bone", icon="BONE_DATA").indexPreset = indexPreset
+                            op = col.operator("ue4workspace.removeboneretargetpreset", text="Remove", icon="TRASH")
+                            op.indexPreset = indexPreset
+                            op.indexBone = indexBone
+
+                            if bone.show_expanded:
+                                col = subBox.column()
+                                row = col.row()
+                                split = row.split(factor=0.5)
+                                col = split.column()
+                                # label
+                                col = col.column()
+                                row = col.row(align=True)
+                                row.label(text="", icon="DECORATE")
+                                row.label(text="Bone Target")
+
+                                row = col.row(align=True)
+                                row.label(text="", icon="DECORATE")
+                                row.label(text="Bone Source")
+
+                                row = col.row(align=True)
+                                row.label(text="", icon="DECORATE")
+                                row.label(text="Transform")
+
+                                row = col.row(align=True)
+                                row.label(text="", icon="DECORATE")
+                                row.label(text="Axis X")
+
+                                row = col.row(align=True)
+                                row.label(text="", icon="DECORATE")
+                                row.label(text="Axis Y")
+
+                                row = col.row(align=True)
+                                row.label(text="", icon="DECORATE")
+                                row.label(text="Axis Z")
+
+                                row = col.row(align=True)
+                                row.label(text="", icon="DECORATE")
+                                row.label(text="Expression")
+
+                                split = split.split()
+                                col = split.column()
+                                # prop
+                                row = col.row(align=True)
+                                row.prop(bone, "boneTarget", text="", icon="BONE_DATA")
+                                row = col.row(align=True)
+                                row.prop(bone, "boneSource", text="", icon="BONE_DATA")
+                                row = col.row(align=True)
+                                for i, name in enumerate(["Rotation", "Location", "Scale"]):
+                                    row.prop(bone, "transform", index=i, text=name, toggle=True)
+                                row = col.row(align=True)
+                                row.prop(bone, "axisX", text="", icon="EMPTY_DATA")
+                                row = col.row(align=True)
+                                row.prop(bone, "axisY", text="", icon="EMPTY_DATA")
+                                row = col.row(align=True)
+                                row.prop(bone, "axisZ", text="", icon="EMPTY_DATA")
+                                row = col.row(align=True)
+                                row.prop(bone, "expression", text="")
+
     def drawMiscTab(self, context):
         layout = self.layout
         box = layout.box()
@@ -1654,9 +1934,290 @@ class Preferences(AddonPreferences):
 
         drawPreferencesTab = {
             "EXPORT": self.drawExportTab,
+            "RETARGET": self.drawRetargetTab,
             "MISC": self.drawMiscTab
         }
 
         drawPreferencesTab = drawPreferencesTab.get(self.preferencesTab, None)
         if drawPreferencesTab is not None:
             drawPreferencesTab(context)
+
+# OPERATOR
+
+# TODO: Refactor Code
+
+class OP_ImportRetagetPreset(Operator, ImportHelper):
+    """Import Retarget Preset From JSON File"""
+    bl_idname = "ue4workspace.importretargetpreset"
+    bl_label = "Import Retarget Preset"
+
+    filename_ext = ".json"
+
+    filter_glob: StringProperty(
+        default="*.json",
+        options={"HIDDEN"},
+        maxlen=255
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        presets = preferences.RETARGET_Presets
+
+        file = open(self.filepath, "r")
+        jsonString = file.read()
+        file.close()
+        jsonPreset = json.loads(jsonString).get("RetargetPreset")
+        if jsonPreset:
+            for preset in jsonPreset:
+                newPreset = presets.add()
+                newPreset.name = preset["name"]
+                newPreset.description = preset["description"]
+                newPreset.flag = int(time.time())
+                for bone in preset["parentBone"]:
+                    newParent = newPreset.ParentBones.add()
+                    newParent.name = bone["name"]
+                    newParent.bone = bone["bone"]
+                    newParent.parent = bone["parent"]
+                for bone in preset["mappingBone"]:
+                    newBone = newPreset.AxisMaps.add()
+                    newBone.name = bone["name"]
+                    newBone.boneTarget = bone["target"]
+                    newBone.boneSource = bone["source"]
+                    newBone.transform = tuple(bone["transform"])
+                    newBone.axisX = bone["axisX"]
+                    newBone.axisY = bone["axisY"]
+                    newBone.axisZ = bone["axisZ"]
+                    newBone.expression = bone["expression"]
+            self.report({"INFO"}, "Import Preset Successful")
+        else:
+            self.report({"WARNING"}, "Import Preset Not Found")
+        return {"FINISHED"}
+
+class OP_AddRetagetPreset(Operator):
+    bl_idname = "ue4workspace.addretargetpreset"
+    bl_label = "Add Retarget Preset"
+    bl_description = "Add Retarget Preset"
+    bl_options = {"UNDO"}
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        duplicateCheck = [preset for preset in preferences.RETARGET_Presets if preset.name.startswith("Preset")]
+        newPreset = preferences.RETARGET_Presets.add()
+        newPreset.name = "Preset" + (str(len(duplicateCheck) + 1) if len(duplicateCheck) != 0 else "")
+        newPreset.flag = int(time.time())
+        return {"FINISHED"}
+
+class OP_ExportRetagetPreset(Operator, ExportHelper):
+    """Export Retarget Preset Into JSON File"""
+    bl_idname = "ue4workspace.exportretargetpreset"
+    bl_label = "Export Retarget Preset"
+
+    filename_ext = ".json"
+
+    filter_glob: StringProperty(
+        default="*.json",
+        options={"HIDDEN"},
+        maxlen=255
+    )
+
+    index: IntProperty(
+        default=0,
+        options={"HIDDEN"}
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preset = preferences.RETARGET_Presets[self.index]
+
+        buildStringJSON = {
+            "RetargetPreset": [
+                {
+                    "name": preset.name,
+                    "description": preset.description,
+                    "parentBone": [{
+                        "name": bone.name,
+                        "bone": bone.bone,
+                        "parent": bone.parent
+                    } for bone in preset.ParentBones],
+                    "mappingBone": [{
+                        "name": bone.name,
+                        "target": bone.boneTarget,
+                        "source": bone.boneSource,
+                        "transform": list(bone.transform),
+                        "axisX": bone.axisX,
+                        "axisY": bone.axisY,
+                        "axisZ": bone.axisZ,
+                        "expression": bone.expression
+                        } for bone in preset.AxisMaps]
+                }
+            ]
+        }
+
+        file = open(self.filepath, "w+")
+        file.write(json.dumps(buildStringJSON, indent=4))
+        file.close()
+
+        self.report({"INFO"}, "Export Preset Successful")
+        return {"FINISHED"}
+
+class OP_DuplicateRetagetPreset(Operator):
+    bl_idname = "ue4workspace.duplicateretargetpreset"
+    bl_label = "Duplicate Retarget Preset"
+    bl_description = "Duplicate Retarget Preset"
+    bl_options = {"UNDO"}
+
+    index: IntProperty(default=0)
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        presets = preferences.RETARGET_Presets
+        preset = presets[self.index]
+        newPreset = presets.add()
+        newPreset.name = "dup " + preset.name
+        newPreset.description = preset.description
+        newPreset.flag = int(time.time())
+        ParentBones = newPreset.ParentBones
+        for parent in preset.ParentBones:
+            newParent = ParentBones.add()
+            newParent.name = parent.name
+            newParent.bone = parent.bone
+            newParent.parent = parent.parent
+        AxisMaps = newPreset.AxisMaps
+        for bone in preset.AxisMaps:
+            newBone = AxisMaps.add()
+            newBone.name = bone.name
+            newBone.boneTarget = bone.boneTarget
+            newBone.boneSource = bone.boneSource
+            newBone.transform = bone.transform
+            newBone.axisX = bone.axisX
+            newBone.axisY = bone.axisY
+            newBone.axisZ = bone.axisZ
+            newBone.expression = bone.expression
+        return {"FINISHED"}
+
+class OP_RemoveRetagetPreset(Operator):
+    bl_idname = "ue4workspace.removeretargetpreset"
+    bl_label = "Remove Retarget Preset"
+    bl_description = "Remove Retarget Preset"
+    bl_options = {"UNDO"}
+
+    index: IntProperty(default=0)
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preferences.RETARGET_Presets.remove(self.index)
+        return {"FINISHED"}
+
+class OP_ClearParentBoneFromRetagetPreset(Operator):
+    bl_idname = "ue4workspace.clearparentboneretargetpreset"
+    bl_label = "Clear Parent Bone From Retaget Preset"
+    bl_description = "Clear Parent Bone From Retaget Preset"
+    bl_options = {"UNDO"}
+
+    indexPreset: IntProperty(default=0)
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preset = preferences.RETARGET_Presets[self.indexPreset]
+        ParentBones = preset.ParentBones
+        ParentBones.clear()
+        self.report({"INFO"}, "Clear Parent Bone Successful")
+        return {"FINISHED"}
+
+class OP_AddParentBoneToRetagetPreset(Operator):
+    bl_idname = "ue4workspace.addparentboneretargetpreset"
+    bl_label = "Add Parent Bone To Retaget Preset"
+    bl_description = "Add Parent Bone To Retaget Preset"
+    bl_options = {"UNDO"}
+
+    indexPreset: IntProperty(default=0)
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preset = preferences.RETARGET_Presets[self.indexPreset]
+        ParentBones = preset.ParentBones
+        duplicateCheck = [parent for parent in ParentBones if parent.name.startswith("Bone")]
+        newParent = ParentBones.add()
+        newParent.name = "Bone" + (str(len(duplicateCheck) + 1) if len(duplicateCheck) != 0 else "") 
+        return {"FINISHED"}
+
+class OP_RemoveParentBoneFromRetagetPreset(Operator):
+    bl_idname = "ue4workspace.removeparentboneretargetpreset"
+    bl_label = "Remove Parent Bone From Retaget Preset"
+    bl_description = "Remove Parent Bone From Retaget Preset"
+    bl_options = {"UNDO"}
+
+    indexPreset: IntProperty(default=0)
+    indexBone: IntProperty(default=0)
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preset = preferences.RETARGET_Presets[self.indexPreset]
+        ParentBones = preset.ParentBones
+        ParentBones.remove(self.indexBone)
+        return {"FINISHED"}
+
+class OP_ClearBoneFromRetagetPreset(Operator):
+    bl_idname = "ue4workspace.clearboneretargetpreset"
+    bl_label = "Clear Bone From Retaget Preset"
+    bl_description = "Clear Bone From Retaget Preset"
+    bl_options = {"UNDO"}
+
+    indexPreset: IntProperty(default=0)
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preset = preferences.RETARGET_Presets[self.indexPreset]
+        AxisMaps = preset.AxisMaps
+        AxisMaps.clear()
+        self.report({"INFO"}, "Clear Bone Successful")
+        return {"FINISHED"}
+
+class OP_AddBoneToRetagetPreset(Operator):
+    bl_idname = "ue4workspace.addboneretargetpreset"
+    bl_label = "Add Bone To Retaget Preset"
+    bl_description = "Add Bone To Retaget Preset"
+    bl_options = {"UNDO"}
+
+    indexPreset: IntProperty(default=0)
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preset = preferences.RETARGET_Presets[self.indexPreset]
+        AxisMaps = preset.AxisMaps
+        duplicateCheck = [bone for bone in AxisMaps if bone.name.startswith("Bone")]
+        newBone = AxisMaps.add()
+        newBone.name = "Bone" + (str(len(duplicateCheck) + 1) if len(duplicateCheck) != 0 else "")
+        return {"FINISHED"}
+
+class OP_RemoveBoneFromRetagetPreset(Operator):
+    bl_idname = "ue4workspace.removeboneretargetpreset"
+    bl_label = "Remove Bone From Retaget Preset"
+    bl_description = "Remove Bone From Retaget Preset"
+    bl_options = {"UNDO"}
+
+    indexPreset: IntProperty(default=0)
+    indexBone: IntProperty(default=0)
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preset = preferences.RETARGET_Presets[self.indexPreset]
+        AxisMaps = preset.AxisMaps
+        AxisMaps.remove(self.indexBone)
+        return {"FINISHED"}
+
+# operator export
+
+Ops = [
+    OP_ImportRetagetPreset,
+    OP_AddRetagetPreset,
+    OP_ExportRetagetPreset,
+    OP_DuplicateRetagetPreset,
+    OP_RemoveRetagetPreset,
+    OP_ClearParentBoneFromRetagetPreset,
+    OP_AddParentBoneToRetagetPreset,
+    OP_RemoveParentBoneFromRetagetPreset,
+    OP_ClearBoneFromRetagetPreset,
+    OP_AddBoneToRetagetPreset,
+    OP_RemoveBoneFromRetagetPreset
+]
