@@ -32,7 +32,9 @@ from bpy.props import (StringProperty, BoolProperty, BoolVectorProperty, IntProp
 from bpy.utils import (register_class, unregister_class)
 
 from . UE4WS_Preferences import (
-    Preferences
+    Groups as PreferencesGroup,
+    Preferences,
+    Ops as PreferencesOperator
 )
 
 from . UE4WS_ExportOption import (
@@ -141,6 +143,8 @@ for x in [
 AR_UE4WS_OperatorArray = []
 # extend operator to array, make sure you add from here
 for x in [
+    PreferencesGroup,
+    PreferencesOperator,
     objectOperator,
     objectCustomCollisionOperator,
     objectSocketOperator,
@@ -189,7 +193,8 @@ AR_UE4WS_classes = (
 TypeProps = {
     "scene": bpy.types.Scene,
     "object": bpy.types.Object,
-    "action": bpy.types.Action
+    "action": bpy.types.Action,
+    "armature": bpy.types.Armature
 }
 
 @persistent
@@ -212,6 +217,9 @@ def resetVariable(scene):
             elif (typeProp == "action"):
                 for action in bpy.data.actions:
                     action.property_unset(P.get("name"))
+            elif (typeProp == "armature"):
+                for armature in bpy.data.armatures:
+                    armature.property_unset(P.get("name"))
 
 def register():
 
