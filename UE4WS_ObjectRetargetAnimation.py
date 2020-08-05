@@ -1,534 +1,135 @@
 import bpy
-from bpy.props import (EnumProperty, StringProperty, IntProperty, BoolProperty, PointerProperty)
-from bpy.types import (Panel, Operator)
+from bpy.props import (EnumProperty, StringProperty, FloatProperty, FloatVectorProperty, IntProperty, BoolProperty, BoolVectorProperty, PointerProperty, CollectionProperty)
+from bpy.types import (Panel, Operator, PropertyGroup, UIList)
 
-# maping bone
-mannequinBoneMaps = [{
-    # enum["LOCATION", "ROTATION", "SCALE"]
-    "copy": ["LOCATION"],
-    "target": "root",
-    "source": "",
-    # axis format (target: enum("X", "Y", "Z"), source: enum("X", "Y", "Z", "-X", "-Y", "-Z"))
-    "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-    "expression": "({var} * 100) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_pelvis",
-    "source": "pelvis",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_spine_01",
-    "source": "spine_01",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_spine_02",
-    "source": "spine_02",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_spine_03",
-    "source": "spine_03",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_neck_01",
-    "source": "neck_01",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_head",
-    "source": "head",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_thigh_l",
-    "source": "thigh_l",
-    "axis": [("X", "-Y"), ("Y", "-X"), ("Z", "-Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_calf_l",
-    "source": "calf_l",
-    "axis": [("X", "-Y"), ("Y", "-X"), ("Z", "-Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_foot_l",
-    "source": "foot_l",
-    "axis": [("X", "Z"), ("Y", "-Y"), ("Z", "X")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "CONTROL_ball_l",
-    "source": "ball_l",
-    "axis": [("X", "Z"), ("Y", "X"), ("Z", "Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_thigh_r",
-    "source": "thigh_r",
-    "axis": [("X", "-Y"), ("Y", "X"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_calf_r",
-    "source": "calf_r",
-    "axis": [("X", "-Y"), ("Y", "X"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_foot_r",
-    "source": "foot_r",
-    "axis": [("X", "Z"), ("Y", "Y"), ("Z", "-X")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "CONTROL_ball_r",
-    "source": "ball_r",
-    "axis": [("X", "Z"), ("Y", "-X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_clavicle_l",
-    "source": "clavicle_l",
-    "axis": [("X", "Y"), ("Y", "X"), ("Z", "-Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_upperarm_l",
-    "source": "upperarm_l",
-    "axis": [("X", "Y"), ("Y", "X"), ("Z", "-Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_lowerarm_l",
-    "source": "lowerarm_l",
-    "axis": [("X", "Y"), ("Y", "X"), ("Z", "-Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["ROTATION"],
-    "target": "TWEAK_hand_l",
-    "source": "hand_l",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_clavicle_r",
-    "source": "clavicle_r",
-    "axis": [("X", "Y"), ("Y", "-X"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_upperarm_r",
-    "source": "upperarm_r",
-    "axis": [("X", "Y"), ("Y", "-X"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_lowerarm_r",
-    "source": "lowerarm_r",
-    "axis": [("X", "Y"), ("Y", "-X"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["ROTATION"],
-    "target": "TWEAK_hand_r",
-    "source": "hand_r",
-    "axis": [("X", "-Z"), ("Y", "-X"), ("Z", "Y")],
-    "expression": "({var}) + {offset}"
-}]
+# PROPERTY GROUP
 
-# Y bot
-mixamoBoneMaps = [{
-    # enum["LOCATION", "ROTATION", "SCALE"]
-    "copy": ["LOCATION"],
-    "target": "root",
-    "source": "mixamorig:Hips",
-    # axis format (target: enum("X", "Y", "Z"), source: enum("X", "Y", "Z", "-X", "-Y", "-Z"))
-    "axis": [("X", "X"), ("Y", "-Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION"],
-    "target": "TWEAK_pelvis",
-    "source": "mixamorig:Hips",
-    "axis": [("Y", "Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["ROTATION"],
-    "target": "TWEAK_pelvis",
-    "source": "mixamorig:Hips",
-    "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["ROTATION"],
-    "target": "TWEAK_spine_01",
-    "source": "mixamorig:Spine",
-    "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["ROTATION"],
-    "target": "TWEAK_spine_02",
-    "source": "mixamorig:Spine1",
-    "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["ROTATION"],
-    "target": "TWEAK_spine_03",
-    "source": "mixamorig:Spine2",
-    "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["ROTATION"],
-    "target": "TWEAK_neck_01",
-    "source": "mixamorig:Neck",
-    "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["ROTATION"],
-    "target": "TWEAK_head",
-    "source": "mixamorig:Head",
-    "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_thigh_l",
-    "source": "mixamorig:LeftUpLeg",
-    "axis": [("X", "Z"), ("Y", "-Y"), ("Z", "X")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_calf_l",
-    "source": "mixamorig:LeftLeg",
-    "axis": [("X", "Z"), ("Y", "-Y"), ("Z", "X")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_foot_l",
-    "source": "mixamorig:LeftFoot",
-    "axis": [("X", "-X"), ("Y", "Z"), ("Z", "Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "CONTROL_ball_l",
-    "source": "mixamorig:LeftToeBase",
-    "axis": [("X", "-X"), ("Y", "Z"), ("Z", "Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_thigh_r",
-    "source": "mixamorig:RightUpLeg",
-    "axis": [("X", "-Z"), ("Y", "-Y"), ("Z", "-X")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_calf_r",
-    "source": "mixamorig:RightLeg",
-    "axis": [("X", "-Z"), ("Y", "-Y"), ("Z", "-X")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_foot_r",
-    "source": "mixamorig:RightFoot",
-    "axis": [("X", "-X"), ("Y", "Z"), ("Z", "Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "CONTROL_ball_r",
-    "source": "mixamorig:RightToeBase",
-    "axis": [("X", "-X"), ("Y", "Z"), ("Z", "Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_clavicle_l",
-    "source": "mixamorig:LeftShoulder",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_upperarm_l",
-    "source": "mixamorig:LeftArm",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_lowerarm_l",
-    "source": "mixamorig:LeftForeArm",
-    "axis": [("X", "-Z"), ("Y", "X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_hand_l",
-    "source": "mixamorig:LeftHand",
-    "axis": [("X", "Z"), ("Y", "X"), ("Z", "Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_clavicle_r",
-    "source": "mixamorig:RightShoulder",
-    "axis": [("X", "Z"), ("Y", "-X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_upperarm_r",
-    "source": "mixamorig:RightArm",
-    "axis": [("X", "Z"), ("Y", "-X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "FK_lowerarm_r",
-    "source": "mixamorig:RightForeArm",
-    "axis": [("X", "Z"), ("Y", "-X"), ("Z", "-Y")],
-    "expression": "({var}) + {offset}"
-},{
-    "copy": ["LOCATION", "ROTATION"],
-    "target": "TWEAK_hand_r",
-    "source": "mixamorig:RightHand",
-    "axis": [("X", "-Z"), ("Y", "-X"), ("Z", "Y")],
-    "expression": "({var}) + {offset}"
-}]
+class RETARGET_DataPath(PropertyGroup):
+    path: StringProperty(default="path")
 
-# mannequin from mixamo
-# mixamoBoneMaps = [{
-#     # enum["LOCATION", "ROTATION", "SCALE"]
-#     "copy": ["LOCATION"],
-#     "target": "root",
-#     "source": "mixamorig1:Hips",
-#     # axis format (target: enum("X", "Y", "Z"), source: enum("X", "Y", "Z", "-X", "-Y", "-Z"))
-#     "axis": [("X", "X"), ("Y", "-Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION"],
-#     "target": "TWEAK_pelvis",
-#     "source": "mixamorig1:Hips",
-#     "axis": [("Y", "Y")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["ROTATION"],
-#     "target": "TWEAK_pelvis",
-#     "source": "mixamorig1:Hips",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["ROTATION"],
-#     "target": "TWEAK_spine_01",
-#     "source": "mixamorig1:Spine",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["ROTATION"],
-#     "target": "TWEAK_spine_02",
-#     "source": "mixamorig1:Spine1",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["ROTATION"],
-#     "target": "TWEAK_spine_03",
-#     "source": "mixamorig1:Spine2",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["ROTATION"],
-#     "target": "TWEAK_neck_01",
-#     "source": "mixamorig1:Neck",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["ROTATION"],
-#     "target": "TWEAK_head",
-#     "source": "mixamorig1:Head",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "FK_thigh_l",
-#     "source": "mixamorig1:LeftUpLeg",
-#     "axis": [("X", "Z"), ("Y", "Y"), ("Z", "-X")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "FK_calf_l",
-#     "source": "mixamorig1:LeftLeg",
-#     "axis": [("X", "Z"), ("Y", "Y"), ("Z", "-X")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "TWEAK_foot_l",
-#     "source": "mixamorig1:LeftFoot",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "CONTROL_ball_l",
-#     "source": "mixamorig1:LeftToeBase",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "FK_thigh_r",
-#     "source": "mixamorig1:RightUpLeg",
-#     "axis": [("X", "-Z"), ("Y", "Y"), ("Z", "X")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "FK_calf_r",
-#     "source": "mixamorig1:RightLeg",
-#     "axis": [("X", "-Z"), ("Y", "Y"), ("Z", "X")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "TWEAK_foot_r",
-#     "source": "mixamorig1:RightFoot",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "CONTROL_ball_r",
-#     "source": "mixamorig1:RightToeBase",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "TWEAK_clavicle_l",
-#     "source": "mixamorig1:LeftShoulder",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "FK_upperarm_l",
-#     "source": "mixamorig1:LeftArm",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "FK_lowerarm_l",
-#     "source": "mixamorig1:LeftForeArm",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "TWEAK_hand_l",
-#     "source": "mixamorig1:LeftHand",
-#     "axis": [("X", "-X"), ("Y", "Y"), ("Z", "-Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "TWEAK_clavicle_r",
-#     "source": "mixamorig1:RightShoulder",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "FK_upperarm_r",
-#     "source": "mixamorig1:RightArm",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "FK_lowerarm_r",
-#     "source": "mixamorig1:RightForeArm",
-#     "axis": [("X", "X"), ("Y", "Y"), ("Z", "Z")],
-#     "expression": "({var}) + {offset}"
-# },{
-#     "copy": ["LOCATION", "ROTATION"],
-#     "target": "TWEAK_hand_r",
-#     "source": "mixamorig1:RightHand",
-#     "axis": [("X", "-X"), ("Y", "Y"), ("Z", "-Z")],
-#     "expression": "({var}) + {offset}"
-# }]
+class RETARGET_BoneParentGroup(PropertyGroup):
+    name: StringProperty(default="Bone")
+    boneExist: BoolProperty(default=True)
+    boneNotExist: BoolProperty(name="Warning", description="Bone Does Not Exist", default=False)
+    mute: BoolProperty(default=False)
+    bone: StringProperty(default="Bone2")
+    parent: StringProperty(default="Bone")
+    influence: FloatProperty(default=1.0, min=0.0, max=1.0)
 
-copyMaps = {
-    "LOCATION": "location",
-    "ROTATION": "rotation_euler",
-    "SCALE": "scale"
-}
-transformTypeMaps = {
-    "LOCATION": "LOC_",
-    "ROTATION": "ROT_",
-    "SCALE": "SCALE_"
-}
-axisMaps = {
-    "X": 0,
-    "Y": 1,
-    "Z": 2
-}
+class RETARGET_BoneMapGroup(PropertyGroup):
+    name: StringProperty(default="Bone")
+    obj: PointerProperty(type=bpy.types.Object)
+    boneExist: BoolProperty(default=True)
+    boneNotExist: BoolProperty(name="Warning", description="Bone Does Not Exist", default=False)
+    def updateMute(self, context):
+        for FCurve in self.obj.animation_data.drivers:
+            if FCurve.data_path + "["+ str(FCurve.array_index) +"]" in [path.path for path in self.dataPaths]:
+                FCurve.mute = self.mute
+    mute: BoolProperty(default=False, update=updateMute)
+    transform: BoolVectorProperty(default=(False, False, False), size=3)
+    source: StringProperty(default="Bone")
+    target: StringProperty(default="Bone")
+    dataPaths: CollectionProperty(type=RETARGET_DataPath)
+    influence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    rotation_eulerX: FloatProperty(default=0.0, subtype="ANGLE")
+    rotation_eulerY: FloatProperty(default=0.0, subtype="ANGLE")
+    rotation_eulerZ: FloatProperty(default=0.0, subtype="ANGLE")
+    rotation_eulerInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    locationX: FloatProperty(default=0.0)
+    locationY: FloatProperty(default=0.0)
+    locationZ: FloatProperty(default=0.0)
+    locationInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    scaleX: FloatProperty(default=0.0)
+    scaleY: FloatProperty(default=0.0)
+    scaleZ: FloatProperty(default=0.0)
+    scaleInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+
+# group export
+
+Groups = [
+    RETARGET_DataPath,
+    RETARGET_BoneParentGroup,
+    RETARGET_BoneMapGroup
+]
 
 # PROPS
 
 Props = [
     {
-        "type": "scene",
-        "name": "HasBindMannequin",
-        "value": BoolProperty(
-            default=False
+        "type": "armature",
+        "name": "RetargetSource",
+        "value": PointerProperty(
+            name="Retarget Source",
+            description="Armature for retarget source",
+            type=bpy.types.Object,
+            poll=lambda self, obj: obj.type == "ARMATURE"
             ),
         "resetVariable": False
     },
     {
-        "type": "scene",
-        "name": "RetargetMannequinSource",
-        "value": PointerProperty(
-            name="Source",
-            description="Armature Source (Must Be Mannequin Armature)",
-            type=bpy.types.Object,
-            poll=lambda self, obj: obj.type == "ARMATURE" and not obj.get("UE4RIGGED", False)
+        "type": "armature",
+        "name": "RetargetPreset",
+        "value": EnumProperty(
+            name="Retarget Preset",
+            items=lambda self, context: [(str(preset.flag), preset.name, preset.description) for preset in context.preferences.addons[__package__].preferences.RETARGET_Presets],
+            default=None
             ),
         "resetVariable": False
     },
     {
-        "type": "scene",
-        "name": "RetargetMannequinTarget",
-        "value": PointerProperty(
-            name="Target",
-            description="Armature Source (Must Be UE4Workspace Rig Armature)",
-            type=bpy.types.Object,
-            poll=lambda self, obj: obj.type == "ARMATURE" and obj.get("UE4RIGGED", False) and obj.get("UE4RIGTYPE") == "HUMANOID"
-        ),
+        "type": "armature",
+        "name": "HasBind",
+        "value": BoolProperty(default=False),
+        "resetVariable": False
+    },
+    {    
+        "type": "armature",
+        "name": "BoneParents",
+        "value": CollectionProperty(type=RETARGET_BoneParentGroup),
         "resetVariable": False
     },
     {
-        "type": "scene",
-        "name": "HasBindMixamo",
-        "value": BoolProperty(
-            default=False
+        "type": "armature",
+        "name": "indexBoneParent",
+        "value": IntProperty(
+            default=-1
             ),
+        "resetVariable": True
+    },
+    {    
+        "type": "armature",
+        "name": "BoneMaps",
+        "value": CollectionProperty(type=RETARGET_BoneMapGroup),
         "resetVariable": False
     },
     {
-        "type": "scene",
-        "name": "RetargetMixamoSource",
-        "value": PointerProperty(
-            name="Source",
-            description="Armature Source (Must Be Mixamo Armature)",
-            type=bpy.types.Object,
-            poll=lambda self, obj: obj.type == "ARMATURE" and not obj.get("UE4RIGGED", False)
+        "type": "armature",
+        "name": "indexBoneMap",
+        "value": IntProperty(
+            default=-1
             ),
-        "resetVariable": False
+        "resetVariable": True
     },
     {
-        "type": "scene",
-        "name": "RetargetMixamoTarget",
-        "value": PointerProperty(
-            name="Target",
-            description="Armature Source (Must Be UE4Workspace Rig Armature)",
-            type=bpy.types.Object,
-            poll=lambda self, obj: obj.type == "ARMATURE" and obj.get("UE4RIGGED", False) and obj.get("UE4RIGTYPE") == "HUMANOID"
-        ),
-        "resetVariable": False
+        "type": "armature",
+        "name": "ParentBoneTab",
+        "value": BoolProperty(default=False),
+        "resetVariable": True
+    },
+    {
+        "type": "armature",
+        "name": "BoneMapTab",
+        "value": BoolProperty(default=False),
+        "resetVariable": True
     }
 ]
 
 # PANEL
 
-class PANEL_RetargetMannequin(Panel):
-    bl_idname = "UE4WORKSPACE_PT_RetargetMannequinPanel"
-    bl_label = "Retarget Mannequin"
+class PANEL(Panel):
+    bl_idname = "UE4WORKSPACE_PT_RetargetAnimationPanel"
+    bl_parent_id = "UE4WORKSPACE_PT_ObjectPanel"
+    bl_label = "Retarget Animation"
     bl_category = "UE4Workspace"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -537,124 +138,204 @@ class PANEL_RetargetMannequin(Panel):
     @classmethod
     def poll(self, context):
         preferences = context.preferences.addons[__package__].preferences
-        return preferences.experimentalFeatures and context.mode == "OBJECT"
+        activeObject = context.active_object
+        return activeObject is not None and activeObject.type == "ARMATURE" and context.mode in ["OBJECT", "POSE"]
 
     def draw(self, context):
         layout = self.layout
-
-        col = layout.column()
-        col.enabled = not context.scene.HasBindMannequin
-        row = col.row()
-        split = row.split(factor=0.6)
-        col = split.column()
-        col.alignment = "RIGHT"
-        col.label(text="Source")
-        split = split.split()
-        col = split.column()
-        col.prop(context.scene, "RetargetMannequinSource", text="", icon="OUTLINER_OB_ARMATURE")
-
-        col = layout.column()
-        col.enabled = not context.scene.HasBindMannequin
-        row = col.row()
-        split = row.split(factor=0.6)
-        col = split.column()
-        col.alignment = "RIGHT"
-        col.label(text="Target")
-        split = split.split()
-        col = split.column()
-        col.prop(context.scene, "RetargetMannequinTarget", text="", icon="OUTLINER_OB_ARMATURE")
-
-        row = layout.row(align=True)
-        row.scale_y = 1.5
-        row.operator("ue4workspace.bindarmaturemannequin",icon="MOD_MIRROR", text=("BIND", "UNBIND")[context.scene.HasBindMannequin])
-
-        row = layout.row(align=True)
-        row.scale_y = 1.5
-        row.operator("ue4workspace.bakeactionmannequin",icon="RENDER_ANIMATION", text="BAKE ACTION")
-
-class PANEL_RetargetMixamo(Panel):
-    bl_idname = "UE4WORKSPACE_PT_RetargetMixamoPanel"
-    bl_label = "Retarget Mixamo"
-    bl_category = "UE4Workspace"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_options = {"DEFAULT_CLOSED"}
-
-    @classmethod
-    def poll(self, context):
         preferences = context.preferences.addons[__package__].preferences
-        return preferences.experimentalFeatures and context.mode == "OBJECT"
-
-    def draw(self, context):
-        layout = self.layout
+        activeObject = context.active_object
 
         col = layout.column()
-        col.enabled = not context.scene.HasBindMixamo
         row = col.row()
         split = row.split(factor=0.6)
         col = split.column()
         col.alignment = "RIGHT"
+        col.label(text="Retarget Preset")
+        col.label(text="Target")
         col.label(text="Source")
         split = split.split()
         col = split.column()
-        col.prop(context.scene, "RetargetMixamoSource", text="", icon="OUTLINER_OB_ARMATURE")
+        col.prop(activeObject.data, "RetargetPreset", text="")
+        col.label(text=activeObject.name, icon="OUTLINER_OB_ARMATURE")
+        col.prop(activeObject.data, "RetargetSource", text="", icon="OUTLINER_OB_ARMATURE")
 
-        col = layout.column()
-        col.enabled = not context.scene.HasBindMixamo
-        row = col.row()
-        split = row.split(factor=0.6)
-        col = split.column()
-        col.alignment = "RIGHT"
-        col.label(text="Target")
+        row = layout.row(align=True)
+        row.scale_y = 1.5
+        row.operator("ue4workspace.bindarmature",icon="MOD_MIRROR", text=("BIND", "UNBIND")[activeObject.data.HasBind])
+
+        row = layout.row(align=True)
+        row.scale_y = 1.5
+        row.operator("ue4workspace.bakeretargetaction",icon="RENDER_ANIMATION", text="BAKE ACTION")
+
+        if activeObject.data.HasBind:
+            layout.prop(activeObject.data, "ParentBoneTab", icon=("TRIA_RIGHT", "TRIA_DOWN")[activeObject.data.ParentBoneTab], text="Parent Bone Tweak", emboss=False)
+            if activeObject.data.ParentBoneTab:
+                col = layout.column()
+                row = col.row()
+                split = row.split(factor=0.5)
+                col = split.column()
+                col.label(text="Bone")
+                split = split.split()
+                col = split.column()
+                col.label(text="Parent")
+
+                layout.template_list("RETARGET_UL_BoneParentList", "", activeObject.data, "BoneParents", activeObject.data, "indexBoneParent", rows=4)
+
+                indexBoneParent = activeObject.data.indexBoneParent
+                if indexBoneParent != -1 and indexBoneParent < len(activeObject.data.BoneParents):
+                    BoneParent = activeObject.data.BoneParents[indexBoneParent]
+                    if BoneParent.boneExist:
+                        box = layout.box()
+                        box.label(text=BoneParent.name)
+                        col = box.column()
+                        row = col.row()
+                        split = row.split(factor=0.6)
+                        col = split.column()
+                        col.alignment = "RIGHT"
+                        col.label(text="Bone")
+                        col.label(text="Parent")
+                        col.label(text="Influence")
+                        split = split.split()
+                        col = split.column()
+                        col.alignment = "LEFT"
+                        col.label(text=BoneParent.bone)
+                        col.label(text=BoneParent.parent)
+                        col.prop(BoneParent, "influence", text="", slider=True)
+
+            layout.prop(activeObject.data, "BoneMapTab", icon=("TRIA_RIGHT", "TRIA_DOWN")[activeObject.data.BoneMapTab], text="Bone Tweak", emboss=False)
+            if activeObject.data.BoneMapTab:
+                col = layout.column()
+                row = col.row()
+                split = row.split(factor=0.5)
+                col = split.column()
+                col.label(text="Target")
+                split = split.split()
+                col = split.column()
+                col.label(text="Source")
+
+                layout.template_list("RETARGET_UL_BoneMapList", "", activeObject.data, "BoneMaps", activeObject.data, "indexBoneMap", rows=4)
+
+                indexBoneMap = activeObject.data.indexBoneMap
+                if indexBoneMap != -1 and indexBoneMap < len(activeObject.data.BoneMaps):
+                    BoneMap = activeObject.data.BoneMaps[indexBoneMap]
+                    if BoneMap.boneExist:
+                        box = layout.box()
+                        box.label(text=BoneMap.name)
+                        col = box.column()
+                        row = col.row()
+                        split = row.split(factor=0.6)
+                        col = split.column()
+                        col.alignment = "RIGHT"
+                        col.label(text="Target")
+                        col.label(text="Source")
+                        # col.label(text="Mute")
+                        # col.label(text="Influence")
+                        split = split.split()
+                        col = split.column()
+                        col.alignment = "LEFT"
+                        col.label(text=BoneMap.target)
+                        col.label(text=BoneMap.source)
+                        # col.prop(BoneMap, "mute", text="", icon=("CHECKBOX_DEHLT" if BoneMap.mute else "CHECKBOX_HLT"), emboss=False)
+                        # col.prop(BoneMap, "influence", text="", slider=True)
+
+                        # i plan to expose expression variable but i think no one will really use
+                        # box.row().label(text="EXPESSION")
+                        # box.row().prop(BoneMap, "target", text="")
+
+                        for index, transform in enumerate(BoneMap.transform):
+                            if transform:
+                                transformLabel = ["ROTATION", "LOCATION", "SCALE"][index]
+                                transformAttribute = ["rotation_euler", "location", "scale"][index]
+                                box.row().label(text="OFFSET " + transformLabel)
+                                col = box.column(align=True)
+                                for axis in ["X", "Y", "Z"]:
+                                    col.prop(BoneMap, transformAttribute + axis, text=axis)
+                                col.prop(BoneMap, transformAttribute + "Influence", text="Influence", slider=True)
+
+# UIList
+
+class RETARGET_UL_BoneParentList(UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        activeObject = context.active_object
+
+        row = layout.row()
+        split = row.split(factor=0.5)
+        row = split.row()
+        row.label(text=item.bone)
         split = split.split()
-        col = split.column()
-        col.prop(context.scene, "RetargetMixamoTarget", text="", icon="OUTLINER_OB_ARMATURE")
+        row = split.row()
+        row.label(text=item.parent)
+        if item.boneExist:
+            row.prop(item, "mute", text="", icon=("CHECKBOX_DEHLT" if item.mute else "CHECKBOX_HLT"), emboss=False)
+        else:
+            row.prop(item, "boneNotExist", text="", icon="ERROR", emboss=False)
 
-        row = layout.row(align=True)
-        row.scale_y = 1.5
-        row.operator("ue4workspace.bindarmaturemixamo",icon="MOD_MIRROR", text=("BIND", "UNBIND")[context.scene.HasBindMixamo])
+class RETARGET_UL_BoneMapList(UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        activeObject = context.active_object
 
-        row = layout.row(align=True)
-        row.scale_y = 1.5
-        row.operator("ue4workspace.bakeactionmixamo",icon="RENDER_ANIMATION", text="BAKE ACTION")
+        row = layout.row()
+        split = row.split(factor=0.5)
+        row = split.row()
+        row.label(text=item.target)
+        split = split.split()
+        row = split.row()
+        row.label(text=item.source)
+        if item.boneExist:
+            row.prop(item, "mute", text="", icon=("CHECKBOX_DEHLT" if item.mute else "CHECKBOX_HLT"), emboss=False)
+        else:
+            row.prop(item, "boneNotExist", text="", icon="ERROR", emboss=False)
 
 #  OPERATOR
 
-class OP_BindArmatureMannequin(Operator):
-    bl_idname = "ue4workspace.bindarmaturemannequin"
-    bl_label = "Bind/Unbind Armature Mannequin"
+class OP_BindArmature(Operator):
+    bl_idname = "ue4workspace.bindarmature"
+    bl_label = "Bind/Unbind Armature"
     bl_description = "Bind/Unbind Armature"
     bl_options = {"UNDO"}
 
     @classmethod
     def poll(self, context):
-        return (context.scene.RetargetMannequinSource is not None and context.scene.RetargetMannequinTarget is not None)
+        activeObject = context.active_object
+        return activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.RetargetSource is not None
 
     def execute(self, context):
-        targetObj = context.scene.RetargetMannequinTarget
-        sourceObj = context.scene.RetargetMannequinSource
-        boneMaps = mannequinBoneMaps
+        preferences = context.preferences.addons[__package__].preferences
+        targetObj = context.active_object
+        sourceObj = targetObj.data.RetargetSource
+        oldMode = context.mode
+        bpy.ops.object.mode_set(mode="OBJECT")
         bpy.ops.object.select_all(action="DESELECT")
         context.view_layer.objects.active = targetObj
         bpy.ops.object.mode_set(mode="POSE")
         poseBones = targetObj.pose.bones
 
-        # unbind
-        if context.scene.HasBindMannequin:
-            # add remove parent constraint on control bone and pole bone
-            for controlBone, poleBone, fkBone  in [("CONTROL_hand_l", "IKPOLE_upperarm_l", "FK_lowerarm_l"), ("CONTROL_hand_r", "IKPOLE_upperarm_r", "FK_lowerarm_r"), ("CONTROL_foot_l", "IKPOLE_thigh_l", "FK_calf_l"), ("CONTROL_foot_r", "IKPOLE_thigh_r", "FK_calf_r")]:
-                for boneName in [controlBone, poleBone]:
-                    bone = poseBones.get(boneName)
-                    constraint = bone.constraints.get("RETARGET_PARENT")
-                    bone.constraints.remove(constraint)
+        preset = next(iter([preset for preset in preferences.RETARGET_Presets if str(preset.flag) == targetObj.data.RetargetPreset]), None)
 
-            # remove driver
-            for boneMap in boneMaps:
-                poseBone = poseBones.get(boneMap["target"])
+        # unbind
+        if targetObj.data.HasBind:
+            # remove parent constraint in bone parent list
+            for index, BoneParent in enumerate([BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist]):
+                poseBone = poseBones.get(BoneParent.bone)
+                constraint = poseBone.constraints.get("RETARGET_PARENT")
+                # remove driver
+                constraint.driver_remove("mute")
+                constraint.driver_remove("influence")
+                poseBone.constraints.remove(constraint)
+            # clear collection
+            targetObj.data.BoneParents.clear()
+
+            # remove driver from maping bone list
+            for index, boneMap in enumerate([boneMap for boneMap in targetObj.data.BoneMaps if boneMap.boneExist]):
+                poseBone = poseBones.get(boneMap.target)
                 # change rotation mode to QUATERNION
                 poseBone.rotation_mode = "QUATERNION"
-                for copyType in boneMap["copy"]:
-                    poseBone.driver_remove(copyMaps.get(copyType))
+                for index, transformType in enumerate(list(boneMap.transform)):
+                    if transformType:
+                        poseBone.driver_remove(["rotation_euler", "location", "scale"][index])
+            # clear collection
+            targetObj.data.BoneMaps.clear()
 
             # clear transform
             bpy.ops.pose.select_all(action="SELECT")
@@ -665,66 +346,134 @@ class OP_BindArmatureMannequin(Operator):
 
         # bind
         else:
-            # snap FK bone to TWEAK bone
-            for boneName in ["FK_thigh_l", "FK_thigh_r", "FK_calf_l", "FK_calf_r", "FK_upperarm_l", "FK_upperarm_r", "FK_lowerarm_l", "FK_lowerarm_r"]:
-                bone = poseBones.get(boneName)
-                tweakBone = poseBones.get(boneName.replace("FK_", "TWEAK_"))
-                bpy.ops.pose.visual_transform_apply()
-                bone.matrix = tweakBone.matrix
-
-            # switch to fk
-            # for ikControl in ["CR_IK_foot_l", "CR_IK_foot_r", "CR_IK_hand_l", "CR_IK_hand_r"]:
-            #     targetObj[ikControl] = 0.0
-
-            # add parent constraint on control bone and pole to fk bone
-            for controlBone, poleBone, fkBone  in [("CONTROL_hand_l", "IKPOLE_upperarm_l", "FK_lowerarm_l"), ("CONTROL_hand_r", "IKPOLE_upperarm_r", "FK_lowerarm_r"), ("CONTROL_foot_l", "IKPOLE_thigh_l", "FK_calf_l"), ("CONTROL_foot_r", "IKPOLE_thigh_r", "FK_calf_r")]:
-                for boneName in [controlBone, poleBone]:
-                    bone = poseBones.get(boneName)
-                    constraint = bone.constraints.new("CHILD_OF")
+            # add parent constraint in bone parent list
+            for index, parentBone in enumerate(preset.ParentBones):
+                newParentBone = targetObj.data.BoneParents.add()
+                newParentBone.name = parentBone.name
+                newParentBone.bone = parentBone.bone
+                newParentBone.parent = parentBone.parent
+                poseBone = poseBones.get(parentBone.bone)
+                if poseBone:
+                    # constraint
+                    constraint = poseBone.constraints.new("ARMATURE")
                     constraint.name = "RETARGET_PARENT"
                     constraint.show_expanded = False
-                    constraint.target = targetObj
-                    constraint.subtarget = fkBone
-                    # set inverse
-                    context_copy = bpy.context.copy()
-                    context_copy["constraint"] = constraint
-                    targetObj.data.bones.active = bone.bone
-                    bpy.ops.constraint.childof_set_inverse(context_copy, constraint=constraint.name, owner="BONE")
+                    target = constraint.targets.new()
+                    target.target = targetObj
+                    target.subtarget = parentBone.parent
+                    target.weight = 1.0
+                    # driver mute
+                    driver = constraint.driver_add("mute").driver
+                    driver.type = "SCRIPTED"
 
-            # maping
-            for boneMap in boneMaps:
-                poseBone = poseBones.get(boneMap["target"])
-                # change rotation mode to XYZ
-                poseBone.rotation_mode = "XYZ"
-                for copyType in boneMap["copy"]:
-                    for target, source in boneMap["axis"]:
-                        isInverse = source.startswith("-")
-                        source = source.replace("-", "")
-                        offset = getattr(poseBone, copyMaps.get(copyType))[axisMaps.get(target)]
+                    var = driver.variables.new()
+                    var.name = "mute"
+                    var.type = "SINGLE_PROP"
+                    varTarget = var.targets[0]
+                    varTarget.id_type = "ARMATURE"
+                    varTarget.id = targetObj.data
+                    varTarget.data_path = newParentBone.path_from_id("mute")
+                    driver.expression = "mute"
 
-                        driver = poseBone.driver_add(copyMaps.get(copyType), axisMaps.get(target)).driver
-                        driver.type = "SCRIPTED"
+                    # driver influence
+                    driver = constraint.driver_add("influence").driver
+                    driver.type = "SCRIPTED"
 
-                        var = driver.variables.new()
-                        var.type = "TRANSFORMS"
-                        varTarget = var.targets[0]
-                        varTarget.id = sourceObj
-                        varTarget.bone_target = boneMap["source"]
-                        varTarget.transform_type = transformTypeMaps.get(copyType) + source
-                        varTarget.rotation_mode = "AUTO"
-                        varTarget.transform_space = "LOCAL_SPACE"
+                    var = driver.variables.new()
+                    var.name = "influence"
+                    var.type = "SINGLE_PROP"
+                    varTarget = var.targets[0]
+                    varTarget.id_type = "ARMATURE"
+                    varTarget.id = targetObj.data
+                    varTarget.data_path = newParentBone.path_from_id("influence")
+                    driver.expression = "influence"
+                else:
+                    newParentBone.boneExist = False
 
-                        varName = "-" + var.name if isInverse else var.name
-                        driver.expression = boneMap["expression"].format(var=varName, offset=offset)
+            # maping bone list
+            for index, boneMap in enumerate(preset.AxisMaps):
+                newBoneMap = targetObj.data.BoneMaps.add()
+                newBoneMap.name = boneMap.name
+                newBoneMap.target = boneMap.boneTarget
+                newBoneMap.source = boneMap.boneSource if boneMap.boneSource else "[Object]"
+                newBoneMap.obj = targetObj
+                poseBone = poseBones.get(boneMap.boneTarget)
+                if poseBone:
+                    # change rotation mode to XYZ
+                    poseBone.rotation_mode = "XYZ"
+                    newBoneMap.transform = boneMap.transform
+                    for index, transformType in enumerate(list(boneMap.transform)):
+                        if transformType:
+                            for targetAxis, sourceAxis in [("X", boneMap.axisX), ("Y", boneMap.axisY), ("Z", boneMap.axisZ)]:
+                                indexToTransformName = ["rotation_euler", "location", "scale"][index]
+                                targetAxisToIndex = {"X": 0, "Y": 1, "Z": 2}[targetAxis]
+                                isInverse = sourceAxis.startswith("-")
+                                sourceAxis = sourceAxis.replace("-", "")
+                                offsetInit = getattr(poseBone, indexToTransformName)[targetAxisToIndex]
 
-        bpy.ops.object.mode_set(mode="OBJECT")
-        context.scene.HasBindMannequin = not context.scene.HasBindMannequin
+                                # driver bone
+                                FCurve = poseBone.driver_add(indexToTransformName, targetAxisToIndex)
+                                driver = FCurve.driver
+                                driver.type = "SCRIPTED"
+
+                                var = driver.variables.new()
+                                var.type = "TRANSFORMS"
+                                varTarget = var.targets[0]
+                                varTarget.id = sourceObj
+                                varTarget.bone_target = boneMap.boneSource
+                                varTarget.transform_type = (["ROT_", "LOC_", "SCALE_"][index]) + sourceAxis
+                                varTarget.rotation_mode = "AUTO"
+                                varTarget.transform_space = "LOCAL_SPACE"
+
+                                varName = "-" + var.name if isInverse else var.name
+
+                                # offset
+                                var = driver.variables.new()
+                                var.name = "offset"
+                                setattr(newBoneMap, indexToTransformName + targetAxis , offsetInit)
+                                offset = var.name
+                                var.type = "SINGLE_PROP"
+                                varTarget = var.targets[0]
+                                varTarget.id_type = "ARMATURE"
+                                varTarget.id = targetObj.data
+                                varTarget.data_path = newBoneMap.path_from_id(indexToTransformName + targetAxis)
+
+                                # influence Transform
+                                var = driver.variables.new()
+                                var.name = "influence"
+                                influence = var.name
+                                var.type = "SINGLE_PROP"
+                                varTarget = var.targets[0]
+                                varTarget.id_type = "ARMATURE"
+                                varTarget.id = targetObj.data
+                                varTarget.data_path = newBoneMap.path_from_id( indexToTransformName + "Influence")
+
+                                # # influence
+                                # var = driver.variables.new()
+                                # var.name = "influence"
+                                # influence = var.name
+                                # var.type = "SINGLE_PROP"
+                                # varTarget = var.targets[0]
+                                # varTarget.id_type = "ARMATURE"
+                                # varTarget.id = targetObj.data
+                                # varTarget.data_path = newBoneMap.path_from_id("influence")
+
+                                driver.expression = boneMap.expression.format(var=varName, offset=offset, influence=influence)
+
+                                # data path collection
+                                dataPath = newBoneMap.dataPaths.add()
+                                dataPath.path = FCurve.data_path + "["+ str(FCurve.array_index) +"]"
+                else:
+                    newBoneMap.boneExist = False
+
+        bpy.ops.object.mode_set(mode=oldMode)
+        targetObj.data.HasBind = not targetObj.data.HasBind
         return {"FINISHED"}
 
-class OP_BakeActionMannequin(Operator):
-    bl_idname = "ue4workspace.bakeactionmannequin"
-    bl_label = "Bake Action Mannequin"
-    bl_description = "Bake Action Mannequin"
+class OP_BakeRetargetAction(Operator):
+    bl_idname = "ue4workspace.bakeretargetaction"
+    bl_label = "Bake Retarget To Action"
+    bl_description = "Bake Retarget To Action"
     bl_options = {"UNDO"}
 
     actionName: StringProperty(default="BakeAction")
@@ -734,7 +483,8 @@ class OP_BakeActionMannequin(Operator):
 
     @classmethod
     def poll(self, context):
-        return context.scene.HasBindMannequin
+        activeObject = context.active_object
+        return activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.HasBind
 
     def invoke(self, context, event):
         self.startFrame = context.scene.frame_start
@@ -785,12 +535,11 @@ class OP_BakeActionMannequin(Operator):
         col.prop(self, "frameStep", text="")
 
     def execute(self, context):
-        targetObj = context.scene.RetargetMannequinTarget
-        sourceObj = context.scene.RetargetMannequinSource
-        boneMaps = mannequinBoneMaps
-        controlBones = ["CONTROL_hand_l", "IKPOLE_upperarm_l", "CONTROL_hand_r", "IKPOLE_upperarm_r", "CONTROL_foot_l", "IKPOLE_thigh_l", "CONTROL_foot_r", "IKPOLE_thigh_r"]
+        targetObj = context.active_object
+        sourceObj = targetObj.data.RetargetSource
+        oldMode = context.mode
+        bpy.ops.object.mode_set(mode="OBJECT")
         bpy.ops.object.select_all(action="DESELECT")
-        targetObj.select_set(True)
         context.view_layer.objects.active = targetObj
         bpy.ops.object.mode_set(mode="POSE")
         poseBones = targetObj.pose.bones
@@ -806,52 +555,50 @@ class OP_BakeActionMannequin(Operator):
         bpy.ops.pose.select_all(action="DESELECT")
 
         oldCurrentFrame = context.scene.frame_current
-        # control bone matrix to keyframe, because using child of constraint does not get local transform
+        # parent bone matrix to keyframe, because using constraint does not get local transform
         # format (boneName: str, matrix: Matrix, frame: int)
-        controlBoneMatrixs = []
+        parentBoneMatrixs = []
+
         # bake animation manually because bake action operator in python is very buggy and give me more control
         frame = self.startFrame
         while frame <= self.endFrame:
             context.scene.frame_set(frame)
             # bake bone base on bone map list
-            for boneMap in boneMaps:
-                poseBone = poseBones.get(boneMap["target"])
-                for copyType in boneMap["copy"]:
-                    # insert keyframe base on copy target
-                    poseBone.keyframe_insert(copyMaps.get(copyType))
-                    if copyType == "ROTATION":
-                        # insert keyframe to quaternion rotation
-                        # convert euler to rotation so you can use two mode rotation
-                        poseBone.rotation_quaternion = poseBone.rotation_euler.to_quaternion()
-                        poseBone.keyframe_insert("rotation_quaternion")
+            for boneMap in [boneMap for boneMap in targetObj.data.BoneMaps if boneMap.boneExist and not boneMap.mute]:
+                poseBone = poseBones.get(boneMap.target)
+                for index, transformType in enumerate(list(boneMap.transform)):
+                    if transformType:
+                        indexToTransformName = ["rotation_euler", "location", "scale"][index]
+                        poseBone.keyframe_insert(indexToTransformName)
+                        if indexToTransformName == "rotation_euler":
+                            # insert keyframe to quaternion rotation
+                            # convert euler to rotation so you can use two mode rotation
+                            poseBone.rotation_quaternion = poseBone.rotation_euler.to_quaternion()
+                            poseBone.keyframe_insert("rotation_quaternion")
 
-            # get matrix control bone
-            for boneName in controlBones:
-                poseBone = poseBones.get(boneName)
+            # get matrix parent bone
+            for index, BoneParent in enumerate([BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist and not BoneParent.mute]):
+                poseBone = poseBones.get(BoneParent.bone)
                 boneMatrix = poseBone.matrix.copy()
-                controlBoneMatrixs.append((boneName, boneMatrix, frame))
+                parentBoneMatrixs.append((BoneParent.bone, boneMatrix, frame))
 
             frame += self.frameStep
 
-        # mute child_of constraint
-        for boneName in controlBones:
-            poseBone = poseBones.get(boneName)
-            constraint = poseBone.constraints.get("RETARGET_PARENT")
-            constraint.mute = True
+        # mute parent constraint
+        for index, BoneParent in enumerate([BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist]):
+            BoneParent.mute = not BoneParent.mute
 
-        # insert control bone keyframe matrix
-        for boneName, matrix, frame in controlBoneMatrixs:
+        # insert parent bone keyframe matrix
+        for boneName, matrix, frame in parentBoneMatrixs:
             poseBone = poseBones.get(boneName)
             poseBone.matrix = matrix
             poseBone.keyframe_insert("location", frame=frame)
             poseBone.keyframe_insert("rotation_quaternion", frame=frame)
             poseBone.keyframe_insert("rotation_euler", frame=frame)
 
-        # unmute child_of constraint
-        for boneName in controlBones:
-            poseBone = poseBones.get(boneName)
-            constraint = poseBone.constraints.get("RETARGET_PARENT")
-            constraint.mute = False
+        # unmute parent constraint
+        for index, BoneParent in enumerate([BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist]):
+            BoneParent.mute = not BoneParent.mute
 
         # change interpolation to LINEAR
         for fcurve in action.fcurves:
@@ -868,265 +615,12 @@ class OP_BakeActionMannequin(Operator):
         bpy.ops.pose.paste(flipped=False)
         bpy.ops.pose.select_all(action="DESELECT")
 
-        bpy.ops.object.mode_set(mode="OBJECT")
-        return {"FINISHED"}
-
-class OP_BindArmatureMixamo(Operator):
-    bl_idname = "ue4workspace.bindarmaturemixamo"
-    bl_label = "Bind/Unbind Armature Mannequin"
-    bl_description = "Bind/Unbind Armature"
-    bl_options = {"UNDO"}
-
-    @classmethod
-    def poll(self, context):
-        return (context.scene.RetargetMixamoSource is not None and context.scene.RetargetMixamoTarget is not None)
-
-    def execute(self, context):
-        targetObj = context.scene.RetargetMixamoTarget
-        sourceObj = context.scene.RetargetMixamoSource
-        boneMaps = mixamoBoneMaps
-        bpy.ops.object.select_all(action="DESELECT")
-        context.view_layer.objects.active = targetObj
-        bpy.ops.object.mode_set(mode="POSE")
-        poseBones = targetObj.pose.bones
-
-        # unbind
-        if context.scene.HasBindMixamo:
-            # add remove parent constraint on control bone and pole bone
-            for controlBone, poleBone, fkBone  in [("CONTROL_hand_l", "IKPOLE_upperarm_l", "FK_lowerarm_l"), ("CONTROL_hand_r", "IKPOLE_upperarm_r", "FK_lowerarm_r"), ("CONTROL_foot_l", "IKPOLE_thigh_l", "FK_calf_l"), ("CONTROL_foot_r", "IKPOLE_thigh_r", "FK_calf_r")]:
-                for boneName in [controlBone, poleBone]:
-                    bone = poseBones.get(boneName)
-                    constraint = bone.constraints.get("RETARGET_PARENT")
-                    bone.constraints.remove(constraint)
-
-            # remove driver
-            for boneMap in boneMaps:
-                poseBone = poseBones.get(boneMap["target"])
-                # change rotation mode to QUATERNION
-                poseBone.rotation_mode = "QUATERNION"
-                for copyType in boneMap["copy"]:
-                    poseBone.driver_remove(copyMaps.get(copyType))
-
-            # clear transform
-            bpy.ops.pose.select_all(action="SELECT")
-            bpy.ops.pose.rot_clear()
-            bpy.ops.pose.loc_clear()
-            bpy.ops.pose.scale_clear()
-            bpy.ops.pose.select_all(action="DESELECT")
-
-        # bind
-        else:
-            # snap FK bone to TWEAK bone
-            for boneName in ["FK_thigh_l", "FK_thigh_r", "FK_calf_l", "FK_calf_r", "FK_upperarm_l", "FK_upperarm_r", "FK_lowerarm_l", "FK_lowerarm_r"]:
-                bone = poseBones.get(boneName)
-                tweakBone = poseBones.get(boneName.replace("FK_", "TWEAK_"))
-                bpy.ops.pose.visual_transform_apply()
-                bone.matrix = tweakBone.matrix
-
-            # switch to fk
-            # for ikControl in ["CR_IK_foot_l", "CR_IK_foot_r", "CR_IK_hand_l", "CR_IK_hand_r"]:
-            #     targetObj[ikControl] = 0.0
-
-            # add parent constraint on control bone and pole to fk bone
-            for controlBone, poleBone, fkBone  in [("CONTROL_hand_l", "IKPOLE_upperarm_l", "FK_lowerarm_l"), ("CONTROL_hand_r", "IKPOLE_upperarm_r", "FK_lowerarm_r"), ("CONTROL_foot_l", "IKPOLE_thigh_l", "FK_calf_l"), ("CONTROL_foot_r", "IKPOLE_thigh_r", "FK_calf_r")]:
-                for boneName in [controlBone, poleBone]:
-                    bone = poseBones.get(boneName)
-                    constraint = bone.constraints.new("CHILD_OF")
-                    constraint.name = "RETARGET_PARENT"
-                    constraint.show_expanded = False
-                    constraint.target = targetObj
-                    constraint.subtarget = fkBone
-                    # set inverse
-                    context_copy = bpy.context.copy()
-                    context_copy["constraint"] = constraint
-                    targetObj.data.bones.active = bone.bone
-                    bpy.ops.constraint.childof_set_inverse(context_copy, constraint=constraint.name, owner="BONE")
-
-            # maping
-            for boneMap in boneMaps:
-                poseBone = poseBones.get(boneMap["target"])
-                # change rotation mode to XYZ
-                poseBone.rotation_mode = "XYZ"
-                for copyType in boneMap["copy"]:
-                    for target, source in boneMap["axis"]:
-                        isInverse = source.startswith("-")
-                        source = source.replace("-", "")
-                        offset = getattr(poseBone, copyMaps.get(copyType))[axisMaps.get(target)]
-
-                        driver = poseBone.driver_add(copyMaps.get(copyType), axisMaps.get(target)).driver
-                        driver.type = "SCRIPTED"
-
-                        var = driver.variables.new()
-                        var.type = "TRANSFORMS"
-                        varTarget = var.targets[0]
-                        varTarget.id = sourceObj
-                        varTarget.bone_target = boneMap["source"]
-                        varTarget.transform_type = transformTypeMaps.get(copyType) + source
-                        varTarget.rotation_mode = "AUTO"
-                        varTarget.transform_space = "LOCAL_SPACE"
-
-                        varName = "-" + var.name if isInverse else var.name
-                        driver.expression = boneMap["expression"].format(var=varName, offset=offset)
-
-        bpy.ops.object.mode_set(mode="OBJECT")
-        context.scene.HasBindMixamo = not context.scene.HasBindMixamo
-        return {"FINISHED"}
-
-class OP_BakeActionMixamo(Operator):
-    bl_idname = "ue4workspace.bakeactionmixamo"
-    bl_label = "Bake Action Mixamo"
-    bl_description = "Bake Action Mixamo"
-    bl_options = {"UNDO"}
-
-    actionName: StringProperty(default="BakeAction")
-    startFrame: IntProperty(default=1)
-    endFrame: IntProperty(default=250)
-    frameStep: IntProperty(default=1)
-
-    @classmethod
-    def poll(self, context):
-        return context.scene.HasBindMixamo
-
-    def invoke(self, context, event):
-        self.startFrame = context.scene.frame_start
-        self.endFrame = context.scene.frame_end
-        return context.window_manager.invoke_props_dialog(self, width = 250)
-
-    def draw(self, context):
-        layout = self.layout
-
-        col = layout.column()
-        row = col.row()
-        split = row.split(factor=0.6)
-        col = split.column()
-        col.alignment = "RIGHT"
-        col.label(text="Action Name")
-        split = split.split()
-        col = split.column()
-        col.prop(self, "actionName", text="", icon="ACTION")
-
-        col = layout.column()
-        row = col.row()
-        split = row.split(factor=0.6)
-        col = split.column()
-        col.alignment = "RIGHT"
-        col.label(text="Start Frame")
-        split = split.split()
-        col = split.column()
-        col.prop(self, "startFrame", text="")
-
-        col = layout.column()
-        row = col.row()
-        split = row.split(factor=0.6)
-        col = split.column()
-        col.alignment = "RIGHT"
-        col.label(text="End Frame")
-        split = split.split()
-        col = split.column()
-        col.prop(self, "endFrame", text="")
-
-        col = layout.column()
-        row = col.row()
-        split = row.split(factor=0.6)
-        col = split.column()
-        col.alignment = "RIGHT"
-        col.label(text="Frame Step")
-        split = split.split()
-        col = split.column()
-        col.prop(self, "frameStep", text="")
-
-    def execute(self, context):
-        targetObj = context.scene.RetargetMixamoTarget
-        sourceObj = context.scene.RetargetMixamoSource
-        boneMaps = mixamoBoneMaps
-        controlBones = ["CONTROL_hand_l", "IKPOLE_upperarm_l", "CONTROL_hand_r", "IKPOLE_upperarm_r", "CONTROL_foot_l", "IKPOLE_thigh_l", "CONTROL_foot_r", "IKPOLE_thigh_r"]
-        bpy.ops.object.select_all(action="DESELECT")
-        targetObj.select_set(True)
-        context.view_layer.objects.active = targetObj
-        bpy.ops.object.mode_set(mode="POSE")
-        poseBones = targetObj.pose.bones
-
-        # create new action
-        action = bpy.data.actions.new(self.actionName)
-        action.use_fake_user = True
-        targetObj.animation_data.action = action
-
-        # copy pose
-        bpy.ops.pose.select_all(action="SELECT")
-        bpy.ops.pose.copy()
-        bpy.ops.pose.select_all(action="DESELECT")
-
-        oldCurrentFrame = context.scene.frame_current
-        # control bone matrix to keyframe, because using child of constraint does not get local transform
-        # format (boneName: str, matrix: Matrix, frame: int)
-        controlBoneMatrixs = []
-        # bake animation manually because bake action operator in python is very buggy and give me more control
-        frame = self.startFrame
-        while frame <= self.endFrame:
-            context.scene.frame_set(frame)
-            # bake bone base on bone map list
-            for boneMap in boneMaps:
-                poseBone = poseBones.get(boneMap["target"])
-                for copyType in boneMap["copy"]:
-                    # insert keyframe base on copy target
-                    poseBone.keyframe_insert(copyMaps.get(copyType))
-                    if copyType == "ROTATION":
-                        # insert keyframe to quaternion rotation
-                        # convert euler to rotation so you can use two mode rotation
-                        poseBone.rotation_quaternion = poseBone.rotation_euler.to_quaternion()
-                        poseBone.keyframe_insert("rotation_quaternion")
-
-            # get matrix control bone
-            for boneName in controlBones:
-                poseBone = poseBones.get(boneName)
-                boneMatrix = poseBone.matrix.copy()
-                controlBoneMatrixs.append((boneName, boneMatrix, frame))
-
-            frame += self.frameStep
-
-        # mute child_of constraint
-        for boneName in controlBones:
-            poseBone = poseBones.get(boneName)
-            constraint = poseBone.constraints.get("RETARGET_PARENT")
-            constraint.mute = True
-
-        # insert control bone keyframe matrix
-        for boneName, matrix, frame in controlBoneMatrixs:
-            poseBone = poseBones.get(boneName)
-            poseBone.matrix = matrix
-            poseBone.keyframe_insert("location", frame=frame)
-            poseBone.keyframe_insert("rotation_quaternion", frame=frame)
-            poseBone.keyframe_insert("rotation_euler", frame=frame)
-
-        # unmute child_of constraint
-        for boneName in controlBones:
-            poseBone = poseBones.get(boneName)
-            constraint = poseBone.constraints.get("RETARGET_PARENT")
-            constraint.mute = False
-
-        # change interpolation to LINEAR
-        for fcurve in action.fcurves:
-            for keyFramePoints in fcurve.keyframe_points:
-                keyFramePoints.interpolation = "LINEAR"
-
-        # unassign action from armature
-        targetObj.animation_data.action = None
-
-        context.scene.frame_current = oldCurrentFrame
-
-        # reset pose
-        bpy.ops.pose.select_all(action="SELECT")
-        bpy.ops.pose.paste(flipped=False)
-        bpy.ops.pose.select_all(action="DESELECT")
-
-        bpy.ops.object.mode_set(mode="OBJECT")
+        bpy.ops.object.mode_set(mode=oldMode)
         return {"FINISHED"}
 
 # operator export
 
 Ops = [
-    OP_BindArmatureMannequin,
-    OP_BakeActionMannequin,
-    OP_BindArmatureMixamo,
-    OP_BakeActionMixamo
+    OP_BindArmature,
+    OP_BakeRetargetAction
 ]
