@@ -55,7 +55,7 @@ class RETARGET_AxisMapGroup(PropertyGroup):
             ],
         default="Z"
     )
-    expression: StringProperty(default="({var}) + {offset}")
+    expression: StringProperty(default="(({var}) + {offset}) * {influence}")
 
 class RETARGET_ParentConstraintGroup(PropertyGroup):
     name: StringProperty(default="Bone")
