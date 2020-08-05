@@ -16,7 +16,7 @@ bl_info = {
     "author" : "Anas RAR",
     "description" : "Addon For UE4 Workspace",
     "blender" : (2, 81, 0),
-    "version" : (1, 3, 0),
+    "version" : (1, 4, 0),
     "location" : "3D View > Tools",
     "warning" : "",
     "wiki_url": "https://github.com/anasrar/Blender-UE4-Workspace", # 2.82 below
@@ -64,6 +64,15 @@ from . UE4WS_ObjectControlRig import (
     Ops as objectControlRigOperator
 )
 
+from . UE4WS_ObjectRetargetAnimation import (
+    RETARGET_UL_BoneParentList,
+    RETARGET_UL_BoneMapList,
+    Groups as objectRetargetAnimationGroup,
+    Props as objectRetargetAnimationProps,
+    PANEL as objectRetargetAnimationPanel,
+    Ops as objectRetargetAnimationOperator
+)
+
 from . UE4WS_ObjectSkeletonPreset import (
     PANEL as objectSkeletonPresetPanel
 )
@@ -109,13 +118,6 @@ from . UE4WS_AnimationUnrealEngine import (
     PANEL as AnimationUnrealEnginePanel
 )
 
-from . UE4WS_RetargetAnimation import (
-    Props as retargetAnimationProps,
-    PANEL_RetargetMannequin as retargetAnimationMannequinPanel,
-    PANEL_RetargetMixamo as retargetAnimationMixamoPanel,
-    Ops as retargetAnimationOperator
-)
-
 from . UE4WS_Credit import (
     PANEL as creditPanel
 )
@@ -135,8 +137,8 @@ AR_UE4WS_PropsArray = []
 for x in [
     objectCustomCollisionProps,
     objectSocketProps,
-    animationProps,
-    retargetAnimationProps
+    objectRetargetAnimationProps,
+    animationProps
     ]:
     AR_UE4WS_PropsArray.extend(x)
 
@@ -149,11 +151,12 @@ for x in [
     objectCustomCollisionOperator,
     objectSocketOperator,
     objectControlRigOperator,
+    objectRetargetAnimationGroup,
+    objectRetargetAnimationOperator,
     exportOptionOperator,
     staticMeshOperator,
     characterOperator,
-    animationOperator,
-    retargetAnimationOperator
+    animationOperator
     ]:
     AR_UE4WS_OperatorArray.extend(x)
 
@@ -168,6 +171,9 @@ AR_UE4WS_classes = (
     objectSocketPanel,
     objectSkeletonPresetPanel,
     objectControlRigPanel,
+    RETARGET_UL_BoneParentList,
+    RETARGET_UL_BoneMapList,
+    objectRetargetAnimationPanel,
     ## Static Mesh
     staticMeshPanel,
     staticMeshFBXOptionPanel,
@@ -181,9 +187,6 @@ AR_UE4WS_classes = (
     animationPanel,
     AnimationFBXOptionPanel,
     AnimationUnrealEnginePanel,
-    ## Retarget Animation
-    retargetAnimationMannequinPanel,
-    retargetAnimationMixamoPanel,
     ## Credit
     creditPanel,
     ## Misc.
