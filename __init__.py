@@ -42,6 +42,22 @@ from . UE4WS_ExportOption import (
     Ops as exportOptionOperator
 )
 
+from . UE4WS_ExportOptionImportAssets import (
+    IMPORTASSETS_UL_AssetsList,
+    Groups as exportOptionImportAssetsGroup,
+    Props as exportOptionImportAssetsProps,
+    PANEL as exportOptionImportAssetsPanel,
+    Ops as exportOptionImportAssetsOperator
+)
+
+from . UE4WS_ExportOptionImportAssetsFBXOption import (
+    PANEL as exportOptionImportAssetsFBXOptionPanel
+)
+
+from . UE4WS_ExportOptionImportAssetsUnrealEngine import (
+    PANEL as exportOptionImportAssetsUnrealEnginePanel
+)
+
 from . UE4WS_Object import (
     PANEL as objectPanel,
     Ops as objectOperator
@@ -135,6 +151,7 @@ remote_exec = RemoteExecution()
 AR_UE4WS_PropsArray = []
 # extend property to array, make sure you add from here
 for x in [
+    exportOptionImportAssetsProps,
     objectCustomCollisionProps,
     objectSocketProps,
     objectRetargetAnimationProps,
@@ -154,6 +171,8 @@ for x in [
     objectRetargetAnimationGroup,
     objectRetargetAnimationOperator,
     exportOptionOperator,
+    exportOptionImportAssetsGroup,
+    exportOptionImportAssetsOperator,
     staticMeshOperator,
     characterOperator,
     animationOperator
@@ -165,6 +184,10 @@ AR_UE4WS_classes = (
     Preferences,
     # Export Option
     exportOptionPanel,
+    IMPORTASSETS_UL_AssetsList,
+    exportOptionImportAssetsPanel,
+    exportOptionImportAssetsFBXOptionPanel,
+    exportOptionImportAssetsUnrealEnginePanel,
     # Object
     objectPanel,
     objectCustomCollisionPanel,
