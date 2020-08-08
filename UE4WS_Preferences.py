@@ -167,6 +167,289 @@ class Preferences(AddonPreferences):
         default=False
     )
 
+    # Import Assets From Unreal Engine Project
+
+    ## Import setting in blender
+
+    IMPORTASSETS_TabFBXInclude: BoolProperty(
+        name="Include",
+        description="Include Tab",
+        default=False
+    )
+
+    IMPORTASSETS_FBXCustomNormals: BoolProperty(
+        name="Custom Normals",
+        description="if available (otherwise Blender will recompute them)",
+        default=True
+    )
+
+    IMPORTASSETS_FBXSubdivisionData: BoolProperty(
+        name="Subdivision Data",
+        description="Import FBX subdivision information as subdivision surface modifiers",
+        default=False
+    )
+
+    IMPORTASSETS_FBXCustomProperties: BoolProperty(
+        name="Custom Properties",
+        description="Import user properties as custom properties",
+        default=True
+    )
+
+    IMPORTASSETS_FBXImportEnums: BoolProperty(
+        name="Import Enums As Strings",
+        description="Store enumeration values as strings",
+        default=True
+    )
+
+    IMPORTASSETS_FBXImageSearch: BoolProperty(
+        name="Image Search",
+        description="Search subdirs for any associated images (WARNING: may be slow)",
+        default=True
+    )
+
+    IMPORTASSETS_TabFBXTransform: BoolProperty(
+        name="Transform",
+        description="Transform Tab",
+        default=False
+    )
+
+    IMPORTASSETS_FBXScale: FloatProperty(
+        name="Scale",
+        description="Scale",
+        default=1.0,
+        min=0.001,
+        max=1000.0
+    )
+
+    IMPORTASSETS_FBXDecalOffset: FloatProperty(
+        name="Decal Offset",
+        description="Displace geometry of alpha meshes",
+        default=0.0,
+        min=0.0,
+        max=1.0
+    )
+
+    IMPORTASSETS_FBXApplyTransform: BoolProperty(
+        name="Apply Transform",
+        description="Bake space transform into object data, avoids getting unwanted rotations to objects when target space is not aligned with Blender’s space (WARNING! experimental option, use at own risks, known broken with armatures/animations)",
+        default=False
+    )
+
+    IMPORTASSETS_FBXUsePrePostRotation: BoolProperty(
+        name="Use Pre/Post Rotation",
+        description="Use pre/post rotation from FBX transform (you may have to disable that in some cases)",
+        default=True
+    )
+
+    IMPORTASSETS_TabFBXOrientation: BoolProperty(
+        name="Orientation",
+        description="Orientation Tab",
+        default=False
+    )
+
+    IMPORTASSETS_FBXManualOrientation: BoolProperty(
+        name="Manual Orientation",
+        description="Specify orientation and scale, instead of using embedded data in FBX file",
+        default=False
+    )
+
+    IMPORTASSETS_FBXAxisForward: EnumProperty(
+        name="Axis Forward",
+        description="Forward",
+        items=[
+            ("X", "X Forward", ""),
+            ("Y", "Y Forward", ""),
+            ("Z", "Z Forward", ""),
+            ("-X", "-X Forward", ""),
+            ("-Y", "-Y Forward", ""),
+            ("-Z", "-Z Forward", "")
+            ],
+        default="-Z"
+    )
+
+    IMPORTASSETS_FBXAxisUp: EnumProperty(
+        name="Axis Up",
+        description="Up",
+        items=[
+            ("X", "X Up", ""),
+            ("Y", "Y Up", ""),
+            ("Z", "Z Up", ""),
+            ("-X", "-X Up", ""),
+            ("-Y", "-Y Up", ""),
+            ("-Z", "-Z Up", "")
+            ],
+        default="Y"
+    )
+
+    IMPORTASSETS_TabFBXAnimation: BoolProperty(
+        name="Animation",
+        description="Animation Tab",
+        default=False
+    )
+
+    IMPORTASSETS_FBXImportAnimation: BoolProperty(
+        name="Animation",
+        description="Import FBX animation",
+        default=True
+    )
+
+    IMPORTASSETS_FBXAnimationOffset: FloatProperty(
+        name="Animation Offset",
+        description="Offset to apply to animation during import, in frames",
+        default=1.0
+    )
+
+    IMPORTASSETS_TabFBXArmature: BoolProperty(
+        name="Armature",
+        description="Armature Tab",
+        default=False
+    )
+
+    IMPORTASSETS_FBXIgnoreLeafBones: BoolProperty(
+        name="Ignore Leaf Bones",
+        description="Ignore the last bone at the end of each chain (used to mark the length of the previous bone)",
+        default=False
+    )
+
+    IMPORTASSETS_FBXForceConnectChildren: BoolProperty(
+        name="Force Connect Children",
+        description="Force connection of children bones to their parent, even if their computed head/tail positions do not match (can be useful with pure-joints-type armatures)",
+        default=False
+    )
+
+    IMPORTASSETS_FBXAutomaticBoneOrientation: BoolProperty(
+        name="Automatic Bone Orientation",
+        description="Try to align the major bone axis with the bone children",
+        default=False
+    )
+
+    IMPORTASSETS_FBXPrimaryBoneAxis: EnumProperty(
+        name="Primary Bone Axis",
+        description="",
+        items=[
+            ("X", "X Axis", ""),
+            ("Y", "Y Axis", ""),
+            ("Z", "Z Axis", ""),
+            ("-X", "-X Axis", ""),
+            ("-Y", "-Y Axis", ""),
+            ("-Z", "-Z Axis", "")
+            ],
+        default="Y"
+    )
+
+    IMPORTASSETS_FBXSecondaryBoneAxis: EnumProperty(
+        name="Secondary Bone Axis",
+        description="",
+        items=[
+            ("X", "X Axis", ""),
+            ("Y", "Y Axis", ""),
+            ("Z", "Z Axis", ""),
+            ("-X", "-X Axis", ""),
+            ("-Y", "-Y Axis", ""),
+            ("-Z", "-Z Axis", "")
+            ],
+        default="X"
+    )
+
+    ## Export setting in unreal engine
+
+    IMPORTASSETS_TabExporter: BoolProperty(
+        name="Exporter",
+        description="Exporter Tab",
+        default=False
+    )
+
+    IMPORTASSETS_FBXExportCompatibility: EnumProperty(
+        name="FBX Export Compatibility",
+        description="This will set the fbx sdk compatibility when exporting to fbx file. The default value is 2013",
+        items=[
+            ("FBX_2011", "2011", "FBX 2011"),
+            ("FBX_2012", "2012", "FBX 2012"),
+            ("FBX_2013", "2013", "FBX 2013"),
+            ("FBX_2014", "2014", "FBX 2014"),
+            ("FBX_2016", "2016", "FBX 2016"),
+            ("FBX_2018", "2018", "FBX 2018")
+            ],
+        default="FBX_2013"
+    )
+
+    IMPORTASSETS_ASCII: BoolProperty(
+        name="ASCII",
+        description="If enabled, save as ascii instead of binary",
+        default=False
+    )
+
+    IMPORTASSETS_ForceFrontXAxis: BoolProperty(
+        name="Force Front X Axis",
+        description="If enabled, export with X axis as the front axis instead of default -Y",
+        default=False
+    )
+
+    IMPORTASSETS_TabMesh: BoolProperty(
+        name="Mesh",
+        description="Mesh Tab",
+        default=False
+    )
+
+    IMPORTASSETS_VertexColor: BoolProperty(
+        name="Vertex Color",
+        description="If enabled, export vertex color",
+        default=True
+    )
+
+    IMPORTASSETS_LevelOfDetail: BoolProperty(
+        name="Level Of Detail",
+        description="If enabled, export the level of detail",
+        default=True
+    )
+
+    IMPORTASSETS_TabStaticMesh: BoolProperty(
+        name="Static Mesh",
+        description="Static Mesh Tab",
+        default=False
+    )
+
+    IMPORTASSETS_Collision: BoolProperty(
+        name="Collision",
+        description="If enabled, export collision",
+        default=True
+    )
+
+    IMPORTASSETS_TabSkeletalMesh: BoolProperty(
+        name="Skeletal Mesh",
+        description="Skeletal Mesh Tab",
+        default=False
+    )
+
+    IMPORTASSETS_ExportMorphTargets: BoolProperty(
+        name="Export Morph Targets",
+        description="If enabled, export the morph targets",
+        default=True
+    )
+
+    IMPORTASSETS_TabAnimation: BoolProperty(
+        name="Animation",
+        description="Animation Tab",
+        default=False
+    )
+
+    IMPORTASSETS_ExportPreviewMesh: BoolProperty(
+        name="Export Preview Mesh",
+        description="If enable, the preview mesh link to the exported animations will be also exported",
+        default=False
+    )
+
+    IMPORTASSETS_MapSkeletalMotionToRoot: BoolProperty(
+        name="Map Skeletal Motion To Root",
+        description="If enable, Map skeletal actor motion to the root bone of the skeleton",
+        default=False
+    )
+
+    IMPORTASSETS_ExportLocalTime: BoolProperty(
+        name="Export Local Time",
+        description="If enabled, export sequencer animation in its local time, relative to its master sequence",
+        default=True
+    )
 
     # Object
 
