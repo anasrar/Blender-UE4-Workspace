@@ -1,6 +1,6 @@
 # Blender Unreal Engine Workspace
 
-![Blender Unreal Engine Workspace](https://repository-images.githubusercontent.com/259026402/3ce99f00-cd76-11ea-9dc6-db0929afbbb2)
+![Blender Unreal Engine Workspace](https://user-images.githubusercontent.com/38805204/89833819-e957bd80-db8b-11ea-89f1-e8d67f397d40.png)
 
 Blender **2.8x** add-on for export directly to Unreal Engine 4 with all setting in Blender (inspired by **send to unreal** add-on).
 
