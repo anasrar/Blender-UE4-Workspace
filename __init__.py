@@ -75,6 +75,13 @@ from . UE4WS_ObjectSocket import (
     Ops as objectSocketOperator
 )
 
+from . UE4WS_ObjectLOD import (
+    Groups as objectLODPGroup,
+    Props as objectLODProps,
+    PANEL as objectLODPanel,
+    Ops as objectLODOperator
+)
+
 from . UE4WS_ObjectControlRig import (
     PANEL as objectControlRigPanel,
     Ops as objectControlRigOperator
@@ -154,6 +161,7 @@ for x in [
     exportOptionImportAssetsProps,
     objectCustomCollisionProps,
     objectSocketProps,
+    objectLODProps,
     objectRetargetAnimationProps,
     animationProps
     ]:
@@ -167,6 +175,8 @@ for x in [
     objectOperator,
     objectCustomCollisionOperator,
     objectSocketOperator,
+    objectLODPGroup,
+    objectLODOperator,
     objectControlRigOperator,
     objectRetargetAnimationGroup,
     objectRetargetAnimationOperator,
@@ -192,6 +202,7 @@ AR_UE4WS_classes = (
     objectPanel,
     objectCustomCollisionPanel,
     objectSocketPanel,
+    objectLODPanel,
     objectSkeletonPresetPanel,
     objectControlRigPanel,
     RETARGET_UL_BoneParentList,
@@ -220,7 +231,8 @@ TypeProps = {
     "scene": bpy.types.Scene,
     "object": bpy.types.Object,
     "action": bpy.types.Action,
-    "armature": bpy.types.Armature
+    "armature": bpy.types.Armature,
+    "mesh": bpy.types.Mesh
 }
 
 @persistent
@@ -245,6 +257,9 @@ def resetVariable(scene):
                     action.property_unset(P.get("name"))
             elif (typeProp == "armature"):
                 for armature in bpy.data.armatures:
+                    armature.property_unset(P.get("name"))
+            elif (typeProp == "mesh"):
+                for armature in bpy.data.meshes:
                     armature.property_unset(P.get("name"))
 
 def register():
