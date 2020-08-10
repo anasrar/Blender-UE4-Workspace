@@ -292,8 +292,18 @@ class OP_ImportAssets(Operator):
                         for collisionObj in [obj for obj in selectedObjects if obj.name.startswith("UCX_")]:
                             context.scene.SM_CollsionPicker= collisionObj
                             bpy.ops.ue4workspace.smcollisionpicker()
+                    lodEmpty = next(iter([obj for obj in selectedObjects if obj.type == "EMPTY"]), None)
+                    if preferences.IMPORTASSETS_LevelOfDetail and lodEmpty:
+                        mainObj = next(iter([obj for obj in selectedObjects if obj.type == "MESH" and obj.name.endswith("LOD0")]), None)
+                        for lod in [obj for obj in selectedObjects if obj != mainObj and obj.type == "MESH" and "LOD" in obj.name and not obj.name.startswith("UCX")]:
+                            lod.data.objectAsLOD = True
+                            lodStruct = mainObj.data.LODs.add()
+                            lodStruct.obj = lod
+                        bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
+                        mainObj.name = mainObj.name.replace("_LOD0", "")
+                        bpy.data.objects.remove(lodEmpty, do_unlink=True)
                 elif fbxType == "ARMATURE":
-                    emptyObj = next(iter([obj for obj in selectedObjects if obj.type == "EMPTY"]))
+                    emptyObj = next(iter([obj for obj in selectedObjects if obj.type == "EMPTY"]), None)
                     # scale object
                     for child in emptyObj.children:
                         child.scale = child.scale / 100.0
@@ -302,7 +312,7 @@ class OP_ImportAssets(Operator):
                     bpy.data.objects.remove(emptyObj, do_unlink=True)
                 elif fbxType == "ACTION":
                     # rename action
-                    mainObj = next(iter([obj for obj in selectedObjects if obj.type == "ARMATURE"]))
+                    mainObj = next(iter([obj for obj in selectedObjects if obj.type == "ARMATURE"]), None)
                     action = mainObj.animation_data.action
                     action.name = os.path.splitext(os.path.basename(filePath))[0]
                     bpy.ops.object.delete(use_global=False)
