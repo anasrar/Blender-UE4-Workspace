@@ -326,8 +326,8 @@ class OP_ExportStaticMesh(Operator):
         preferences = context.preferences.addons[__package__].preferences
         selectedObjects = context.selected_objects
         objects = (selectedObjects, context.scene.objects)[preferences.SM_ExportMeshOption == "ALL"]
-        # Filter object for mesh, object is not collision, and mesh does not have ARMATURE modifiers
-        objects = [obj for obj in objects if obj.type == "MESH" and not obj.get("isCollision") and not "ARMATURE" in [mod.type for mod in obj.modifiers]]
+        # Filter object for mesh, object is not collision, object is not lod, and mesh does not have ARMATURE modifiers
+        objects = [obj for obj in objects if obj.type == "MESH" and not obj.get("isCollision") and not obj.data.objectAsLOD and not "ARMATURE" in [mod.type for mod in obj.modifiers]]
 
         # Deselect all object
         bpy.ops.object.select_all(action="DESELECT")
@@ -434,6 +434,33 @@ class OP_ExportStaticMesh(Operator):
                     # Reset location
                     obj.location = (0, 0, 0)
 
+                # LOD
+                # lod filter from object data
+                lodStructObjects = [(lod.obj, lod.screenSize) for lod in obj.data.LODs if lod.obj]
+                # lod array for information (obj)
+                lodArrInfo = []
+                objOriginalParent = obj.parent
+                LOD = None
+                if preferences.SM_LOD and bool(lodStructObjects):
+                    LOD = bpy.data.objects.new("LOD_" + obj.name, None)
+                    context.collection.objects.link(LOD)
+                    LOD.empty_display_size = 2
+                    LOD.empty_display_type = "ARROWS"
+                    LOD["fbx_type"] = "LodGroup"
+                    LOD.select_set(state=True)
+                    obj.parent = LOD
+                    for lodObj, screenSize in lodStructObjects:
+                        lodObjCopy = lodObj.copy()
+                        context.collection.objects.link(lodObjCopy)
+                        lodArrInfo.append(lodObjCopy)
+                        # Select object
+                        lodObjCopy.hide_select = False
+                        lodObjCopy.hide_viewport = False
+                        lodObjCopy.select_set(state=True)
+                        if preferences.SM_MeshOrigin == "OBJECT":
+                            lodObjCopy.location = (0, 0, 0)
+                        lodObjCopy.parent = LOD
+
                 # Select current object
                 obj.select_set(state=True)
 
@@ -454,7 +481,7 @@ class OP_ExportStaticMesh(Operator):
                     use_subsurf=preferences.SM_FBXUseSubsurf,
                     use_mesh_edges=preferences.SM_FBXUseMeshEdges,
                     use_tspace=preferences.SM_FBXUseTSpace,
-                    use_custom_props=False,
+                    use_custom_props=True,
                     bake_anim=False,
                     path_mode="AUTO",
                     embed_textures=False,
@@ -468,8 +495,16 @@ class OP_ExportStaticMesh(Operator):
                     # Check if have "Lightmap" UV
                     "custom_uv": "Lightmap" in [uv.name for uv in obj.data.uv_layers],
                     "custom_collision": (preferences.SM_CustomCollision and bool(collObjects)),
-                    "lod": False
+                    "lod": ([obj.data.LOD0ScreenSize] + [screenSize for lodObj,screenSize in lodStructObjects]) if (preferences.SM_LOD and bool(lodStructObjects)) else [],
+                    "auto_compute_lod_distances": obj.data.AutoComputeLODScreenSize
                 })
+
+                # restore LOD
+                if preferences.SM_LOD and bool(lodStructObjects):
+                    obj.parent = objOriginalParent
+                    for lodObj in lodArrInfo:
+                        bpy.data.objects.remove(lodObj, do_unlink=True)
+                    bpy.data.objects.remove(LOD, do_unlink=True)
 
                 if preferences.SM_MeshOrigin == "OBJECT":
                     # Set location object back to original
