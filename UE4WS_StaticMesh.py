@@ -52,16 +52,15 @@ class PANEL(Panel):
         col = split.column()
         col.prop(preferences, "SM_Socket", text="")
 
-        if preferences.devMode:
-            col = layout.column()
-            row = col.row()
-            split = row.split(factor=0.6)
-            col = split.column()
-            col.alignment = "RIGHT"
-            col.label(text="Level of Detail")
-            split = split.split()
-            col = split.column()
-            col.prop(preferences, "SM_LOD", text="")
+        col = layout.column()
+        row = col.row()
+        split = row.split(factor=0.6)
+        col = split.column()
+        col.alignment = "RIGHT"
+        col.label(text="Level of Detail")
+        split = split.split()
+        col = split.column()
+        col.prop(preferences, "SM_LOD", text="")
 
         col = layout.column()
         row = col.row()

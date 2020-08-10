@@ -513,7 +513,7 @@ class Preferences(AddonPreferences):
     SM_LOD: BoolProperty(
         name="Level of Detail",
         description="Export mesh with level of detail (if exist)",
-        default=False
+        default=True
     )
 
     SM_OverwriteFile: BoolProperty(

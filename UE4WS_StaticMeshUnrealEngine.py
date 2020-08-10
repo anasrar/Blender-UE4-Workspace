@@ -18,16 +18,15 @@ class PANEL(Panel):
         if preferences.SM_TabMesh:
             box = layout.box()
             for arr in [["SM_AutoGenerateCollision", "Auto Generate Collision"], ["SM_VertexColorImportOption", "Vertex Color Import Option"], ["SM_VertexOverrideColor", "Vertex Override Color"], ["SM_RemoveDegenerates", "Remove Degenerate"], ["SM_BuildAdjacencyBuffer", "Build Adjacency Buffer"], ["SM_BuildReversedIndexBuffer", "Build Reversed Index Buffer"], ["SM_GenerateLightmapsUVs", "Generate Lightmaps UVs"], ["SM_OneConvexHullPerUCX", "One Convex Hull Per UCX"], ["SM_CombineMeshes", "Combine Meshes"], ["SM_TransformVertexToAbsolute", "Transform Vertex to Absolute"], ["SM_BakePivotInVertex", "Bake Pivot in Vertex"], ["SM_ImportMeshLODs", "Import Mesh LODs"], ["SM_NormalImportMethod", "Normal Import Method"], ["SM_NormalGenerationMethod", "Normal Generation Method"], ["SM_ComputeWeightedNormals", "Compute Weighted Normals"]]:
-                if not arr[0] in ["SM_ImportMeshLODs"]:
-                    col = box.column()
-                    row = col.row()
-                    split = row.split(factor=0.6)
-                    col = split.column()
-                    col.alignment = "RIGHT"
-                    col.label(text=arr[1])
-                    split = split.split()
-                    col = split.column()
-                    col.prop(preferences, arr[0], text="")
+                col = box.column()
+                row = col.row()
+                split = row.split(factor=0.6)
+                col = split.column()
+                col.alignment = "RIGHT"
+                col.label(text=arr[1])
+                split = split.split()
+                col = split.column()
+                col.prop(preferences, arr[0], text="")
 
         layout.prop(preferences, "SM_TabTransform", icon=("TRIA_RIGHT", "TRIA_DOWN")[preferences.SM_TabTransform], emboss=False)
         if preferences.SM_TabTransform:
