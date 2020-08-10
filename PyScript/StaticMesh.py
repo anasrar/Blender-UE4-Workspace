@@ -50,7 +50,7 @@ for file in jsonSetting["files"]:
         importOptions.static_mesh_import_data.set_editor_property("combine_meshes", jsonSetting["combine_meshes"])
         importOptions.static_mesh_import_data.set_editor_property("transform_vertex_to_absolute", jsonSetting["transform_vertex_to_absolute"])
         importOptions.static_mesh_import_data.set_editor_property("bake_pivot_in_vertex", jsonSetting["bake_pivot_in_vertex"])
-        importOptions.static_mesh_import_data.set_editor_property("import_mesh_lo_ds", jsonSetting["import_mesh_lods"])
+        importOptions.static_mesh_import_data.set_editor_property("import_mesh_lo_ds", (jsonSetting["import_mesh_lods"], True)[bool(file["lod"])])
         importOptions.static_mesh_import_data.set_editor_property("normal_import_method", getattr(FBXNormalImportMethod, "FBXNIM_" + jsonSetting["normal_import_method"]))
         importOptions.static_mesh_import_data.set_editor_property("normal_generation_method", getattr(FBXNormalGenerationMethod, jsonSetting["normal_generation_method"]))
         importOptions.static_mesh_import_data.set_editor_property("compute_weighted_normals", jsonSetting["compute_weighted_normals"])
@@ -70,10 +70,15 @@ for file in jsonSetting["files"]:
 
         # LODSetting
 
-        importOptions.set_editor_property("auto_compute_lod_distances", jsonSetting["auto_compute_lod_distances"])
+        importOptions.set_editor_property("auto_compute_lod_distances", (jsonSetting["auto_compute_lod_distances"], file["auto_compute_lod_distances"])[bool(file["lod"])])
 
-        for index, numLOD in enumerate(jsonSetting["lod_distance"]):
-            importOptions.set_editor_property("lod_distance{0}".format(index), numLOD)
+        if bool(file["lod"]):
+            screenSizes = file["lod"] + jsonSetting["lod_distance"][len(file["lod"]):]
+            for index, screenSize in enumerate(screenSizes):
+                importOptions.set_editor_property("lod_distance{0}".format(index), screenSize)
+        else:
+            for index, numLOD in enumerate(jsonSetting["lod_distance"]):
+                importOptions.set_editor_property("lod_distance{0}".format(index), numLOD)
 
         importOptions.set_editor_property("minimum_lod_number", jsonSetting["minimum_lod_number"])
         importOptions.set_editor_property("lod_number", jsonSetting["lod_number"])
