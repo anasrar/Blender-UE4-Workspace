@@ -1,6 +1,6 @@
 import bpy
 from mathutils import Matrix
-from bpy.props import (EnumProperty, StringProperty, PointerProperty)
+from bpy.props import (EnumProperty, BoolProperty, FloatVectorProperty, StringProperty, PointerProperty)
 from bpy.types import (Panel, Operator)
 
 # PROPS
@@ -13,8 +13,26 @@ Props = [
             name="Attach to",
             description="Attach object to socket",
             type=bpy.types.Object,
-            poll=lambda self, obj: obj.type == "EMPTY" and obj.get("isSocket")
+            poll=lambda self, obj: obj.type == "EMPTY" and obj.get("isSocket") and obj.parent is not bpy.context.active_object
             ),
+        "resetVariable": False
+    },
+    {
+        "type": "object",
+        "name": "isAttachToObject",
+        "value": BoolProperty(default=False),
+        "resetVariable": False
+    },
+    {
+        "type": "object",
+        "name": "attachLocationOriginal",
+        "value": FloatVectorProperty(size=3),
+        "resetVariable": False
+    },
+    {
+        "type": "object",
+        "name": "attachRotationOriginal",
+        "value": FloatVectorProperty(size=3),
         "resetVariable": False
     }
 ]
@@ -48,11 +66,11 @@ class PANEL(Panel):
         split = split.split()
         col = split.column()
         row = col.row()
-        row.enabled = not activeObject.get("isAttachToObject", False)
+        row.enabled = not activeObject.isAttachToObject
         row.prop(activeObject, "attachTo", text="", icon="EMPTY_ARROWS")
         row = col.row()
         row.scale_y = 1.5
-        row.operator("ue4workspace.attachobject",icon="CON_PIVOT", text=("Attach", "Detach")[activeObject.get("isAttachToObject", False)])
+        row.operator("ue4workspace.attachobject",icon="CON_PIVOT", text=("Attach", "Detach")[activeObject.isAttachToObject])
 
         box = layout.box()
         row = box.row()
@@ -120,7 +138,7 @@ class OP_AttachObject(Operator):
 
     def execute(self, context):
         obj = context.active_object
-        isAttach = not obj.get("isAttachToObject")
+        isAttach = not obj.isAttachToObject
 
         if isAttach:
             # Attach
@@ -128,9 +146,9 @@ class OP_AttachObject(Operator):
             constraint.name = "AttachTo"
             constraint.target = obj.attachTo
 
-            obj["attachLocationOriginal"] = obj.location
-            obj["attachRotationOriginal"] = obj.rotation_euler
-            obj["isAttachToObject"] = True
+            obj.attachLocationOriginal = obj.location
+            obj.attachRotationOriginal = obj.rotation_euler
+            obj.isAttachToObject = True
             obj.location = [0, 0, 0]
             obj.rotation_euler = [0, 0, 0]
 
@@ -139,11 +157,9 @@ class OP_AttachObject(Operator):
             constraint = obj.constraints.get("AttachTo")
             if constraint:
                 obj.constraints.remove(constraint)
-            obj.location = obj["attachLocationOriginal"]
-            obj.rotation_euler = obj["attachRotationOriginal"]
-            obj.pop("isAttachToObject")
-            obj.pop("attachLocationOriginal")
-            obj.pop("attachRotationOriginal")
+            obj.isAttachToObject = False
+            obj.location = obj.attachLocationOriginal
+            obj.rotation_euler = obj.attachRotationOriginal
 
         try:
             bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg=("Detach Object Success", "Attach Object Success")[isAttach])
