@@ -139,7 +139,7 @@ class PANEL(Panel):
     def poll(self, context):
         preferences = context.preferences.addons[__package__].preferences
         activeObject = context.active_object
-        return activeObject is not None and activeObject.type == "ARMATURE" and context.mode in ["OBJECT", "POSE"]
+        return preferences.experimentalFeatures and activeObject is not None and activeObject.type == "ARMATURE" and context.mode in ["OBJECT", "POSE"]
 
     def draw(self, context):
         layout = self.layout
@@ -298,7 +298,7 @@ class OP_BindArmature(Operator):
     @classmethod
     def poll(self, context):
         activeObject = context.active_object
-        return activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.RetargetSource is not None
+        return preferences.experimentalFeatures and activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.RetargetSource is not None
 
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
@@ -484,7 +484,7 @@ class OP_BakeRetargetAction(Operator):
     @classmethod
     def poll(self, context):
         activeObject = context.active_object
-        return activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.HasBind
+        return preferences.experimentalFeatures and activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.HasBind
 
     def invoke(self, context, event):
         self.startFrame = context.scene.frame_start
