@@ -97,7 +97,8 @@ from . UE4WS_ObjectRetargetAnimation import (
 )
 
 from . UE4WS_ObjectSkeletonPreset import (
-    PANEL as objectSkeletonPresetPanel
+    PANEL as objectSkeletonPresetPanel,
+    Ops as objectSkeletonPresetOperator
 )
 
 from . UE4WS_StaticMesh import (
@@ -180,6 +181,7 @@ for x in [
     objectControlRigOperator,
     objectRetargetAnimationGroup,
     objectRetargetAnimationOperator,
+    objectSkeletonPresetOperator,
     exportOptionOperator,
     exportOptionImportAssetsGroup,
     exportOptionImportAssetsOperator,
