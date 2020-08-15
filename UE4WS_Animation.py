@@ -123,8 +123,8 @@ class ANIM_UL_actionList(UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         if context.active_object is not None and context.active_object.type == "ARMATURE" and True:
             boneNames = [bone.name for bone in context.active_object.pose.bones]
+            layout.prop(item, "name", text="", icon="ACTION", emboss=False)
             if (any(name in fcurve.data_path for fcurve in item.fcurves for name in boneNames)):
-                layout.prop(item, "name", text="", icon="ACTION", emboss=False)
                 layout.prop(item, "isExport", text="")
 
 #  OPERATOR
