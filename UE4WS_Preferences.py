@@ -19,42 +19,9 @@ class RETARGET_AxisMapGroup(PropertyGroup):
     )
     boneTarget: StringProperty(default="Bone")
     boneSource: StringProperty(default="Bone")
-    axisX: EnumProperty(
-        name="Axis Map",
-        items=[
-            ("X", "X", ""),
-            ("Y", "Y", ""),
-            ("Z", "Z", ""),
-            ("-X", "-X", ""),
-            ("-Y", "-Y", ""),
-            ("-Z", "-Z", "")
-            ],
-        default="X"
-    )
-    axisY: EnumProperty(
-        name="Axis Map",
-        items=[
-            ("X", "X", ""),
-            ("Y", "Y", ""),
-            ("Z", "Z", ""),
-            ("-X", "-X", ""),
-            ("-Y", "-Y", ""),
-            ("-Z", "-Z", "")
-            ],
-        default="Y"
-    )
-    axisZ: EnumProperty(
-        name="Axis Map",
-        items=[
-            ("X", "X", ""),
-            ("Y", "Y", ""),
-            ("Z", "Z", ""),
-            ("-X", "-X", ""),
-            ("-Y", "-Y", ""),
-            ("-Z", "-Z", "")
-            ],
-        default="Z"
-    )
+    axisX: BoolProperty(default=True)
+    axisY: BoolProperty(default=True)
+    axisZ: BoolProperty(default=True)
     expression: StringProperty(default="(({var}) + {offset}) * {influence}")
 
 class RETARGET_ParentConstraintGroup(PropertyGroup):
@@ -2179,10 +2146,6 @@ class Preferences(AddonPreferences):
                                 row.label(text="", icon="DECORATE")
                                 row.label(text="Axis Z")
 
-                                row = col.row(align=True)
-                                row.label(text="", icon="DECORATE")
-                                row.label(text="Expression")
-
                                 split = split.split()
                                 col = split.column()
                                 # prop
@@ -2199,13 +2162,11 @@ class Preferences(AddonPreferences):
                                 for i, name in enumerate(["Rotation", "Location", "Scale"]):
                                     row.prop(bone, "transform", index=i, text=name, toggle=True)
                                 row = col.row(align=True)
-                                row.prop(bone, "axisX", text="", icon="EMPTY_DATA")
+                                row.prop(bone, "axisX", text="")
                                 row = col.row(align=True)
-                                row.prop(bone, "axisY", text="", icon="EMPTY_DATA")
+                                row.prop(bone, "axisY", text="")
                                 row = col.row(align=True)
-                                row.prop(bone, "axisZ", text="", icon="EMPTY_DATA")
-                                row = col.row(align=True)
-                                row.prop(bone, "expression", text="")
+                                row.prop(bone, "axisZ", text="")
 
     def drawMiscTab(self, context):
         layout = self.layout
@@ -2228,6 +2189,10 @@ class Preferences(AddonPreferences):
     def draw(self, context):
         layout = self.layout
         
+        warn = layout.box()
+        warn.alert = True
+        warn.scale_y = 2
+        warn.label(text="Remember to export all retarget preset before you remove or disable the add-on")
         layout.row().prop(self, "preferencesTab", expand=True)
 
         drawPreferencesTab = {
@@ -2266,11 +2231,11 @@ class OP_ImportRetagetPreset(Operator, ImportHelper):
         file.close()
         jsonPreset = json.loads(jsonString).get("RetargetPreset")
         if jsonPreset:
-            for preset in jsonPreset:
+            for index, preset in enumerate(jsonPreset):
                 newPreset = presets.add()
                 newPreset.name = preset["name"]
                 newPreset.description = preset["description"]
-                newPreset.flag = int(time.time())
+                newPreset.flag = int(time.time()) + index
                 for bone in preset["parentBone"]:
                     newParent = newPreset.ParentBones.add()
                     newParent.name = bone["name"]
