@@ -19,7 +19,10 @@ class RETARGET_BoneParentGroup(PropertyGroup):
 class RETARGET_BoneMapGroup(PropertyGroup):
     name: StringProperty(default="Bone")
     obj: PointerProperty(type=bpy.types.Object)
-    boneExist: BoolProperty(default=True)
+    boneTargetName: StringProperty(default="Bone")
+    boneSourceName: StringProperty(default="Bone")
+    boneTargetExist: BoolProperty(default=True)
+    boneSourceExist: BoolProperty(default=True)
     boneNotExist: BoolProperty(name="Warning", description="Bone Does Not Exist", default=False)
     def updateMute(self, context):
         for FCurve in self.obj.animation_data.drivers:
@@ -27,22 +30,21 @@ class RETARGET_BoneMapGroup(PropertyGroup):
                 FCurve.mute = self.mute
     mute: BoolProperty(default=False, update=updateMute)
     transform: BoolVectorProperty(default=(False, False, False), size=3)
+    axis: BoolVectorProperty(default=(False, False, False), size=3)
     source: StringProperty(default="Bone")
     target: StringProperty(default="Bone")
     dataPaths: CollectionProperty(type=RETARGET_DataPath)
     influence: FloatProperty(default=1.0, min=0.0, max=1.0)
-    rotation_eulerX: FloatProperty(default=0.0, subtype="ANGLE")
-    rotation_eulerY: FloatProperty(default=0.0, subtype="ANGLE")
-    rotation_eulerZ: FloatProperty(default=0.0, subtype="ANGLE")
-    rotation_eulerInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
-    locationX: FloatProperty(default=0.0)
-    locationY: FloatProperty(default=0.0)
-    locationZ: FloatProperty(default=0.0)
-    locationInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
-    scaleX: FloatProperty(default=0.0)
-    scaleY: FloatProperty(default=0.0)
-    scaleZ: FloatProperty(default=0.0)
-    scaleInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    locationMultiply: FloatProperty(default=1.0)
+    ROT_XInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    ROT_YInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    ROT_ZInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    LOC_XInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    LOC_YInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    LOC_ZInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    SCALE_XInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    SCALE_YInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
+    SCALE_ZInfluence: FloatProperty(default=1.0, min=0.0, max=1.0)
 
 # group export
 
@@ -121,6 +123,12 @@ Props = [
         "name": "BoneMapTab",
         "value": BoolProperty(default=False),
         "resetVariable": True
+    },
+    {
+        "type": "armature",
+        "name": "boneShapeObj",
+        "value": PointerProperty(type=bpy.types.Object),
+        "resetVariable": False
     }
 ]
 
@@ -139,7 +147,7 @@ class PANEL(Panel):
     def poll(self, context):
         preferences = context.preferences.addons[__package__].preferences
         activeObject = context.active_object
-        return preferences.experimentalFeatures and activeObject is not None and activeObject.type == "ARMATURE" and context.mode in ["OBJECT", "POSE"]
+        return activeObject is not None and activeObject.type == "ARMATURE" and context.mode in ["OBJECT", "POSE"]
 
     def draw(self, context):
         layout = self.layout
@@ -173,12 +181,13 @@ class PANEL(Panel):
             if activeObject.data.ParentBoneTab:
                 col = layout.column()
                 row = col.row()
-                split = row.split(factor=0.5)
+                split = row.split(factor=0.8)
                 col = split.column()
-                col.label(text="Bone")
+                col.label(text="Name")
                 split = split.split()
                 col = split.column()
-                col.label(text="Parent")
+                col.alignment = "RIGHT"
+                col.label(text="Mute")
 
                 layout.template_list("RETARGET_UL_BoneParentList", "", activeObject.data, "BoneParents", activeObject.data, "indexBoneParent", rows=4)
 
@@ -199,7 +208,10 @@ class PANEL(Panel):
                         split = split.split()
                         col = split.column()
                         col.alignment = "LEFT"
-                        col.label(text=BoneParent.bone)
+                        row = col.row(align=True)
+                        if True:
+                            row.prop(BoneParent, "boneNotExist", text="", icon="ERROR", emboss=False)
+                        row.label(text=BoneParent.bone)
                         col.label(text=BoneParent.parent)
                         col.prop(BoneParent, "influence", text="", slider=True)
 
@@ -207,51 +219,52 @@ class PANEL(Panel):
             if activeObject.data.BoneMapTab:
                 col = layout.column()
                 row = col.row()
-                split = row.split(factor=0.5)
+                split = row.split(factor=0.8)
                 col = split.column()
-                col.label(text="Target")
+                col.label(text="Name")
                 split = split.split()
                 col = split.column()
-                col.label(text="Source")
+                col.alignment = "RIGHT"
+                col.label(text="Mute")
 
                 layout.template_list("RETARGET_UL_BoneMapList", "", activeObject.data, "BoneMaps", activeObject.data, "indexBoneMap", rows=4)
 
                 indexBoneMap = activeObject.data.indexBoneMap
                 if indexBoneMap != -1 and indexBoneMap < len(activeObject.data.BoneMaps):
                     BoneMap = activeObject.data.BoneMaps[indexBoneMap]
-                    if BoneMap.boneExist:
-                        box = layout.box()
-                        box.label(text=BoneMap.name)
-                        col = box.column()
-                        row = col.row()
-                        split = row.split(factor=0.6)
-                        col = split.column()
-                        col.alignment = "RIGHT"
-                        col.label(text="Target")
-                        col.label(text="Source")
-                        # col.label(text="Mute")
-                        # col.label(text="Influence")
-                        split = split.split()
-                        col = split.column()
-                        col.alignment = "LEFT"
-                        col.label(text=BoneMap.target)
-                        col.label(text=BoneMap.source)
-                        # col.prop(BoneMap, "mute", text="", icon=("CHECKBOX_DEHLT" if BoneMap.mute else "CHECKBOX_HLT"), emboss=False)
-                        # col.prop(BoneMap, "influence", text="", slider=True)
 
-                        # i plan to expose expression variable but i think no one will really use
-                        # box.row().label(text="EXPESSION")
-                        # box.row().prop(BoneMap, "target", text="")
+                    box = layout.box()
+                    box.label(text=BoneMap.name)
+                    col = box.column()
+                    row = col.row()
+                    split = row.split(factor=0.6)
+                    col = split.column()
+                    col.alignment = "RIGHT"
+                    col.label(text="Target")
+                    col.label(text="Source")
+                    split = split.split()
+                    col = split.column()
+                    row = col.row(align=True)
+                    if not BoneMap.boneTargetExist:
+                        row.prop(BoneMap, "boneNotExist", text="", icon="ERROR", emboss=False)
+                    row.label(text=BoneMap.target)
+                    row = col.row(align=True)
+                    if not BoneMap.boneSourceExist:
+                        row.prop(BoneMap, "boneNotExist", text="", icon="ERROR", emboss=False)
+                    row.label(text=BoneMap.source if BoneMap.source else "OBJECT")
 
-                        for index, transform in enumerate(BoneMap.transform):
-                            if transform:
-                                transformLabel = ["ROTATION", "LOCATION", "SCALE"][index]
-                                transformAttribute = ["rotation_euler", "location", "scale"][index]
-                                box.row().label(text="OFFSET " + transformLabel)
-                                col = box.column(align=True)
-                                for axis in ["X", "Y", "Z"]:
-                                    col.prop(BoneMap, transformAttribute + axis, text=axis)
-                                col.prop(BoneMap, transformAttribute + "Influence", text="Influence", slider=True)
+                    for index, transform in enumerate(BoneMap.transform):
+                        if transform:
+                            transformLabel = ["Rotation", "Location", "Scale"][index]
+                            transformAttribute = ["ROT_", "LOC_", "SCALE_"][index]
+                            if transformAttribute == "LOC_":
+                                box.row().label(text=transformLabel + " Multipy")
+                                box.row(align=True).prop(BoneMap, "locationMultiply", text="")
+                            box.row().label(text="Influence " + transformLabel)
+                            col = box.column(align=True)
+                            for axis in [i for i, x in enumerate(list(BoneMap.axis)) if x]:
+                                axis = ["X", "Y", "Z"][axis]
+                                col.prop(BoneMap, transformAttribute + axis + "Influence", text=axis, slider=True)
 
 # UIList
 
@@ -260,12 +273,7 @@ class RETARGET_UL_BoneParentList(UIList):
         activeObject = context.active_object
 
         row = layout.row()
-        split = row.split(factor=0.5)
-        row = split.row()
-        row.label(text=item.bone)
-        split = split.split()
-        row = split.row()
-        row.label(text=item.parent)
+        row.label(text=item.name)
         if item.boneExist:
             row.prop(item, "mute", text="", icon=("CHECKBOX_DEHLT" if item.mute else "CHECKBOX_HLT"), emboss=False)
         else:
@@ -276,13 +284,8 @@ class RETARGET_UL_BoneMapList(UIList):
         activeObject = context.active_object
 
         row = layout.row()
-        split = row.split(factor=0.5)
-        row = split.row()
-        row.label(text=item.target)
-        split = split.split()
-        row = split.row()
-        row.label(text=item.source)
-        if item.boneExist:
+        row.label(text=item.name)
+        if item.boneTargetExist and item.boneSourceExist:
             row.prop(item, "mute", text="", icon=("CHECKBOX_DEHLT" if item.mute else "CHECKBOX_HLT"), emboss=False)
         else:
             row.prop(item, "boneNotExist", text="", icon="ERROR", emboss=False)
@@ -297,8 +300,9 @@ class OP_BindArmature(Operator):
 
     @classmethod
     def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
         activeObject = context.active_object
-        return preferences.experimentalFeatures and activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.RetargetSource is not None
+        return activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.RetargetSource is not None
 
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
@@ -308,13 +312,21 @@ class OP_BindArmature(Operator):
         bpy.ops.object.mode_set(mode="OBJECT")
         bpy.ops.object.select_all(action="DESELECT")
         context.view_layer.objects.active = targetObj
-        bpy.ops.object.mode_set(mode="POSE")
-        poseBones = targetObj.pose.bones
+        selectStateTargetObj = targetObj.select_get()
+        selectStateSourceObj = sourceObj.select_get()
+        targetObj.select_set(True)
+        sourceObj.select_set(True)
+        bpy.ops.object.mode_set(mode="EDIT")
+        targetPoseBones = targetObj.pose.bones
+        sourcePoseBones = sourceObj.pose.bones
+        targetEditBones = targetObj.data.edit_bones
+        sourceEditBones = sourceObj.data.edit_bones
 
         preset = next(iter([preset for preset in preferences.RETARGET_Presets if str(preset.flag) == targetObj.data.RetargetPreset]), None)
 
         # unbind
         if targetObj.data.HasBind:
+            bpy.ops.object.mode_set(mode="POSE")
             # remove parent constraint in bone parent list
             for index, BoneParent in enumerate([BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist]):
                 poseBone = poseBones.get(BoneParent.bone)
@@ -326,42 +338,92 @@ class OP_BindArmature(Operator):
             # clear collection
             targetObj.data.BoneParents.clear()
 
-            # remove driver from maping bone list
-            for index, boneMap in enumerate([boneMap for boneMap in targetObj.data.BoneMaps if boneMap.boneExist]):
-                poseBone = poseBones.get(boneMap.target)
-                # change rotation mode to QUATERNION
-                poseBone.rotation_mode = "QUATERNION"
-                for index, transformType in enumerate(list(boneMap.transform)):
-                    if transformType:
-                        poseBone.driver_remove(["rotation_euler", "location", "scale"][index])
+            # remove constraint and driver
+            for boneMap in [boneMap for boneMap in targetObj.data.BoneMaps if boneMap.boneSourceExist and boneMap.boneTargetExist]:
+                targetPoseBone = targetPoseBones.get(boneMap.target)
+                constraint = targetPoseBone.constraints.get("RETARGET_TRANSFORM")
+                constraint.driver_remove("mute")
+                targetPoseBone.constraints.remove(constraint)
+
+                sourceMimicPoseBone = targetPoseBones.get(boneMap.boneSourceName)
+                for transformType in [["rotation_euler", "location", "scale"][i] for i, x in enumerate(list(boneMap.transform)) if x]:
+                    sourceMimicPoseBone.driver_remove(transformType)
+
+            bpy.ops.object.mode_set(mode="EDIT")
+
+            # remove mimic bone
+            for boneMap in [boneMap for boneMap in targetObj.data.BoneMaps if boneMap.boneSourceExist and boneMap.boneTargetExist]:
+                sourceMimicBone = targetEditBones.get(boneMap.boneSourceName)
+                targetMimicBone = targetEditBones.get(boneMap.boneTargetName)
+
+                targetEditBones.remove(sourceMimicBone)
+                targetEditBones.remove(targetMimicBone)
+
             # clear collection
             targetObj.data.BoneMaps.clear()
 
-            # clear transform
-            bpy.ops.pose.select_all(action="SELECT")
-            bpy.ops.pose.rot_clear()
-            bpy.ops.pose.loc_clear()
-            bpy.ops.pose.scale_clear()
-            bpy.ops.pose.select_all(action="DESELECT")
-
+            # remove custom shape for hide bone
+            bpy.data.objects.remove(targetObj.data.boneShapeObj, do_unlink=True)
         # bind
         else:
+            mesh = bpy.data.meshes.new("HideBone")
+            objCustomShape = bpy.data.objects.new(mesh.name,mesh)
+            mesh.from_pydata([(0, 0, 0)], [], [])
+            targetObj.data.boneShapeObj = objCustomShape
+
+            # maping bone list
+            # adding mimic bone
+            for boneMap in preset.AxisMaps:
+                newBoneMap = targetObj.data.BoneMaps.add()
+                newBoneMap.name = boneMap.name
+                newBoneMap.target = boneMap.boneTarget
+                newBoneMap.source = boneMap.boneSource
+                newBoneMap.obj = targetObj
+                newBoneMap.axis = (boneMap.axisX, boneMap.axisY, boneMap.axisZ)
+                newBoneMap.transform = boneMap.transform
+
+                sourceBone = sourceEditBones.get(boneMap.boneSource) if boneMap.boneSource else sourceObj
+                targetBone = targetEditBones.get(boneMap.boneTarget)
+
+                newBoneMap.boneSourceExist = bool(sourceBone)
+                newBoneMap.boneTargetExist = bool(targetBone)
+
+                if newBoneMap.boneSourceExist and newBoneMap.boneTargetExist:
+                    sourceMimicBone = targetEditBones.new("RETARGET_SRC_" + (boneMap.boneSource if boneMap.boneSource else "[OBJECT]"))
+                    sourceMimicBone.length = 0.25
+                    sourceMimicBone.use_deform = False
+                    sourceMimicBone.matrix = sourceBone.matrix.copy().to_quaternion().to_matrix().to_4x4() if boneMap.boneSource else sourceObj.matrix_world.copy().to_quaternion().to_matrix().to_4x4()
+
+                    targetMimicBone = targetEditBones.new("RETARGET_TRG_" + boneMap.boneTarget)
+                    targetMimicBone.length = 0.25
+                    targetMimicBone.use_deform = False
+                    targetMimicBone.matrix = targetBone.matrix.copy().to_quaternion().to_matrix().to_4x4()
+                    targetMimicBone.parent = sourceMimicBone
+
+                    newBoneMap.boneSourceName = sourceMimicBone.name
+                    newBoneMap.boneTargetName = targetMimicBone.name
+
+            bpy.ops.object.mode_set(mode="POSE")
+
             # add parent constraint in bone parent list
-            for index, parentBone in enumerate(preset.ParentBones):
+            for parentBone in preset.ParentBones:
                 newParentBone = targetObj.data.BoneParents.add()
                 newParentBone.name = parentBone.name
                 newParentBone.bone = parentBone.bone
                 newParentBone.parent = parentBone.parent
-                poseBone = poseBones.get(parentBone.bone)
-                if poseBone:
+                poseBone = targetPoseBones.get(parentBone.bone)
+                newParentBone.boneExist = bool(poseBone)
+                if newParentBone.boneExist:
                     # constraint
-                    constraint = poseBone.constraints.new("ARMATURE")
+                    constraint = poseBone.constraints.new("CHILD_OF")
                     constraint.name = "RETARGET_PARENT"
                     constraint.show_expanded = False
-                    target = constraint.targets.new()
-                    target.target = targetObj
-                    target.subtarget = parentBone.parent
-                    target.weight = 1.0
+                    constraint.target = targetObj
+                    constraint.subtarget = parentBone.parent
+                    context_copy = bpy.context.copy()
+                    context_copy["constraint"] = constraint
+                    targetObj.data.bones.active = poseBone.bone
+                    bpy.ops.constraint.childof_set_inverse(context_copy, constraint=constraint.name, owner="BONE")
                     # driver mute
                     driver = constraint.driver_add("mute").driver
                     driver.type = "SCRIPTED"
@@ -387,85 +449,115 @@ class OP_BindArmature(Operator):
                     varTarget.id = targetObj.data
                     varTarget.data_path = newParentBone.path_from_id("influence")
                     driver.expression = "influence"
-                else:
-                    newParentBone.boneExist = False
 
-            # maping bone list
-            for index, boneMap in enumerate(preset.AxisMaps):
-                newBoneMap = targetObj.data.BoneMaps.add()
-                newBoneMap.name = boneMap.name
-                newBoneMap.target = boneMap.boneTarget
-                newBoneMap.source = boneMap.boneSource if boneMap.boneSource else "[Object]"
-                newBoneMap.obj = targetObj
-                poseBone = poseBones.get(boneMap.boneTarget)
-                if poseBone:
-                    # change rotation mode to XYZ
-                    poseBone.rotation_mode = "XYZ"
-                    newBoneMap.transform = boneMap.transform
-                    for index, transformType in enumerate(list(boneMap.transform)):
-                        if transformType:
-                            for targetAxis, sourceAxis in [("X", boneMap.axisX), ("Y", boneMap.axisY), ("Z", boneMap.axisZ)]:
-                                indexToTransformName = ["rotation_euler", "location", "scale"][index]
-                                targetAxisToIndex = {"X": 0, "Y": 1, "Z": 2}[targetAxis]
-                                isInverse = sourceAxis.startswith("-")
-                                sourceAxis = sourceAxis.replace("-", "")
-                                offsetInit = getattr(poseBone, indexToTransformName)[targetAxisToIndex]
+            # add driver and constraint
+            for boneMap in [boneMap for boneMap in targetObj.data.BoneMaps if boneMap.boneSourceExist and boneMap.boneTargetExist]:
+                sourcePoseBone = targetPoseBones.get(boneMap.boneSourceName)
+                # change rotation mode to XYZ
+                sourcePoseBone.rotation_mode = "XYZ"
+                for transformType in [["rotation_euler", "location", "scale"][i] for i, x in enumerate(list(boneMap.transform)) if x]:
+                    for axis in [i for i, x in enumerate(list(boneMap.axis)) if x]:
+                        transformDriver = ({"rotation_euler": "ROT_", "location": "LOC_", "scale": "SCALE_"}[transformType]) + (["X", "Y", "Z"][axis])
+                        # driver bone
+                        FCurve = sourcePoseBone.driver_add(transformType, axis)
+                        driver = FCurve.driver
+                        driver.type = "SCRIPTED"
 
-                                # driver bone
-                                FCurve = poseBone.driver_add(indexToTransformName, targetAxisToIndex)
-                                driver = FCurve.driver
-                                driver.type = "SCRIPTED"
+                        var = driver.variables.new()
+                        var.name = "var"
+                        varName = var.name
+                        var.type = "TRANSFORMS"
+                        varTarget = var.targets[0]
+                        varTarget.id = sourceObj
+                        varTarget.bone_target = boneMap.source
+                        varTarget.transform_type = transformDriver
+                        varTarget.rotation_mode = "AUTO"
+                        varTarget.transform_space = "LOCAL_SPACE"
 
-                                var = driver.variables.new()
-                                var.type = "TRANSFORMS"
-                                varTarget = var.targets[0]
-                                varTarget.id = sourceObj
-                                varTarget.bone_target = boneMap.boneSource
-                                varTarget.transform_type = (["ROT_", "LOC_", "SCALE_"][index]) + sourceAxis
-                                varTarget.rotation_mode = "AUTO"
-                                varTarget.transform_space = "LOCAL_SPACE"
+                        # influence
+                        var = driver.variables.new()
+                        var.name = "influence"
+                        varInfluence = var.name
+                        var.type = "SINGLE_PROP"
+                        varTarget = var.targets[0]
+                        varTarget.id_type = "ARMATURE"
+                        varTarget.id = targetObj.data
+                        varTarget.data_path = boneMap.path_from_id(transformDriver + "Influence")
 
-                                varName = "-" + var.name if isInverse else var.name
+                        # location Multiply
+                        var = driver.variables.new()
+                        var.name = "locationMultiply"
+                        varLocationMultiply = var.name
+                        var.type = "SINGLE_PROP"
+                        varTarget = var.targets[0]
+                        varTarget.id_type = "ARMATURE"
+                        varTarget.id = targetObj.data
+                        varTarget.data_path = boneMap.path_from_id("locationMultiply")
 
-                                # offset
-                                var = driver.variables.new()
-                                var.name = "offset"
-                                setattr(newBoneMap, indexToTransformName + targetAxis , offsetInit)
-                                offset = var.name
-                                var.type = "SINGLE_PROP"
-                                varTarget = var.targets[0]
-                                varTarget.id_type = "ARMATURE"
-                                varTarget.id = targetObj.data
-                                varTarget.data_path = newBoneMap.path_from_id(indexToTransformName + targetAxis)
+                        # scale source
+                        var = driver.variables.new()
+                        var.name = "scaleSource"
+                        varScaleSource = var.name
+                        var.type = "TRANSFORMS"
+                        varTarget = var.targets[0]
+                        varTarget.id = sourceObj
+                        varTarget.bone_target = ""
+                        varTarget.transform_type = "SCALE_" + (["X", "Y", "Z"][axis])
+                        varTarget.rotation_mode = "AUTO"
+                        varTarget.transform_space = "LOCAL_SPACE"
 
-                                # influence Transform
-                                var = driver.variables.new()
-                                var.name = "influence"
-                                influence = var.name
-                                var.type = "SINGLE_PROP"
-                                varTarget = var.targets[0]
-                                varTarget.id_type = "ARMATURE"
-                                varTarget.id = targetObj.data
-                                varTarget.data_path = newBoneMap.path_from_id( indexToTransformName + "Influence")
+                        # scale target
+                        var = driver.variables.new()
+                        var.name = "scaleTarget"
+                        varScaleTarget = var.name
+                        var.type = "TRANSFORMS"
+                        varTarget = var.targets[0]
+                        varTarget.id = targetObj
+                        varTarget.bone_target = ""
+                        varTarget.transform_type = "SCALE_" + (["X", "Y", "Z"][axis])
+                        varTarget.rotation_mode = "AUTO"
+                        varTarget.transform_space = "LOCAL_SPACE"
 
-                                # # influence
-                                # var = driver.variables.new()
-                                # var.name = "influence"
-                                # influence = var.name
-                                # var.type = "SINGLE_PROP"
-                                # varTarget = var.targets[0]
-                                # varTarget.id_type = "ARMATURE"
-                                # varTarget.id = targetObj.data
-                                # varTarget.data_path = newBoneMap.path_from_id("influence")
+                        driver.expression = "(({}/({}/{}))*{})*{}".format(varName, varScaleTarget, varScaleSource, varLocationMultiply, varInfluence) if transformType == "location" else "{}*{}".format(varName, varInfluence)
 
-                                driver.expression = boneMap.expression.format(var=varName, offset=offset, influence=influence)
+                        # data path collection
+                        dataPath = boneMap.dataPaths.add()
+                        dataPath.path = FCurve.data_path + "["+ str(FCurve.array_index) +"]"
 
-                                # data path collection
-                                dataPath = newBoneMap.dataPaths.add()
-                                dataPath.path = FCurve.data_path + "["+ str(FCurve.array_index) +"]"
-                else:
-                    newBoneMap.boneExist = False
+                sourcePoseBone.custom_shape = targetObj.data.boneShapeObj
+                sourcePoseBone.custom_shape_scale = 0
+                sourcePoseBone.bone.hide = True
 
+                targetMimicPoseBone = targetPoseBones.get(boneMap.boneTargetName)
+                targetMimicPoseBone.custom_shape = targetObj.data.boneShapeObj
+                targetMimicPoseBone.custom_shape_scale = 0
+                targetMimicPoseBone.bone.hide = True
+
+                targetPoseBone = targetPoseBones.get(boneMap.target)
+                constraint = targetPoseBone.constraints.new("COPY_TRANSFORMS")
+                constraint.show_expanded = False
+                constraint.name = "RETARGET_TRANSFORM"
+                constraint.subtarget = boneMap.boneTargetName
+                constraint.target = targetObj
+                constraint.owner_space = "LOCAL"
+                constraint.target_space = "LOCAL_WITH_PARENT"
+                constraint.mix_mode = "BEFORE"
+                # driver mute
+                driver = constraint.driver_add("mute").driver
+                driver.type = "SCRIPTED"
+
+                var = driver.variables.new()
+                var.name = "mute"
+                var.type = "SINGLE_PROP"
+                varTarget = var.targets[0]
+                varTarget.id_type = "ARMATURE"
+                varTarget.id = targetObj.data
+                varTarget.data_path = boneMap.path_from_id("mute")
+                driver.expression = "mute"
+
+        bpy.ops.object.mode_set(mode="OBJECT")
+        targetObj.select_set(selectStateTargetObj)
+        sourceObj.select_set(selectStateSourceObj)
         bpy.ops.object.mode_set(mode=oldMode)
         targetObj.data.HasBind = not targetObj.data.HasBind
         return {"FINISHED"}
@@ -483,8 +575,9 @@ class OP_BakeRetargetAction(Operator):
 
     @classmethod
     def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
         activeObject = context.active_object
-        return preferences.experimentalFeatures and activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.HasBind
+        return activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.HasBind
 
     def invoke(self, context, event):
         self.startFrame = context.scene.frame_start
@@ -555,50 +648,65 @@ class OP_BakeRetargetAction(Operator):
         bpy.ops.pose.select_all(action="DESELECT")
 
         oldCurrentFrame = context.scene.frame_current
-        # parent bone matrix to keyframe, because using constraint does not get local transform
-        # format (boneName: str, matrix: Matrix, frame: int)
+        # pose bone matrix to keyframe, because using constraint does not get local transform
+        # format (poseBone: poseBone, matrix: Matrix, frame: int, transform: tuple(rotation: bool, location: bool, scale: bool), axis: tuple(x: bool, y: bool, z: bool))
+        poseBoneMatrixs = []
+        # same as pose bone matrix but for parent bone
+        # format (poseBone: poseBone, matrix: Matrix, frame: int)
         parentBoneMatrixs = []
+
+        # fliter bone maps
+        boneMaps = [boneMap for boneMap in targetObj.data.BoneMaps if boneMap.boneTargetExist and boneMap.boneSourceExist and not boneMap.mute]
+        # fliter parent bone
+        parentBones = [BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist and not BoneParent.mute]
 
         # bake animation manually because bake action operator in python is very buggy and give me more control
         frame = self.startFrame
         while frame <= self.endFrame:
             context.scene.frame_set(frame)
-            # bake bone base on bone map list
-            for boneMap in [boneMap for boneMap in targetObj.data.BoneMaps if boneMap.boneExist and not boneMap.mute]:
+            # get matrix bone maps
+            for boneMap in boneMaps:
                 poseBone = poseBones.get(boneMap.target)
-                for index, transformType in enumerate(list(boneMap.transform)):
-                    if transformType:
-                        indexToTransformName = ["rotation_euler", "location", "scale"][index]
-                        poseBone.keyframe_insert(indexToTransformName)
-                        if indexToTransformName == "rotation_euler":
-                            # insert keyframe to quaternion rotation
-                            # convert euler to rotation so you can use two mode rotation
-                            poseBone.rotation_quaternion = poseBone.rotation_euler.to_quaternion()
-                            poseBone.keyframe_insert("rotation_quaternion")
+                poseBoneMatrixs.append((poseBone, poseBone.matrix.copy(), frame, boneMap.transform, boneMap.axis))
 
             # get matrix parent bone
-            for index, BoneParent in enumerate([BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist and not BoneParent.mute]):
+            for BoneParent in parentBones:
                 poseBone = poseBones.get(BoneParent.bone)
-                boneMatrix = poseBone.matrix.copy()
-                parentBoneMatrixs.append((BoneParent.bone, boneMatrix, frame))
+                parentBoneMatrixs.append((poseBone, poseBone.matrix.copy(), frame))
 
             frame += self.frameStep
 
-        # mute parent constraint
-        for index, BoneParent in enumerate([BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist]):
-            BoneParent.mute = not BoneParent.mute
+        # mute bone constraint
+        for boneMap in boneMaps:
+            boneMap.mute = True
 
-        # insert parent bone keyframe matrix
-        for boneName, matrix, frame in parentBoneMatrixs:
-            poseBone = poseBones.get(boneName)
+        # mute parent constraint
+        for BoneParent in parentBones:
+            BoneParent.mute = True
+
+        # insert bone keyframe matrix
+        for poseBone, matrix, frame, transform, axis in poseBoneMatrixs:
             poseBone.matrix = matrix
+            bpy.ops.pose.visual_transform_apply()
             poseBone.keyframe_insert("location", frame=frame)
             poseBone.keyframe_insert("rotation_quaternion", frame=frame)
             poseBone.keyframe_insert("rotation_euler", frame=frame)
 
+        # insert parent bone keyframe matrix
+        for poseBone, matrix, frame in parentBoneMatrixs:
+            poseBone.matrix = matrix
+            bpy.ops.pose.visual_transform_apply()
+            poseBone.keyframe_insert("location", frame=frame)
+            poseBone.keyframe_insert("rotation_quaternion", frame=frame)
+            poseBone.keyframe_insert("rotation_euler", frame=frame)
+
+        # unmute bone constraint
+        for boneMap in boneMaps:
+            boneMap.mute = False
+
         # unmute parent constraint
-        for index, BoneParent in enumerate([BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist]):
-            BoneParent.mute = not BoneParent.mute
+        for BoneParent in parentBones:
+            BoneParent.mute = False
 
         # change interpolation to LINEAR
         for fcurve in action.fcurves:
