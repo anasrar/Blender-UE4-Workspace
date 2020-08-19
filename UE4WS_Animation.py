@@ -99,7 +99,7 @@ class PANEL(Panel):
             row = layout.row()
             row.scale_y = 1.5
             # operator location on UE4WS_Character.py
-            row.operator("ue4workspace.updatelistskeleton",icon="ARMATURE_DATA", text="Update List Skeleton")
+            row.operator("ue4workspace.updateskeletonlist",icon="ARMATURE_DATA")
 
         row = layout.row()
         row.scale_y = 1.5

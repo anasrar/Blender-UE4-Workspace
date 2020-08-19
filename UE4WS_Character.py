@@ -102,7 +102,7 @@ class PANEL(Panel):
 
             row = layout.row()
             row.scale_y = 1.5
-            row.operator("ue4workspace.updatelistskeleton",icon="ARMATURE_DATA", text="Update List Skeleton")
+            row.operator("ue4workspace.updateskeletonlist",icon="ARMATURE_DATA")
 
         row = layout.row()
         row.scale_y = 1.5
@@ -360,10 +360,10 @@ class OP_IMPORTARMATURE(Operator):
 
         return {"FINISHED"}
 
-class OP_UpdateListSkeleton(Operator):
-    bl_idname = "ue4workspace.updatelistskeleton"
-    bl_label = "UE4Workspace Operator"
-    bl_description = "Update List Skeleton"
+class OP_UpdateSkeletonList(Operator):
+    bl_idname = "ue4workspace.updateskeletonlist"
+    bl_label = "Update Skeleton List"
+    bl_description = "Update Skeleton List From Unreal Engine"
 
     remote = None
 
@@ -1038,7 +1038,7 @@ class OP_ExportCharacter(Operator):
 
 Ops = [
     OP_IMPORTARMATURE,
-    OP_UpdateListSkeleton,
+    OP_UpdateSkeletonList,
     OP_CharacterRotateBone,
     OP_CharacterGenerateRig,
     OP_CharacterRemoveTemporaryBone,
