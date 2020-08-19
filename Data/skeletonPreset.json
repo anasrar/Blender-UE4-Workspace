@@ -227,7 +227,7 @@
                     "connect": true,
                     "roll": 0.7739402055740356,
                     "parent": "lowerarm_l",
-                    "use_inherit_rotation": false,
+                    "use_inherit_rotation": true,
                     "prop": {
                         "boneOrient": [
                             -1.5707963267948966,
@@ -653,7 +653,7 @@
                     "connect": true,
                     "roll": -0.7739402055740356,
                     "parent": "lowerarm_r",
-                    "use_inherit_rotation": false,
+                    "use_inherit_rotation": true,
                     "prop": {
                         "boneOrient": [
                             1.5707963267948966,
@@ -1056,7 +1056,7 @@
                     "connect": true,
                     "roll": 2.9952428340911865,
                     "parent": "calf_l",
-                    "use_inherit_rotation": false,
+                    "use_inherit_rotation": true,
                     "prop": {
                         "boneOrient": [
                             3.141592653589793,
@@ -1146,7 +1146,7 @@
                     "connect": true,
                     "roll": -2.9952428340911865,
                     "parent": "calf_r",
-                    "use_inherit_rotation": false,
+                    "use_inherit_rotation": true,
                     "prop": {
                         "boneOrient": [
                             0.0,
@@ -1406,7 +1406,7 @@
                     "connect": true,
                     "roll": 0.7739402055740356,
                     "parent": "lowerarm_l",
-                    "use_inherit_rotation": false,
+                    "use_inherit_rotation": true,
                     "prop": {
                         "boneOrient": [
                             -1.5707963267948966,
@@ -1832,7 +1832,7 @@
                     "connect": true,
                     "roll": -0.7739402055740356,
                     "parent": "lowerarm_r",
-                    "use_inherit_rotation": false,
+                    "use_inherit_rotation": true,
                     "prop": {
                         "boneOrient": [
                             1.5707963267948966,
@@ -2235,7 +2235,7 @@
                     "connect": true,
                     "roll": 2.9952428340911865,
                     "parent": "calf_l",
-                    "use_inherit_rotation": false,
+                    "use_inherit_rotation": true,
                     "prop": {
                         "boneOrient": [
                             3.141592653589793,
@@ -2325,7 +2325,7 @@
                     "connect": true,
                     "roll": -2.9952428340911865,
                     "parent": "calf_r",
-                    "use_inherit_rotation": false,
+                    "use_inherit_rotation": true,
                     "prop": {
                         "boneOrient": [
                             0.0,
