@@ -74,9 +74,9 @@ class PANEL(Panel):
         col = split.column()
         col.prop(context.scene.render, "fps", text="")
 
-        if context.active_object is not None:
+        if context.active_object is not None and context.active_object.type == "ARMATURE":
             row = layout.row()
-            row.enabled = (context.active_object is not None and context.active_object.type == "ARMATURE")
+            # row.enabled = (context.active_object is not None and context.active_object.type == "ARMATURE")
             row.template_list("ANIM_UL_actionList", "", bpy.data, "actions", context.active_object, "ANIM_index_action")
 
             row = layout.row(align=True)
@@ -121,11 +121,8 @@ class PANEL(Panel):
 
 class ANIM_UL_actionList(UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        if context.active_object is not None and context.active_object.type == "ARMATURE" and True:
-            boneNames = [bone.name for bone in context.active_object.pose.bones]
-            layout.prop(item, "name", text="", icon="ACTION", emboss=False)
-            if (any(name in fcurve.data_path for fcurve in item.fcurves for name in boneNames)):
-                layout.prop(item, "isExport", text="")
+        layout.prop(item, "name", text="", icon="ACTION", emboss=False)
+        layout.prop(item, "isExport", text="")
 
 #  OPERATOR
 
@@ -326,14 +323,12 @@ class OP_SelectAnimation(Operator):
     def execute(self, context):
         if context.active_object is not None and context.active_object.type == "ARMATURE" and True:
             for action in bpy.data.actions:
-                boneNames = [bone.name for bone in context.active_object.pose.bones]
-                if (any(name in fcurve.data_path for fcurve in action.fcurves for name in boneNames)):
-                    if self.type == "SELECT":
-                        action.isExport = True
-                    elif self.type == "DESELECT":
-                        action.isExport = False
-                    elif self.type == "INVERT":
-                        action.isExport = not action.isExport
+                if self.type == "SELECT":
+                    action.isExport = True
+                elif self.type == "DESELECT":
+                    action.isExport = False
+                elif self.type == "INVERT":
+                    action.isExport = not action.isExport
 
         return {"FINISHED"}
 
