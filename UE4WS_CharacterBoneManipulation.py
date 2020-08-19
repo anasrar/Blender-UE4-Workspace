@@ -1307,6 +1307,8 @@ class BoneManipulation:
                 if len(boneChildren) != 0:
                     toe = boneChildren.pop(0)
 
+                customPropertyName = None
+
                 if calf is not None:
                     constraints = calf.constraints.new(type="IK")
                     constraints.name = "IK"
@@ -1442,6 +1444,15 @@ class BoneManipulation:
                     FK2InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
 
                 if foot is not None:
+                    inheritRotationDriver = foot.bone.driver_add("use_inherit_rotation").driver
+                    inheritRotationDriver.type = "SCRIPTED"
+                    var = inheritRotationDriver.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id = self.activeObject
+                    target.data_path = "[\""+ customPropertyName + "\"]"
+                    inheritRotationDriver.expression = var.name + " == 0"
+
                     constraints = foot.constraints.new(type="COPY_ROTATION")
                     constraints.name = "FOOT_CONTROL_ROTATION"
                     constraints.show_expanded = False
@@ -1641,6 +1652,9 @@ class BoneManipulation:
                     lowerarm = boneChildren.pop(0)
                 if len(boneChildren) != 0:
                     hand = boneChildren.pop(0)
+
+                customPropertyName = None
+
                 if lowerarm is not None:
                     constraints = lowerarm.constraints.new(type="IK")
                     constraints.name = "IK"
@@ -1761,6 +1775,15 @@ class BoneManipulation:
                     FK2InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
 
                 if hand is not None:
+                    inheritRotationDriver = hand.bone.driver_add("use_inherit_rotation").driver
+                    inheritRotationDriver.type = "SCRIPTED"
+                    var = inheritRotationDriver.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id = self.activeObject
+                    target.data_path = "[\""+ customPropertyName + "\"]"
+                    inheritRotationDriver.expression = var.name + " == 0"
+
                     constraints = hand.constraints.new(type="COPY_ROTATION")
                     constraints.name = "HAND_CONTROL_ROTATION"
                     constraints.show_expanded = False
