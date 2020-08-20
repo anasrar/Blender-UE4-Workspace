@@ -382,13 +382,14 @@ class OP_ExportStaticMesh(Operator):
                 collName = "UCX_" + obj.name + "_"
                 # Collision filter from scene objects
                 collObjects = [obj for obj in context.scene.objects if obj.get("isCollision")]
-                # Collision array for information [name, location, disable select, hide_viewport]
+                # Collision array for information [name, location, disable select, hide_viewport, hide]
                 collArrInfo = []
 
                 if preferences.SM_CustomCollision and collObjects:
                     for index, collObj in enumerate(collObjects, start=1):
-                        collArrInfo.append([collObj.name, collObj.location.copy(), collObj.hide_select, collObj.hide_viewport])
+                        collArrInfo.append([collObj.name, collObj.location.copy(), collObj.hide_select, collObj.hide_viewport, collObj.hide_get()])
                         # Select object
+                        collObj.hide_set(False)
                         collObj.hide_select = False
                         collObj.hide_viewport = False
                         collObj.select_set(state=True)
@@ -401,13 +402,14 @@ class OP_ExportStaticMesh(Operator):
 
                 # Socket filter from children objects
                 socketObjects = [obj for obj in obj.children if obj.type == "EMPTY" and obj.get("isSocket")]
-                # Socket array for information [disable select, hide_viewport]
+                # Socket array for information [disable select, hide_viewport, hide]
                 socketArrInfo = []
 
                 if preferences.SM_Socket and socketObjects:
                     for index, socketObj in enumerate(socketObjects, start=1):
-                        socketArrInfo.append([socketObj.hide_select, socketObj.hide_viewport])
+                        socketArrInfo.append([socketObj.hide_select, socketObj.hide_viewport, socketObj.hide_get()])
                         # Select object
+                        socketObj.hide_set(False)
                         socketObj.hide_select = False
                         socketObj.hide_viewport = False
                         socketObj.select_set(state=True)
@@ -454,6 +456,7 @@ class OP_ExportStaticMesh(Operator):
                         context.collection.objects.link(lodObjCopy)
                         lodArrInfo.append(lodObjCopy)
                         # Select object
+                        lodObjCopy.hide_set(False)
                         lodObjCopy.hide_select = False
                         lodObjCopy.hide_viewport = False
                         lodObjCopy.select_set(state=True)
@@ -516,6 +519,7 @@ class OP_ExportStaticMesh(Operator):
                 if preferences.SM_CustomCollision and collObjects:
                     for index, collObj in enumerate(collObjects, start=0):
                         # deselect object
+                        collObj.hide_set(collArrInfo[index][4])
                         collObj.select_set(state=False)
                         collObj.hide_select = collArrInfo[index][2]
                         collObj.hide_viewport = collArrInfo[index][3]
@@ -530,6 +534,7 @@ class OP_ExportStaticMesh(Operator):
                 if preferences.SM_Socket and socketObjects:
                     for index, socketObj in enumerate(socketObjects, start=0):
                         # deselect object
+                        socketObj.hide_set(socketArrInfo[index][2])
                         socketObj.select_set(state=False)
                         socketObj.hide_select = socketArrInfo[index][0]
                         socketObj.hide_viewport = socketArrInfo[index][1]
