@@ -69,6 +69,12 @@ from . UE4WS_ObjectCustomCollision import (
     Ops as objectCustomCollisionOperator
 )
 
+from . UE4WS_ObjectCharacterPart import (
+    Props as objectCharacterPartProps,
+    PANEL as objectCharacterPartPanel,
+    Ops as objectCharacterPartOperator
+)
+
 from . UE4WS_ObjectSocket import (
     Props as objectSocketProps,
     PANEL as objectSocketPanel,
@@ -161,6 +167,7 @@ AR_UE4WS_PropsArray = []
 for x in [
     exportOptionImportAssetsProps,
     objectCustomCollisionProps,
+    objectCharacterPartProps,
     objectSocketProps,
     objectLODProps,
     objectRetargetAnimationProps,
@@ -175,6 +182,7 @@ for x in [
     PreferencesOperator,
     objectOperator,
     objectCustomCollisionOperator,
+    objectCharacterPartOperator,
     objectSocketOperator,
     objectLODPGroup,
     objectLODOperator,
@@ -203,6 +211,7 @@ AR_UE4WS_classes = (
     # Object
     objectPanel,
     objectCustomCollisionPanel,
+    objectCharacterPartPanel,
     objectSocketPanel,
     objectLODPanel,
     objectSkeletonPresetPanel,
