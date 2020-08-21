@@ -732,8 +732,14 @@ class OP_ExportCharacter(Operator):
                         constraint.mute = True
 
                     obj.select_set(state=True)
-                    # select children mesh
-                    for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
+                    # filter (part) children mesh to export
+                    # (obj, disable select, hide_viewport, hide)
+                    characterParts = [(mesh, mesh.hide_select, mesh.hide_viewport, mesh.hide_get()) for mesh in obj.children if mesh.type == "MESH" and mesh.data.isExportCharacterPart]
+                    for mesh, select, viewport, hide in characterParts:
+                        # Select object
+                        mesh.hide_set(False)
+                        mesh.hide_select = False
+                        mesh.hide_viewport = False
                         mesh.select_set(state=True)
 
                     # Export character option
@@ -773,8 +779,12 @@ class OP_ExportCharacter(Operator):
                     })
 
                     obj.select_set(state=False)
-                    # deselect children mesh
-                    for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
+                    # deselect characterParts
+                    for mesh, select, viewport, hide in characterParts:
+                        # Select object
+                        mesh.hide_set(hide)
+                        mesh.hide_select = select
+                        mesh.hide_viewport = viewport
                         mesh.select_set(state=False)
 
                     # restore location
@@ -870,7 +880,7 @@ class OP_ExportCharacter(Operator):
                     constraintMute = constraint.mute
                     constraint.mute = True
 
-                for mesh in [mesh for mesh in obj.children if mesh.type == "MESH"]:
+                for mesh, select, viewport, hide in [(mesh, mesh.hide_select, mesh.hide_viewport, mesh.hide_get()) for mesh in obj.children if mesh.type == "MESH" and mesh.data.isExportCharacterPart]:
                     # Remove invalid character for filename
                     filename = re.sub("[\\/:<>\'\"|?*&]", "", armatureName + "_" + mesh.name).strip()
                     # Check duplicate from arrCharacterObject
@@ -882,6 +892,9 @@ class OP_ExportCharacter(Operator):
                     if not os.path.isfile(os.path.join(directory, filename + ".fbx")) or preferences.CHAR_OverwriteFile:
                         obj.select_set(state=True)
                         # select children mesh
+                        mesh.hide_set(False)
+                        mesh.hide_select = False
+                        mesh.hide_viewport = False
                         mesh.select_set(state=True)
 
                         # Export character option
@@ -922,6 +935,9 @@ class OP_ExportCharacter(Operator):
 
                         obj.select_set(state=False)
                         # deselect children mesh
+                        mesh.hide_set(hide)
+                        mesh.hide_select = select
+                        mesh.hide_viewport = viewport
                         mesh.select_set(state=False)
 
                 # restore location
