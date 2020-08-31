@@ -302,7 +302,7 @@ class OP_ExportAnimation(Operator):
                 self.remote.close_command_connection()
 
         try:
-            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Exprot Animation Complete")
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Export Animation Complete")
         except Exception: 
             pass
 
