@@ -64,7 +64,7 @@ Props = [
             name="Retarget Source",
             description="Armature for retarget source",
             type=bpy.types.Object,
-            poll=lambda self, obj: obj.type == "ARMATURE"
+            poll=lambda self, obj: obj.type == "ARMATURE" and obj is not bpy.context.active_object
             ),
         "resetVariable": False
     },
@@ -252,6 +252,10 @@ class PANEL(Panel):
                     if not BoneMap.boneSourceExist:
                         row.prop(BoneMap, "boneNotExist", text="", icon="ERROR", emboss=False)
                     row.label(text=BoneMap.source if BoneMap.source else "OBJECT")
+
+                    row = box.row(align=True)
+                    row.scale_y = 1.5
+                    row.operator("ue4workspace.mirrortweakvalue",icon="MOD_MIRROR", text="Mirror Value")
 
                     for index, transform in enumerate(BoneMap.transform):
                         if transform:
@@ -562,6 +566,53 @@ class OP_BindArmature(Operator):
         targetObj.data.HasBind = not targetObj.data.HasBind
         return {"FINISHED"}
 
+class OP_MirrorTweakValue(Operator):
+    bl_idname = "ue4workspace.mirrortweakvalue"
+    bl_label = "Mirror Tweak Value"
+    bl_description = "Copy Tweak Value to Another Side Bone"
+    bl_options = {"UNDO"}
+
+    @classmethod
+    def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        return activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.HasBind
+
+    def execute(self, context):
+        activeObject = context.active_object
+        boneMaps = activeObject.data.BoneMaps
+        index = activeObject.data.indexBoneMap
+        boneMap = boneMaps[index]
+
+        mirrorDict = {
+            "r": "l",
+            "l": "r",
+            "right": "left",
+            "left": "right"
+        }
+
+        boneMapNameSplit = boneMap.name.lower().split("_")
+        side = mirrorDict.get(boneMapNameSplit[-1], False)
+        if side:
+            boneMapNameSplit[-1] = side
+            boneMapName = "_".join(boneMapNameSplit)
+            targetBoneMap, targetBoneMapIndex = (next(((item, i) for i, item in enumerate(boneMaps) if (getattr(item, "name").lower() if getattr(item, "name") else False)  == boneMapName), None))
+
+            if targetBoneMap:
+                targetBoneMap.influence = boneMap.influence
+                targetBoneMap.locationMultiply = boneMap.locationMultiply
+                targetBoneMap.ROT_XInfluence = boneMap.ROT_XInfluence
+                targetBoneMap.ROT_YInfluence = boneMap.ROT_YInfluence
+                targetBoneMap.ROT_ZInfluence = boneMap.ROT_ZInfluence
+                targetBoneMap.LOC_XInfluence = boneMap.LOC_XInfluence
+                targetBoneMap.LOC_YInfluence = boneMap.LOC_YInfluence
+                targetBoneMap.LOC_ZInfluence = boneMap.LOC_ZInfluence
+                targetBoneMap.SCALE_XInfluence = boneMap.SCALE_XInfluence
+                targetBoneMap.SCALE_YInfluence = boneMap.SCALE_YInfluence
+                targetBoneMap.SCALE_ZInfluence = boneMap.SCALE_ZInfluence
+
+        return {"FINISHED"}
+
 class OP_BakeRetargetAction(Operator):
     bl_idname = "ue4workspace.bakeretargetaction"
     bl_label = "Bake Retarget To Action"
@@ -730,5 +781,6 @@ class OP_BakeRetargetAction(Operator):
 
 Ops = [
     OP_BindArmature,
+    OP_MirrorTweakValue,
     OP_BakeRetargetAction
 ]
