@@ -2023,6 +2023,9 @@ class Preferences(AddonPreferences):
                 if preset.ParentBonesShowExpanded:
                     if not parentBones:
                         box.box().operator("ue4workspace.addparentboneretargetpreset", text="Add Bone", icon="BONE_DATA").indexPreset = indexPreset
+                        if context.mode == "POSE" and len(context.selected_pose_bones) > 1:
+                            selectedBones = context.selected_pose_bones
+                            box.box().operator("ue4workspace.addsetparentboneretargetpreset", text="Add Bone (" + selectedBones[1].name + " > " + selectedBones[0].name + ")", icon="BONE_DATA").indexPreset = indexPreset
                     else:
                         for indexBone, parentBone in enumerate(parentBones):
                             subBox = box.box()
@@ -2068,6 +2071,10 @@ class Preferences(AddonPreferences):
                                 row = col.row(align=True)
                                 row.prop(parentBone, "parent", text="", icon="BONE_DATA")
 
+                        if context.mode == "POSE" and len(context.selected_pose_bones) > 1:
+                            selectedBones = context.selected_pose_bones
+                            box.box().operator("ue4workspace.addsetparentboneretargetpreset", text="Add Bone (" + selectedBones[1].name + " > " + selectedBones[0].name + ")", icon="BONE_DATA").indexPreset = indexPreset
+
                 col = box.column()
                 row = col.row()
                 split = row.split(factor=0.5)
@@ -2088,6 +2095,9 @@ class Preferences(AddonPreferences):
                 if preset.AxisMapsShowExpanded:
                     if not bones:
                         box.box().operator("ue4workspace.addboneretargetpreset", text="Add Bone", icon="BONE_DATA").indexPreset = indexPreset
+                        if context.mode == "POSE" and len(context.selected_pose_bones) > 1:
+                            selectedBones = context.selected_pose_bones
+                            box.box().operator("ue4workspace.addsetboneretargetpreset", text="Add Bone (" + selectedBones[1].name + " > " + selectedBones[0].name + ")", icon="BONE_DATA").indexPreset = indexPreset
                     else:
                         for indexBone, bone in enumerate(bones):
                             subBox = box.box()
@@ -2167,6 +2177,10 @@ class Preferences(AddonPreferences):
                                 row.prop(bone, "axisY", text="")
                                 row = col.row(align=True)
                                 row.prop(bone, "axisZ", text="")
+
+                        if context.mode == "POSE" and len(context.selected_pose_bones) > 1:
+                            selectedBones = context.selected_pose_bones
+                            box.box().operator("ue4workspace.addsetboneretargetpreset", text="Add Bone (" + selectedBones[1].name + " > " + selectedBones[0].name + ")", icon="BONE_DATA").indexPreset = indexPreset
 
     def drawMiscTab(self, context):
         layout = self.layout
@@ -2423,6 +2437,29 @@ class OP_AddParentBoneToRetagetPreset(Operator):
         newParent.name = "Bone" + (str(len(duplicateCheck) + 1) if len(duplicateCheck) != 0 else "") 
         return {"FINISHED"}
 
+class OP_AddSetParentBoneToRetagetPreset(Operator):
+    bl_idname = "ue4workspace.addsetparentboneretargetpreset"
+    bl_label = "Add and Set Parent Bone To Retaget Preset"
+    bl_description = "Add and Set Parent Bone To Retaget Preset"
+    bl_options = {"UNDO"}
+
+    indexPreset: IntProperty(default=0)
+
+    @classmethod
+    def poll(self, context):
+        return context.mode == "POSE" and len(context.selected_pose_bones) > 1
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preset = preferences.RETARGET_Presets[self.indexPreset]
+        ParentBones = preset.ParentBones
+        selectedBones = context.selected_pose_bones
+        newParent = ParentBones.add()
+        newParent.name = selectedBones[1].name
+        newParent.bone = selectedBones[1].name
+        newParent.parent = selectedBones[0].name
+        return {"FINISHED"}
+
 class OP_RemoveParentBoneFromRetagetPreset(Operator):
     bl_idname = "ue4workspace.removeparentboneretargetpreset"
     bl_label = "Remove Parent Bone From Retaget Preset"
@@ -2496,6 +2533,29 @@ class OP_AddBoneToRetagetPreset(Operator):
         newBone.name = "Bone" + (str(len(duplicateCheck) + 1) if len(duplicateCheck) != 0 else "")
         return {"FINISHED"}
 
+class OP_AddSetBoneToRetagetPreset(Operator):
+    bl_idname = "ue4workspace.addsetboneretargetpreset"
+    bl_label = "Add and Set Bone To Retaget Preset"
+    bl_description = "Add and Set Bone To Retaget Preset"
+    bl_options = {"UNDO"}
+
+    indexPreset: IntProperty(default=0)
+
+    @classmethod
+    def poll(self, context):
+        return context.mode == "POSE" and len(context.selected_pose_bones) > 1
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        preset = preferences.RETARGET_Presets[self.indexPreset]
+        AxisMaps = preset.AxisMaps
+        selectedBones = context.selected_pose_bones
+        newBone = AxisMaps.add()
+        newBone.name = selectedBones[1].name
+        newBone.boneTarget = selectedBones[1].name
+        newBone.boneSource = selectedBones[0].name
+        return {"FINISHED"}
+
 class OP_RemoveBoneFromRetagetPreset(Operator):
     bl_idname = "ue4workspace.removeboneretargetpreset"
     bl_label = "Remove Bone From Retaget Preset"
@@ -2530,8 +2590,8 @@ class OP_SetBoneTargetAndSource(Operator):
         preset = preferences.RETARGET_Presets[self.indexPreset]
         AxisMap = preset.AxisMaps[self.indexBone]
         selectedBones = context.selected_pose_bones
-        AxisMap.boneTarget = selectedBones[0].name
-        AxisMap.boneSource = selectedBones[1].name
+        AxisMap.boneTarget = selectedBones[1].name
+        AxisMap.boneSource = selectedBones[0].name
         return {"FINISHED"}
 
 # operator export
@@ -2545,10 +2605,12 @@ Ops = [
     OP_ClearParentBoneFromRetagetPreset,
     OP_DuplicateParentBoneFromRetagetPreset,
     OP_AddParentBoneToRetagetPreset,
+    OP_AddSetParentBoneToRetagetPreset,
     OP_RemoveParentBoneFromRetagetPreset,
     OP_ClearBoneFromRetagetPreset,
     OP_DuplicateBoneToRetagetPreset,
     OP_AddBoneToRetagetPreset,
+    OP_AddSetBoneToRetagetPreset,
     OP_RemoveBoneFromRetagetPreset,
     OP_SetBoneTargetAndSource
 ]
