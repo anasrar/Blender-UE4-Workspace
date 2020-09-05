@@ -1,0 +1,60 @@
+site_name: Blender Unreal Engine 4 Workspace Documentation
+theme:
+  name: material
+  language: en
+  icon:
+    logo: octicons/workflow-24
+  features:
+    - tabs
+nav:
+  - 'Home':
+    - 'index.md'
+    - 'installation.md'
+  - 'Static Mesh':
+    - 'static-mesh\index.md'
+    - 'static-mesh\custom-collision.md'
+    - 'static-mesh\socket.md'
+    - 'static-mesh\lod.md'
+  - 'Skeletal Mesh':
+    - 'skeletal-mesh\index.md'
+    - 'skeletal-mesh\socket.md'
+    - 'skeletal-mesh\modular-character.md'
+  - 'Animation':
+    - 'animation\index.md'
+  - 'Skeleton Preset':
+    - 'skeleton-preset\index.md'
+    - 'skeleton-preset\rigging.md'
+  - 'Import From Unreal':
+    - 'import-from-unreal\index.md'
+  - 'Retarget Animation':
+    - 'retarget-animation\index.md'
+    - 'retarget-animation\retarget-preset.md'
+    - 'retarget-animation\tips-and-tricks-retarget.md'
+  - 'Changelog':
+    - 'changelog.md'
+repo_url: https://github.com/anasrar/Blender-UE4-Workspace
+repo_name: Blender-UE4-Workspace
+markdown_extensions:
+  - attr_list
+  - def_list
+  - meta
+  - toc:
+      permalink: true
+      toc_depth: 6
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - pymdownx.keys
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/anasrar/Blender-UE4-Workspace
+    - icon: fontawesome/brands/youtube
+      link: https://www.youtube.com/playlist?list=PLolnhUV-ZzXrXx1gJunoknuni8klsy0wH
