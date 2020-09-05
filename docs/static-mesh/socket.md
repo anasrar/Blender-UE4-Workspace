@@ -16,11 +16,11 @@ Socket panel in object panel.
 Create socket point on object base on 3D Cursor location.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/g8SxC5S-kY4" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Attach To Socket
 
 Attach object `#!python ["MESH", "ARMATURE"]` to socket.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/zBgIdbg7DwE" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

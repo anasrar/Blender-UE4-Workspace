@@ -30,4 +30,4 @@ If `#!python True` it will automatically computed each screen size LODs on Unrea
 How I create LOD in Blender using Decimate Modifier.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/G8hpbskpT1s" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

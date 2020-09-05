@@ -17,7 +17,7 @@ You can import skeleton in character panel, for now only **HUMANOID** and **HUMA
 Epic skeleton compatible, base on Mannequin skeleton structure (include IK bones).
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/pVOOBkU2QUs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ### HUMANOID+FACE
 
@@ -27,7 +27,7 @@ Epic skeleton compatible, base on Mannequin skeleton structure (include IK bones
 Same as **HUMANOID** but with face rig, face rig base on Paragon character.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/2NvMv9yKw1Y" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Customization
 
@@ -44,14 +44,14 @@ Add twist bone in `#!python ["UPPERARM", "LOWERARM", "THIGH", "CALF"]` skeleton 
     * **A** : Your hardware can handle that ??
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/9GSTDj1-oUw" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ### Custom Bone
 
 Add custom bone on skeleton preset
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/giZH5wax8Jk" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Tips and Tricks
 
@@ -60,4 +60,4 @@ Add custom bone on skeleton preset
 Prototyping character with skeleton placement
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/SIacqMeLlVM" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

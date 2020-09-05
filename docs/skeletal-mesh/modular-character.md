@@ -18,4 +18,4 @@ Character part panel in object panel.
 You can manage mesh that you want to export (combine or part).
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/5S-JYsETBBY" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

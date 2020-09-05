@@ -26,4 +26,4 @@ Create collision from vertices, edges, or faces.
 Create collision from another object mesh.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/cezmsmpU_yY" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
