@@ -15,14 +15,14 @@ On this page will show you how to rig **HUMANOID** character and export to Unrea
 Align armature to 3d model (A-Pose or T-Pose), and check bone orientation.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/ySJAdWOI6zU" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Skin Weight
 
 Checking weight and paint.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/q3mpFQaq24Y" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 !!! info
     Select the armature and then select the mesh, enter to **Weight Paint** mode.
@@ -32,7 +32,7 @@ Checking weight and paint.
     Also you can tweak bone (rotation with ++r++), give you more visualization how defrom goes
 
 !!! info
-    ![Option Blender Skin Weight](https://media.discordapp.net/attachments/745946625112932403/746333483697307658/unknown.png)
+    ![Option Blender Skin Weight](../img/skin-weight-option.png)
 
     1. **Auto Normalize**
 
@@ -59,7 +59,7 @@ Checking weight and paint.
 Set pose to A-Pose (Unreal Engine Mannequin).
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/lw6ukV3bWSM" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Apply Pose
 
@@ -68,25 +68,25 @@ Apply pose for the rest of pose (Default pose), the purpose is to make A-Pose as
 [https://docs.unrealengine.com/en-US/Engine/Animation/AnimationRetargeting/index.html](https://docs.unrealengine.com/en-US/Engine/Animation/AnimationRetargeting/index.html "Animation Retargeting")
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/jG_DwDKXc24" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Export To Unreal Engine
 
 Export to Unreal Engine for preview how it will be in Unreal Engine.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/L4zsy8o1fpw" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Generate Rig
 
 If anything seem good you can generate rig for future animation in Blender.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/3KJL9x20e3o" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Control Rig
 
 Control Rig panel in object panel.
 
 !!! note ""
-    <iframe width="760" height="415" src="https://www.youtube.com/embed/38d5Myrh3ic" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="760" height="415" src="https://www.youtube.com/embed/UtvYICbIwDs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
