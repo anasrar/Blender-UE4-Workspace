@@ -2023,9 +2023,9 @@ class Preferences(AddonPreferences):
                 if preset.ParentBonesShowExpanded:
                     if not parentBones:
                         box.box().operator("ue4workspace.addparentboneretargetpreset", text="Add Bone", icon="BONE_DATA").indexPreset = indexPreset
-                        if context.mode == "POSE" and len(context.selected_pose_bones) > 1:
-                            selectedBones = context.selected_pose_bones
-                            box.box().operator("ue4workspace.addsetparentboneretargetpreset", text="Add Bone (" + selectedBones[1].name + " > " + selectedBones[0].name + ")", icon="BONE_DATA").indexPreset = indexPreset
+                        # if context.mode == "POSE" and len(context.selected_pose_bones) > 1:
+                        #     selectedBones = context.selected_pose_bones
+                        #     box.box().operator("ue4workspace.addsetparentboneretargetpreset", text="Add Bone (" + selectedBones[1].name + " > " + selectedBones[0].name + ")", icon="BONE_DATA").indexPreset = indexPreset
                     else:
                         for indexBone, parentBone in enumerate(parentBones):
                             subBox = box.box()
@@ -2071,9 +2071,9 @@ class Preferences(AddonPreferences):
                                 row = col.row(align=True)
                                 row.prop(parentBone, "parent", text="", icon="BONE_DATA")
 
-                        if context.mode == "POSE" and len(context.selected_pose_bones) > 1:
-                            selectedBones = context.selected_pose_bones
-                            box.box().operator("ue4workspace.addsetparentboneretargetpreset", text="Add Bone (" + selectedBones[1].name + " > " + selectedBones[0].name + ")", icon="BONE_DATA").indexPreset = indexPreset
+                        # if context.mode == "POSE" and len(context.selected_pose_bones) > 1:
+                        #     selectedBones = context.selected_pose_bones
+                        #     box.box().operator("ue4workspace.addsetparentboneretargetpreset", text="Add Bone (" + selectedBones[1].name + " > " + selectedBones[0].name + ")", icon="BONE_DATA").indexPreset = indexPreset
 
                 col = box.column()
                 row = col.row()
