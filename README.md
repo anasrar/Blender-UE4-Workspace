@@ -1,10 +1,14 @@
 # Blender Unreal Engine Workspace
 
-![Blender Unreal Engine Workspace](https://user-images.githubusercontent.com/38805204/89833819-e957bd80-db8b-11ea-89f1-e8d67f397d40.png)
+![Blender Unreal Engine Workspace](https://anasrar.github.io/Blender-UE4-Workspace/img/blender-unreal-engine-4-workspace-banner.png)
 
-Blender **2.8x** add-on for export directly to Unreal Engine 4 with all setting in Blender (inspired by **send to unreal** add-on).
+Blender **2.8x** *(above)* add-on for export directly to Unreal Engine 4 with all setting in Blender (inspired by **send to unreal** add-on).
 
-this add-on I make because I don't want to open file explorer and drag and drop to Unreal Engine, so I make this add-on with full control import setting on Blender.
+## Feature
+
+Allow you export static mesh, skeletal mesh, and animation with single click directly to Unreal Engine 4 or to FBX file.
+
+![Feature Node](https://anasrar.github.io/Blender-UE4-Workspace/img/feature-node.png "Feature Node")
 
 and yeah, I don't really have any future plan. so if you have any suggest just open new issue.
 
@@ -20,6 +24,8 @@ Export for Static Mesh.
 - Custom lightmaps
 - Export profile - ```v.1.2```
 - Socket System - ```v.1.3```
+- Level of Detail - ```v.1.4```
+- Import Static Mesh From Unreal Engine ```v.1.4```
 
 ### Character
 
@@ -32,6 +38,8 @@ Export for Character (Skeletal Mesh).
 - Generate rig for skeleton preset - ```v.1.2```
 - Export profile - ```v.1.2```
 - Socket System (**Not Support Export**) - ```v.1.3```
+- Character Part Manager ```v.1.4```
+- Import Skeletal Mesh From Unreal Engine ```v.1.4```
 
 ### Animation
 
@@ -39,14 +47,15 @@ Export for Animation.
 
 - Export to FBX and Unreal Engine - ```v.1.2```  
 - Export profile - ```v.1.2```
+- Import Animation From Unreal Engine ```v.1.4```
 
 ### Retarget Animation (Experimental)
 
-Retarget Animation to another skeleton - ```v.1.3```
+Retarget Animation to another skeleton - ```v.1.3``` **Experimental**, ```v.1.4``` **Production Ready**
 
-## Tutorial
+## Documetation
 
-[wiki page](https://github.com/anasrar/Blender-UE4-Workspace/wiki) or [youtube playlist](https://www.youtube.com/playlist?list=PLolnhUV-ZzXrXx1gJunoknuni8klsy0wH)
+[documentation page](https://anasrar.github.io/Blender-UE4-Workspace/) or [youtube playlist](https://www.youtube.com/playlist?list=PLolnhUV-ZzXrXx1gJunoknuni8klsy0wH)
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/anasrar/Blender-UE4-Workspace?style=flat-square)
 
@@ -54,7 +63,7 @@ Retarget Animation to another skeleton - ```v.1.3```
 
 Unreal Engine 4 allow to remote execute python script, with that we can execute python script import assets (FBX File) to Unreal Engine 4.
 
-![Blender Unreal Engine Workspace FlowChart](https://user-images.githubusercontent.com/38805204/82159805-2d079780-98bb-11ea-92a2-9a9c1628b429.png)
+![Blender Unreal Engine Workspace FlowChart](https://anasrar.github.io/Blender-UE4-Workspace/img/flowchart.png "Flowchart")
 
 ## Download
 
@@ -74,13 +83,13 @@ You can watch this video https://www.youtube.com/watch?v=38d5Myrh3ic or simply f
 
 ### Blender
 
-Edit > Preferences > Add-ons > Install > Select **UE4Workspace.zip** > Install Add-ons
+Edit &nbsp; 🡆 &nbsp; Preferences &nbsp; 🡆 &nbsp; Add-ons &nbsp; 🡆 &nbsp; Install &nbsp; 🡆 &nbsp; Select **UE4Workspace.zip** &nbsp; 🡆 &nbsp; Install Add-ons
 
 ### Unreal Engine 4
 
-Edit > Plugins > Type "Script" On Search Bar > Enabled **Python Editor Script** Plugin and **Editor Scripting Utilities** > Reset Project
+Edit &nbsp; 🡆 &nbsp; Plugins &nbsp; 🡆 &nbsp; Type "Script" On Search Bar &nbsp; 🡆 &nbsp; Enabled **Python Editor Script Plugin** and **Editor Scripting Utilities** &nbsp; 🡆 &nbsp; Reset Project
 
-Edit > Project Setting > Plugin|Python > Check **Enable Remote Execution?**
+Edit &nbsp; 🡆 &nbsp; Project Setting &nbsp; 🡆 &nbsp; Plugin &nbsp; 🡆 &nbsp; Python &nbsp; 🡆 &nbsp; Check **Enable Remote Execution**?
 
 Then you can try to connect your project from blender
 
@@ -88,14 +97,19 @@ Then you can try to connect your project from blender
 
 Press **N** on Blender for open the tab menu.
 
+## Compatibility Test
+
 tested with blender version
 
-- **2.81** - **DROP** from version ```v.1.3```
-- **2.82**
-- **2.83** (make sure export folder path is absolute)
-- **2.90 Beta** (make sure export folder path is absolute)
+* **2.81** - **DROP** from version `v.1.3`
 
-using Blender latest version for better compatibility
+* **2.82** - **DROP** from version `v.1.4`
+
+* **2.83** (make sure export folder path is absolute)
+
+* **2.90** (make sure export folder path is absolute)
+
+using Blender latest version for better compatibility.
 
 ## Support
 
@@ -109,7 +123,7 @@ For major changes or features request, please open an issue first to discuss wha
 
 ## Changelog
 
-Any changelog in [wiki page](https://github.com/anasrar/Blender-UE4-Workspace/wiki/Changelog) 
+Any changelog in [documentation page](https://anasrar.github.io/Blender-UE4-Workspace/changelog/) 
 
 ## License
 
