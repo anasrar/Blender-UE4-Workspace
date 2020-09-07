@@ -209,11 +209,15 @@ class PANEL(Panel):
                         col = split.column()
                         col.alignment = "LEFT"
                         row = col.row(align=True)
-                        if True:
+                        if not BoneParent.boneExist:
                             row.prop(BoneParent, "boneNotExist", text="", icon="ERROR", emboss=False)
                         row.label(text=BoneParent.bone)
                         col.label(text=BoneParent.parent)
                         col.prop(BoneParent, "influence", text="", slider=True)
+
+                        row = box.row(align=True)
+                        row.scale_y = 1.5
+                        row.operator("ue4workspace.mirrorparentvalue",icon="MOD_MIRROR", text="Mirror Value")
 
             layout.prop(activeObject.data, "BoneMapTab", icon=("TRIA_RIGHT", "TRIA_DOWN")[activeObject.data.BoneMapTab], text="Bone Tweak", emboss=False)
             if activeObject.data.BoneMapTab:
@@ -566,6 +570,43 @@ class OP_BindArmature(Operator):
         targetObj.data.HasBind = not targetObj.data.HasBind
         return {"FINISHED"}
 
+class OP_MirrorParentValue(Operator):
+    bl_idname = "ue4workspace.mirrorparentvalue"
+    bl_label = "Mirror Parent Value"
+    bl_description = "Copy Parent Value to Another Side Bone"
+    bl_options = {"UNDO"}
+
+    @classmethod
+    def poll(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        return activeObject is not None and activeObject.type == "ARMATURE" and activeObject.data.HasBind
+
+    def execute(self, context):
+        activeObject = context.active_object
+        boneParents = activeObject.data.BoneParents
+        index = activeObject.data.indexBoneParent
+        boneParent = boneParents[index]
+
+        mirrorDict = {
+            "r": "l",
+            "l": "r",
+            "right": "left",
+            "left": "right"
+        }
+
+        boneParentNameSplit = boneParent.name.lower().split("_")
+        side = mirrorDict.get(boneParentNameSplit[-1], False)
+        if side:
+            boneParentNameSplit[-1] = side
+            boneParentName = "_".join(boneParentNameSplit)
+            targetParent, targetParentIndex = (next(((item, i) for i, item in enumerate(boneParents) if (getattr(item, "name").lower() if getattr(item, "name") else False)  == boneParentName), None))
+
+            if targetParent:
+                targetParent.influence = boneParent.influence
+
+        return {"FINISHED"}
+
 class OP_MirrorTweakValue(Operator):
     bl_idname = "ue4workspace.mirrortweakvalue"
     bl_label = "Mirror Tweak Value"
@@ -781,6 +822,7 @@ class OP_BakeRetargetAction(Operator):
 
 Ops = [
     OP_BindArmature,
+    OP_MirrorParentValue,
     OP_MirrorTweakValue,
     OP_BakeRetargetAction
 ]
