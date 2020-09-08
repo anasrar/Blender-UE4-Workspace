@@ -1,3 +1,4 @@
+import math
 import bpy
 from mathutils import Matrix
 from bpy.props import (EnumProperty, BoolProperty, FloatVectorProperty, StringProperty, PointerProperty)
@@ -78,6 +79,11 @@ class PANEL(Panel):
         row.operator("ue4workspace.createsocket",icon="EMPTY_ARROWS", text="Add Socket")
 
         socketObjects = [obj for obj in context.scene.objects if obj.type == "EMPTY" and obj.get("isSocket") and obj.parent is activeObject]
+
+        if socketObjects and activeObject.type == "ARMATURE":
+            row = box.row()
+            row.scale_y = 1.5
+            row.operator("ue4workspace.copysocket",icon="DECORATE_ANIMATE", text="Copy Socket")
 
         if socketObjects:
             for obj in socketObjects:
@@ -235,9 +241,95 @@ class OP_CreateSocket(Operator):
 
         return {"FINISHED"}
 
+class OP_CopySocket(Operator):
+    bl_idname = "ue4workspace.copysocket"
+    bl_label = "Copy Socket"
+    bl_description = "Copy socket for unreal engine skeleton"
+    bl_options = {"UNDO", "REGISTER"}
+
+    @classmethod
+    def poll(self, context):
+        return context.mode == "OBJECT" and context.active_object is not None and context.active_object.type == "ARMATURE"
+
+    def execute(self, context):
+        activeObject = context.active_object
+
+        # create new empty
+        boneParent = bpy.data.objects.new(name="dummySocketBoneParent", object_data=None)
+        socketPoint = bpy.data.objects.new(name="dummySocketPoint", object_data=None)
+
+        context.scene.collection.objects.link(boneParent)
+        context.scene.collection.objects.link(socketPoint)
+
+        socketPoint.parent = boneParent
+
+        # set constraint
+        boneParentConstraint = boneParent.constraints.new("COPY_TRANSFORMS")
+        socketPointConstraint = socketPoint.constraints.new("COPY_TRANSFORMS")
+
+        boneParentConstraint.target = activeObject
+
+        bpy.ops.object.select_all(action="DESELECT")
+
+        # select bone parent and socket point
+        boneParent.select_set(state=True)
+        socketPoint.select_set(state=True)
+
+        # get all socket parent with bone
+        socketBoneObjects = [obj for obj in context.scene.objects if obj.type == "EMPTY" and obj.get("isSocket") and obj.parent is activeObject and obj.parent_type == "BONE" and obj.parent_bone]
+
+        # string to copy on clipboard
+        stringClipboard = "SocketCopyPasteBuffer\n\nNumSockets={}\n\n".format(len(socketBoneObjects))
+
+        for index, socketObj in enumerate(socketBoneObjects):
+            # set target
+            boneParentConstraint.subtarget = socketObj.parent_bone
+            socketPointConstraint.target = socketObj
+            # get relative transform using apply visual transfrom
+            bpy.ops.object.visual_transform_apply()
+            stringClipboard += "IsOnSkeleton=1\nBegin Object Class=/Script/Engine.SkeletalMeshSocket Name=\"SkeletalMeshSocket_{index}\"\nSocketName=\"{socketName}\"\nBoneName=\"{boneName}\"\nRelativeLocation=(X={location[x]},Y={location[y]},Z={location[z]})\nRelativeRotation=(Pitch={rotation[y]},Yaw={rotation[z]},Roll={rotation[x]})\nRelativeScale=(X={scale[x]},Y={scale[y]},Z={scale[z]})\nEnd Object\n\n".format(
+                index = index,
+                socketName = socketObj.name,
+                boneName = socketObj.parent_bone,
+                location = {
+                    "x": socketPoint.location.x,
+                    "y": socketPoint.location.y * -1,
+                    "z": socketPoint.location.z
+                },
+                rotation = {
+                    "x": math.degrees(socketPoint.rotation_euler.x),
+                    "y": math.degrees(socketPoint.rotation_euler.y * -1),
+                    "z": math.degrees(socketPoint.rotation_euler.z * -1)
+                },
+                scale = {
+                    "x": float(socketPoint.scale.x / 100),
+                    "y": float(socketPoint.scale.y / 100),
+                    "z": float(socketPoint.scale.z / 100)
+                }
+            )
+
+        # remove constarint
+        boneParent.constraints.remove(boneParentConstraint)
+        socketPoint.constraints.remove(socketPointConstraint)
+
+        # remove object
+        bpy.data.objects.remove(boneParent, do_unlink=True)
+        bpy.data.objects.remove(socketPoint, do_unlink=True)
+
+        # copy string to clipboard
+        context.window_manager.clipboard = stringClipboard
+
+        try:
+            bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Copy Socket Success")
+        except Exception: 
+            pass
+
+        return {"FINISHED"}
+
 # operator export
 
 Ops = [
     OP_AttachObject,
-    OP_CreateSocket
+    OP_CreateSocket,
+    OP_CopySocket
 ]
