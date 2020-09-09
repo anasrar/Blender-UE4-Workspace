@@ -156,7 +156,10 @@ class OP_UpdateAssetsList(Operator):
             # Fix Python PATH Script Issue #9
             output = self.remote.run_command("execfile(\"" + os.path.join(os.path.dirname(os.path.realpath(__file__)), "PyScript", "GetAllImportableAssets.py").replace(os.sep, "/") +"\")", exec_mode="ExecuteStatement")
             self.remote.close_command_connection()
-            AssetsList += json.loads(output["output"][0]["output"])
+            openAssetsList = open(os.path.normpath(os.path.join(os.path.dirname(__file__), "Data", "assetsList.json")), "r")
+            readAssetsList = openAssetsList.read()
+            openAssetsList.close()
+            AssetsList += json.loads(readAssetsList)
 
         # add asset
         for path, name, typeAsset in [tuple(asset) for asset in AssetsList]:
