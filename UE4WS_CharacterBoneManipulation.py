@@ -204,6 +204,8 @@ class BoneManipulation:
         customBones = [(editBone, editBone.parent.name) for editBone in editBones if editBone.get("boneOrient", None) is None and editBone.parent is not None and editBone.parent.get("boneOrient", False)]
 
         for bone in [editBone for editBone in editBones if editBone.get("boneOrient", False)]:
+            # disconnet bone
+            bone.use_connect = False
             if self.getBone("ORIENT_" + bone.name) is None:
                 # create new temporary bone
                 newBone = editBones.new("ORIENT_" + bone.name)
@@ -251,6 +253,9 @@ class BoneManipulation:
                     newBone.tail[1] = newBone.head[1] + bone.length
                     newBone.tail[2] = newBone.head[2]
                     newBone.roll = 0
+                # PELVIS, SPINE, NECK, and HEAD_HUMAN
+                elif bone.get("UE4RIGTYPE") in ["PELVIS", "SPINE", "NECK", "HEAD_HUMAN"]:
+                    newBone.tail[2] = newBone.head[2]
 
                 # set parent
                 if bone.parent:
