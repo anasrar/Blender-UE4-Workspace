@@ -70,6 +70,7 @@
                     "roll": 0.0,
                     "parent": "spine_01",
                     "prop": {
+                        "UE4RIGTYPE": "SPINE",
                         "boneOrient": [
                             -1.5707963267948966,
                             -1.5707963267948966,
@@ -92,6 +93,7 @@
                     "roll": 0.0,
                     "parent": "spine_02",
                     "prop": {
+                        "UE4RIGTYPE": "SPINE",
                         "boneOrient": [
                             -1.5707963267948966,
                             -1.5707963267948966,
@@ -1249,6 +1251,7 @@
                     "roll": 0.0,
                     "parent": "spine_01",
                     "prop": {
+                        "UE4RIGTYPE": "SPINE",
                         "boneOrient": [
                             -1.5707963267948966,
                             -1.5707963267948966,
@@ -1271,6 +1274,7 @@
                     "roll": 0.0,
                     "parent": "spine_02",
                     "prop": {
+                        "UE4RIGTYPE": "SPINE",
                         "boneOrient": [
                             -1.5707963267948966,
                             -1.5707963267948966,
