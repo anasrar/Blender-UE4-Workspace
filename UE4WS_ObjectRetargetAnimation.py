@@ -337,7 +337,7 @@ class OP_BindArmature(Operator):
             bpy.ops.object.mode_set(mode="POSE")
             # remove parent constraint in bone parent list
             for index, BoneParent in enumerate([BoneParent for BoneParent in targetObj.data.BoneParents if BoneParent.boneExist]):
-                poseBone = poseBones.get(BoneParent.bone)
+                poseBone = targetPoseBones.get(BoneParent.bone)
                 constraint = poseBone.constraints.get("RETARGET_PARENT")
                 # remove driver
                 constraint.driver_remove("mute")
