@@ -381,7 +381,8 @@ class OP_ExportStaticMesh(Operator):
                 # Collision name
                 collName = "UCX_" + obj.name + "_"
                 # Collision filter from scene objects
-                collObjects = [obj for obj in context.scene.objects if obj.get("isCollision")]
+                parent = obj
+                collObjects = [obj for obj in context.scene.objects if obj.get("isCollision") and obj.parent is parent]
                 # Collision array for information [name, location, disable select, hide_viewport, hide]
                 collArrInfo = []
 
