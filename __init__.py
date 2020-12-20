@@ -16,7 +16,7 @@ bl_info = {
     "author" : "Anas RAR",
     "description" : "Addon For UE4 Workspace",
     "blender" : (2, 81, 0),
-    "version" : (1, 4, 0),
+    "version" : (1, 5, 0),
     "location" : "3D View > Tools",
     "warning" : "",
     "wiki_url": "https://github.com/anasrar/Blender-UE4-Workspace", # 2.82 below
@@ -121,6 +121,9 @@ from . UE4WS_StaticMeshUnrealEngine import (
 )
 
 from . UE4WS_Character import (
+    UE4WORKSPACE_MT_skeleton_preset_submenu,
+    appendType as characterAppendType,
+    Props as characterProps,
     PANEL as characterPanel,
     Ops as characterOperator
 )
@@ -171,6 +174,7 @@ for x in [
     objectSocketProps,
     objectLODProps,
     objectRetargetAnimationProps,
+    characterProps,
     animationProps
     ]:
     AR_UE4WS_PropsArray.extend(x)
@@ -199,6 +203,13 @@ for x in [
     ]:
     AR_UE4WS_OperatorArray.extend(x)
 
+AR_UE4WS_AppendTypes = []
+# extend append type to array, make sure you add from here
+for x in [
+    characterAppendType
+    ]:
+    AR_UE4WS_AppendTypes.extend(x)
+
 AR_UE4WS_classes = (
     # addon preferences
     Preferences,
@@ -224,6 +235,7 @@ AR_UE4WS_classes = (
     staticMeshFBXOptionPanel,
     staticMeshUnrealEnginePanel,
     ## Character
+    UE4WORKSPACE_MT_skeleton_preset_submenu,
     characterPanel,
     CharacterFBXOptionPanel,
     CharacterUnrealEnginePanel,
@@ -243,6 +255,7 @@ TypeProps = {
     "object": bpy.types.Object,
     "action": bpy.types.Action,
     "armature": bpy.types.Armature,
+    "bone": bpy.types.Bone,
     "mesh": bpy.types.Mesh
 }
 
@@ -274,7 +287,7 @@ def resetVariable(scene):
                     armature.property_unset(P.get("name"))
 
 def register():
-
+    # Register operator
     for X in AR_UE4WS_OperatorArray:
         if hasattr(X, "remote"):
             X.remote = remote_exec
@@ -282,9 +295,19 @@ def register():
             X.addonVersion = bl_info["version"]
         register_class(X)
 
+    # Register prop
     for P in AR_UE4WS_PropsArray:
         setattr(TypeProps.get(P.get("type")), P.get("name"), P.get("value"))
 
+    # Append Type
+    for bType, func in AR_UE4WS_AppendTypes:
+        dataType = getattr(bpy.types, bType)
+        if dataType:
+            dataType.append(func)
+        else:
+            print("TRY TO APPEND : bpy.types.{} Not Found".format(bType))
+
+    # Register class
     for C in AR_UE4WS_classes:
         if hasattr(C, "remote"):
             C.remote = remote_exec
@@ -295,13 +318,23 @@ def register():
     bpy.app.handlers.load_post.append(resetVariable)
 
 def unregister():
-
+    # Unregister operator
     for X in reversed(AR_UE4WS_OperatorArray):
         unregister_class(X)
 
+    # Unregister prop
     for P in reversed(AR_UE4WS_PropsArray):
         delattr(TypeProps.get(P.get("type")), P.get("name"))
 
+    # Remove Append Type
+    for bType, func in AR_UE4WS_AppendTypes:
+        dataType = getattr(bpy.types, bType)
+        if dataType:
+            dataType.remove(func)
+        else:
+            print("TRY TO REMOVE : bpy.types.{} Not Found".format(bType))
+
+    # Unregister class
     for C in reversed(AR_UE4WS_classes):
         unregister_class(C)
 

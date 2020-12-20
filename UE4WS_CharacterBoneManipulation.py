@@ -1,5 +1,7 @@
 import bpy, math
-from mathutils import Matrix
+from mathutils import (Matrix, Vector)
+from . import boneShape
+import inspect
 
 class BoneManipulation:
     """
@@ -89,6 +91,85 @@ class BoneManipulation:
 
         return self.activeObject.pose.bones.get(name)
 
+    # https://blender.stackexchange.com/questions/19754/how-to-set-calculate-pole-angle-of-ik-constraint-so-the-chain-does-not-move
+    def signed_angle(self, vector_u, vector_v, normal):
+        # Normal specifies orientation
+        angle = vector_u.angle(vector_v)
+        if vector_u.cross(vector_v).angle(normal) < 1:
+            angle = -angle
+        return angle
+
+    def get_pole_angle(self, base_bone, ik_bone, pole_location):
+        pole_normal = (ik_bone.tail - base_bone.head).cross(pole_location - base_bone.head)
+        projected_pole_axis = pole_normal.cross(base_bone.tail - base_bone.head)
+        return self.signed_angle(base_bone.x_axis, projected_pole_axis, base_bone.tail - base_bone.head)
+
+    def moveBoneLayer(self, boneList, layerList):
+        """move bone layer in edit mode
+
+        :param name: boneList
+        :type name: list[(editBones)]
+        :param name: layerList
+        :type name: list[(int)]
+        :returns: None
+        :rtype: None
+        """
+
+        for bone in boneList:
+            bone.select = True
+            bone.select_head = True
+            bone.select_tail = True
+        bpy.ops.armature.bone_layers(layers=tuple([(i in layerList) for i in range(32)]))
+        bpy.ops.armature.select_all(action="DESELECT")
+
+    def generateCustomBoneShape(self, poseBone, collection, boneShape, boneGroup, scaleBone = False):
+        """generate custom bone
+
+        :param name: poseBone
+        :type name: poseBone
+        :param name: collection
+        :type name: collection
+        :param name: boneShape
+        :type name: [[vertices], [edges], [face]]
+        :param name: boneGroup
+        :type name: boneGroup
+        :param name: scaleBone
+        :type name: boolean
+        :returns: None
+        :rtype: None
+        """
+        mesh = bpy.data.meshes.new("UE4WSBS_" + poseBone.name)
+        objShape = bpy.data.objects.new("UE4WSBS_" + poseBone.name,mesh)
+        collection.objects.link(objShape)
+        mesh.from_pydata(*boneShape)
+
+        poseBone.custom_shape = objShape
+        poseBone.use_custom_shape_bone_size = scaleBone
+        poseBone.bone_group = boneGroup
+
+    def addFloorConstraint(self, poseBone, floorBoneName, offset):
+        """create floor constraint to poseBone
+
+        :param name: poseBone
+        :type name: poseBone
+        :param name: floorBoneName
+        :type name: string
+        :param name: offset
+        :type name: int
+        :returns: None
+        :rtype: None
+        """
+
+        floorConstarint = poseBone.constraints.new("FLOOR")
+        floorConstarint.name = "FLOOR"
+        floorConstarint.show_expanded = False
+        floorConstarint.target = self.activeObject
+        floorConstarint.subtarget = floorBoneName
+        floorConstarint.offset = offset
+        floorConstarint.use_rotation = True
+        floorConstarint.target_space = "POSE"
+        floorConstarint.owner_space = "POSE"
+
     def addIKBone(self):
         """add ik bone
 
@@ -112,11 +193,7 @@ class BoneManipulation:
             root.head = (0,0,0)
             root.tail = (0,1.2,0)
             root.roll = 0.0
-            root.select_head = True
-            root.select_tail = True
-            root.select = True
-            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True))
-            bpy.ops.armature.select_all(action="DESELECT")
+            self.moveBoneLayer([root], [31])
 
             if rootBone == "hand" and self.getBone("hand_r") is not None:
                 if self.getBone("ik_hand_gun") is None:
@@ -127,11 +204,7 @@ class BoneManipulation:
                     gun.tail = rightHand.tail
                     gun.roll = rightHand.roll
                     gun.parent = self.getBone("ik_" + rootBone +"_root")
-                    gun.select_head = True
-                    gun.select_tail = True
-                    gun.select = True
-                    bpy.ops.armature.bone_layers(layers=(False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True))
-                    bpy.ops.armature.select_all(action="DESELECT")
+                    self.moveBoneLayer([gun], [31])
 
             for side in sides:
                 bone = self.getBone(rootBone + "_" + side)
@@ -142,11 +215,7 @@ class BoneManipulation:
                         ik.tail = bone.tail
                         ik.roll = bone.roll
                         ik.parent = (self.getBone("ik_" + rootBone +"_root"), handGun)[handGun is not None]
-                        ik.select_head = True
-                        ik.select_tail = True
-                        ik.select = True
-                        bpy.ops.armature.bone_layers(layers=(False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True))
-                        bpy.ops.armature.select_all(action="DESELECT")
+                        self.moveBoneLayer([ik], [31])
 
         bpy.ops.armature.select_all(action="DESELECT")
 
@@ -201,17 +270,16 @@ class BoneManipulation:
             editBones.remove(bone)
 
         # filter bone and parent for custom bone, tuple: (bone: editBones, parentName: str)
-        customBones = [(editBone, editBone.parent.name) for editBone in editBones if editBone.get("boneOrient", None) is None and editBone.parent is not None and editBone.parent.get("boneOrient", False)]
+        customBones = [(editBone, editBone.parent.name) for editBone in editBones if editBone.get("rotateBone", None) is None and editBone.parent is not None and editBone.parent.get("rotateBone", False)]
 
-        for bone in [editBone for editBone in editBones if editBone.get("boneOrient", False)]:
-            # disconnet bone
-            bone.use_connect = False
+        for bone in [editBone for editBone in editBones if self.activeObject.data.bones[editBone.name].rotateBone]:
             if self.getBone("ORIENT_" + bone.name) is None:
                 # create new temporary bone
                 newBone = editBones.new("ORIENT_" + bone.name)
                 newBone.head = bone.head
                 newBone.tail = bone.tail
                 newBone.roll = bone.roll
+                newBone.use_deform = bone.use_deform
 
                 # rotate active bone
                 bpy.ops.armature.select_all(action="DESELECT")
@@ -220,15 +288,16 @@ class BoneManipulation:
                 editBones.active.select_head = True
                 editBones.active.select_tail = True
 
-                orient = bone.get("boneOrient").split("|")
+                dataBone = self.activeObject.data.bones[bone.name]
+
                 # bug on blender version 2.83
                 # https://github.com/anasrar/Blender-UE4-Workspace/issues/5
                 # https://blenderartists.org/t/why-i-got-difference-rotate-bone-result-in-version-2-82-and-2-83/1234794
                 # I assume this bug wrong rotation bone only in 2.83 LTS version, so i decide to reverse the bone rotation only on 2.83 LTS
-                rotationRadian = float(orient[0]) if bpy.app.version[0:2] in [(2, 83)] else -float(orient[0])
-                bpy.ops.transform.rotate(value=rotationRadian, orient_axis=orient[2], orient_type="NORMAL", mirror=False)
+                rotationRadian = dataBone.rotationRadian if bpy.app.version[0:2] in [(2, 83)] else -dataBone.rotationRadian
+                bpy.ops.transform.rotate(value=rotationRadian, orient_axis=dataBone.orientAxis, orient_type="NORMAL", mirror=False)
                 # add roll
-                newBone.roll += float(orient[1])
+                newBone.roll += dataBone.orientRoll
 
                 # move orient bone to last layer
                 bpy.ops.armature.bone_layers(layers=(False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True))
@@ -248,14 +317,14 @@ class BoneManipulation:
                     newBone.tail[1] = newBone.head[1]
                     newBone.tail[0] = newBone.head[0]
                 # FACE JAW HUMANOID
-                elif bone.get("UE4RIGTYPE") == "FACE_JAW_HUMAN":
+                elif bone.get("UE4RIGTYPE") == "JAW":
                     newBone.tail[0] = newBone.head[0]
                     newBone.tail[1] = newBone.head[1] + bone.length
                     newBone.tail[2] = newBone.head[2]
                     newBone.roll = 0
-                # PELVIS, SPINE, NECK, and HEAD_HUMAN
-                elif bone.get("UE4RIGTYPE") in ["PELVIS", "SPINE", "NECK", "HEAD_HUMAN"]:
-                    newBone.tail[2] = newBone.head[2]
+
+                # set length bone
+                newBone.length = 0.1 if newBone.length >= 0.1 else newBone.length
 
                 # set parent
                 if bone.parent:
@@ -427,62 +496,6 @@ class BoneManipulation:
 
         bpy.ops.object.mode_set(mode=oldMode)
 
-    def spineRecursiveBone(self, children, collection, vertices, edges, group):
-        """recursive function to make custom shape to spine
-
-        :param children: list bpy.types.PoseBone
-        :type children: bpy.types.PoseBone
-        :param collection: collection to link object
-        :type collection: bpy.types.Collection
-        :param vertices: list tuple coordinate
-        :type vertices: list tuple
-        :param edges: list tuple edges line
-        :type edges: list tuple
-        :param group: bone group of armature to assign color
-        :type group: bpy.types.BoneGroup
-        :returns: None
-        :rtype: None
-        """
-
-        for bone in children:
-            # check is child have rig type and bone is connect with parent
-            if not bone.get("UE4RIGTYPE") and bone.bone.use_connect:
-                mesh = bpy.data.meshes.new("UE4WSBoneShape_" + bone.name)
-                objSpine = bpy.data.objects.new(mesh.name,mesh)
-                collection.objects.link(objSpine)
-                mesh.from_pydata([(v[0] / bone.length, 0.5, v[2] / bone.length) for v in vertices], edges, [])
-                bone.custom_shape = objSpine
-                bone.bone_group = group
-                self.spineRecursiveBone(bone.children, collection, vertices, edges, group)
-
-    def neckRecursiveBone(self, children, collection, vertices, edges, group):
-        """recursive function to make custom shape to neck
-
-        :param children: list bpy.types.PoseBone
-        :type children: bpy.types.PoseBone
-        :param collection: collection to link object
-        :type collection: bpy.types.Collection
-        :param vertices: list tuple coordinate
-        :type vertices: list tuple
-        :param edges: list tuple edges line
-        :type edges: list tuple
-        :param group: bone group of armature to assign color
-        :type group: bpy.types.BoneGroup
-        :returns: None
-        :rtype: None
-        """
-
-        for bone in children:
-            # check is child have rig type and bone is connect with parent
-            if not bone.get("UE4RIGTYPE") and bone.bone.use_connect:
-                mesh = bpy.data.meshes.new("UE4WSBoneShape_" + bone.name)
-                objNeck = bpy.data.objects.new(mesh.name,mesh)
-                collection.objects.link(objNeck)
-                mesh.from_pydata([(v[0] * 5, 0.5, v[2] * 5) for v in vertices], edges, [])
-                bone.custom_shape = objNeck
-                bone.bone_group = group
-                self.neckRecursiveBone(bone.children, collection, vertices, edges, group)
-
     def generateRig(self):
         """generate rig
         - uncheck deform bone and change bone name
@@ -506,7 +519,7 @@ class BoneManipulation:
         self.activeObject.data.use_mirror_x = False
 
         # uncheck deform bone and change bone name
-        for bone in [bone for bone in editBones if bone.get("boneOrient", False)]:
+        for bone in [bone for bone in editBones if bone.get("rotateBone", False)]:
             bone.use_deform = False
             bone.name = "TWEAK_" + bone.name
         # rename temporary bone and make copy bone
@@ -533,21 +546,21 @@ class BoneManipulation:
         self.activeObject.data.use_mirror_x = oldMirror
         bpy.ops.object.mode_set(mode="OBJECT")
         # add IK bone if humanoid
-        if self.activeObject.get("UE4RIGTYPE") == "HUMANOID":
+        if self.activeObject.data.UE4RIGTYPE == "HUMANOID":
             self.addIKBone()
         # create group bone
         boneGroups = self.activeObject.pose.bone_groups
         redGroup = boneGroups.new(name="red")
         redGroup.color_set = "CUSTOM"
-        redGroup.colors.select = [0.6, 0.0, 0.0]
-        redGroup.colors.normal = [0.5, 0.0, 0.0]
-        redGroup.colors.active = [0.9, 0.0, 0.0]
+        redGroup.colors.select = [0.9, 0.0, 0.0]
+        redGroup.colors.normal = [0.8, 0.0, 0.0]
+        redGroup.colors.active = [1, 0.0, 0.0]
 
         greenGroup = boneGroups.new(name="green")
         greenGroup.color_set = "CUSTOM"
-        greenGroup.colors.select = [0.0, 0.45, 0.0]
-        greenGroup.colors.normal = [0.0, 0.4, 0.0]
-        greenGroup.colors.active = [0.0, 0.9, 0.0]
+        greenGroup.colors.select = [0.0, 0.9, 0.0]
+        greenGroup.colors.normal = [0.0, 0.8, 0.0]
+        greenGroup.colors.active = [0.0, 1, 0.0]
 
         yellowGroup = boneGroups.new(name="yellow")
         yellowGroup.color_set = "CUSTOM"
@@ -560,6 +573,24 @@ class BoneManipulation:
         blueGroup.colors.select = [0.0, 0.3, 0.7]
         blueGroup.colors.normal = [0.0, 0.3, 0.5]
         blueGroup.colors.active = [0.0, 0.5, 1]
+
+        leftSideGroup = boneGroups.new(name="leftSide")
+        leftSideGroup.color_set = "CUSTOM"
+        leftSideGroup.colors.select = [0.0, 0.4, 0.9]
+        leftSideGroup.colors.normal = [0.0, 0.55, 0.9]
+        leftSideGroup.colors.active = [0.0, 0.5, 1.0]
+
+        rightSideGroup = boneGroups.new(name="rightSide")
+        rightSideGroup.color_set = "CUSTOM"
+        rightSideGroup.colors.select = [0.95, 0.57, 0.0]
+        rightSideGroup.colors.normal = [0.93, 0.56, 0.0]
+        rightSideGroup.colors.active = [1.0, 0.6, 0.0]
+
+        propGroup = boneGroups.new(name="prop")
+        propGroup.color_set = "CUSTOM"
+        propGroup.colors.select = [1.0, 0.1, 0.95]
+        propGroup.colors.normal = [0.95, 0.0, 1.0]
+        propGroup.colors.active = [1.0, 0.0, 0.925]
 
         # add control bone
         bpy.ops.object.mode_set(mode="EDIT")
@@ -580,585 +611,549 @@ class BoneManipulation:
         if not editBones.get("root"):
             root = editBones.new("root")
             root.head = [0, 0, 0]
-            root.tail = [0, 1, 0]
+            root.tail = [0, 0.05, 0]
             root.roll = 0
             for bone in [bone for bone in editBones if bone.parent is None and bone.name != "root"]:
                 bone.parent = root
 
-            vertices = [(0.0, 0.5, 0.0), (-0.19134172797203064, 0.4619397521018982, 0.0), (-0.3535533845424652, 0.3535533845424652, 0.0), (-0.4619397521018982, 0.19134171307086945, 0.0), (-0.5, -2.1855694143368964e-08, 0.0), (-0.4619397521018982, -0.19134175777435303, 0.0), (-0.3535533845424652, -0.3535533845424652, 0.0), (-0.19134174287319183, -0.4619397521018982, 0.0), (-7.549790126404332e-08, -0.5, 0.0), (0.1913416087627411, -0.46193981170654297, 0.0), (0.35355329513549805, -0.35355350375175476, 0.0), (0.4619397521018982, -0.19134178757667542, 0.0), (0.5, 5.962440319251527e-09, 0.0), (0.4619397222995758, 0.1913418024778366, 0.0), (0.35355326533317566, 0.35355350375175476, 0.0), (0.19134148955345154, 0.46193987131118774, 0.0), (-7.549790126404332e-08, -0.599839448928833, 0.0), (-7.549790126404332e-08, -0.6148394346237183, 0.014999999664723873), (-7.549790126404332e-08, -0.6148394346237183, -0.014999999664723873), (-7.549790126404332e-08, -0.7313858270645142, 0.0), (0.01499992422759533, -0.6148394346237183, 0.0), (-0.015000075101852417, -0.6148394346237183, 0.0), (1.0404690442555875e-09, 0.5279299020767212, 0.0), (-0.2020300328731537, 0.487743616104126, 0.0), (-0.3733028173446655, 0.3733028173446655, 0.0), (-0.487743616104126, 0.2020300179719925, 0.0), (-0.5279298424720764, -2.338869009577138e-08, 0.0), (-0.487743616104126, -0.20203007757663727, 0.0), (-0.3733028173446655, -0.3733028173446655, 0.0), (-0.20203004777431488, -0.487743616104126, 0.0), (-7.867473073019937e-08, -0.5279299020767212, 0.0), (0.20202991366386414, -0.48774367570877075, 0.0), (0.37330272793769836, -0.3733029365539551, 0.0), (0.487743616104126, -0.20203010737895966, 0.0), (0.5279299020767212, 5.983360029659934e-09, 0.0), (0.4877435863018036, 0.20203012228012085, 0.0), (0.3733026683330536, 0.3733029365539551, 0.0), (0.20202979445457458, 0.4877437353134155, 0.0)]
-            edges = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (0, 15), (23, 22), (16, 17), (16, 18), (18, 19), (17, 19), (16, 20), (19, 20), (17, 20), (18, 20), (16, 21), (17, 21), (18, 21), (24, 23), (25, 24), (26, 25), (27, 26), (28, 27), (29, 28), (30, 29), (31, 30), (32, 31), (33, 32), (34, 33), (35, 34), (36, 35), (37, 36), (22, 37), (19, 21)]
-
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_Root")
+            mesh = bpy.data.meshes.new("UE4WSBS_root")
             objRootShape = bpy.data.objects.new(mesh.name,mesh)
             collection.objects.link(objRootShape)
-            mesh.from_pydata(vertices, edges, [(23, 24, 2, 1), (24, 25, 3, 2), (25, 26, 4, 3), (26, 27, 5, 4), (27, 28, 6, 5), (28, 29, 7, 6), (29, 30, 8, 7), (30, 31, 9, 8), (31, 32, 10, 9), (32, 33, 11, 10), (33, 34, 12, 11), (34, 35, 13, 12), (35, 36, 14, 13), (36, 37, 15, 14), (37, 22, 0, 15), (22, 23, 1, 0), (17, 20, 16), (17, 16, 21), (21, 16, 18), (18, 16, 20), (20, 19, 18), (19, 21, 18), (19, 17, 21), (19, 20, 17)])
+            mesh.from_pydata(*boneShape.root())
             bpy.ops.object.mode_set(mode="POSE")
             poseBone = self.poseBone("root")
             if poseBone is None:
                poseBone = self.poseBone("root")
             poseBone.custom_shape = objRootShape
+            poseBone.use_custom_shape_bone_size = False
             poseBone.bone_group = redGroup
             bpy.ops.object.mode_set(mode="EDIT")
-
-        # transfer rig type to pose bone
-        for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE")]:
-            poseBone = self.poseBone(bone.name)
-            if poseBone is not None:
-                poseBone["UE4RIGTYPE"] = bone.get("UE4RIGTYPE")
 
         # FINGER
         for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE") == "FINGER"]:
             bpy.ops.armature.select_all(action="DESELECT")
             boneName = bone.name
             # CONTROL BONE
-            control = editBones.new("CONTROL_" + boneName.replace("TWEAK_", ""))
+            control = editBones.new(boneName.replace("TWEAK_", "CONTROL_"))
             control.use_deform = False
-            control.head = bone.head
-            control.tail = bone.tail
+            control.head = bone.head + (bone.z_axis * 0.025)
+            control.tail = bone.tail + (bone.z_axis * 0.025)
             control.roll = bone.roll
             control.length = 0.05
             control.parent = bone.parent
-            control.select = True
-            control.select_head = True
-            control.select_tail = True
-            bpy.ops.transform.translate(value=(0, 0, 0.025), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            control.select = False
-            control.select_head = False
-            control.select_tail = False
-            poseBone = self.poseBone(boneName)
-            if poseBone is not None:
-                poseBone["subtargetRotation"] = control.name
+            bone["subtargetRotation"] = control.name
+            # CONTROL IK BONE
+            # filter children with starts string "TWEAK_"
+            filterChildren = [bone for bone in bone.children_recursive if bone.name.startswith("TWEAK_") and not bone.get("UE4RIGTYPE")]
+            # get index bone that have RIGTYPE
+            endIndex = next((index for (index, bn) in enumerate(filterChildren) if bn.get("UE4RIGTYPE")), None)
+            if endIndex is not None:
+                filterChildren = filterChildren[:endIndex:]
+            for bn in filterChildren:
+                bn.use_connect = False
+            lastChildBone = filterChildren[-1]
+            ikControl = editBones.new(boneName.replace("TWEAK_", "IKTARGET_"))
+            ikControl.use_deform = False
+            ikControl.head = lastChildBone.tail
+            ikControl.tail = lastChildBone.tail + (lastChildBone.y_axis * 0.05)
+            ikControl.roll = lastChildBone.roll
+            ikControl.length = 0.05
+            ikControl.parent = bone.parent
+            self.moveBoneLayer([control, ikControl], [0])
+            bone["subtargetIK"] = ikControl.name
 
         # LEG_HUMAN
         for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE") == "LEG_HUMAN"]:
+            bone.use_connect = False
             bpy.ops.armature.select_all(action="DESELECT")
             boneName = bone.name
             # POLE BONE
-            canCreatePole = [bn for bn in bone.children if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name]
+            canCreatePole = [bn for bn in bone.children if bn.name.startswith("TWEAK_") and not bn.get("UE4RIGTYPE") and not "_twist_" in bn.name]
             if canCreatePole:
                 calfBone = canCreatePole[0]
-                pole = editBones.new("IKPOLE_" + boneName.replace("TWEAK_", ""))
+                calfBone.use_connect = False
+
+                # CHECK IF FOOT AND TOE EXIST
+                footBone = [bn for bn in calfBone.children if bn.name.startswith("TWEAK_") and not bn.get("UE4RIGTYPE") and not "_twist_" in bn.name]
+                footBone = footBone[0] if footBone else None
+                toeBone = [bn for bn in footBone.children if bn.name.startswith("TWEAK_") and not bn.get("UE4RIGTYPE") and not "_twist_" in bn.name] if footBone else None
+                toeBone = toeBone[0] if toeBone else None
+
+                vA = calfBone.vector
+                vB = calfBone.tail - bone.head
+
+                vElbow = (vA.project(vB) - vA).normalized() * vB.length
+
+                pole = editBones.new(boneName.replace("TWEAK_", "IKPOLE_"))
                 pole.use_deform = False
-                pole.head = [calfBone.head[0], calfBone.head[1], calfBone.head[2]]
-                pole.tail = [calfBone.tail[0], calfBone.tail[1], calfBone.tail[2]]
-                pole.roll = calfBone.roll
-                pole.length = 0.25
-                bpy.ops.armature.select_all(action="DESELECT")
-                pole.select = True
-                pole.select_head = True
-                pole.select_tail = True
-                bpy.ops.transform.translate(value=(-0.5 if calfBone.roll < 0.0 else 0.5, -0.15, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+                pole.head = bone.tail + vElbow
+                pole.tail = pole.head - vElbow/8
                 pole.roll = 0
-                pole.select = False
-                pole.select_head = False
-                pole.select_tail = False
+                pole.length = 0.25
+
+                # VIS POLE
+                visPole = editBones.new(calfBone.name.replace("TWEAK_", "VISPOLE_"))
+                visPole.use_deform = False
+                visPole.head = pole.head
+                visPole.tail = calfBone.head
+                visPole.roll = 0
+
                 # IK TARGET BONE
-                ikTarget = editBones.new("IKTARGET_" + calfBone.name.replace("TWEAK_", ""))
+                ikTarget = editBones.new(calfBone.name.replace("TWEAK_", "IKTARGET_"))
                 ikTarget.use_deform = False
-                ikTarget.head = [calfBone.tail[0], calfBone.tail[1], calfBone.tail[2]]
-                ikTarget.tail = [calfBone.tail[0], calfBone.tail[1] + 0.15, calfBone.tail[2]]
-                ikTarget.roll = 0
+                ikTarget.head = calfBone.tail if not footBone else footBone.head
+                ikTarget.tail = (calfBone.tail + Vector((0, 0.15, 0))) if not footBone else footBone.tail
+                ikTarget.roll = 0 if not footBone else footBone.roll
                 # CONTROLLER BONE
-                control = editBones.new("CONTROL_" + calfBone.name.replace("TWEAK_", ""))
+                control = editBones.new((calfBone.name.replace("TWEAK_", "CONTROL_") if not footBone else footBone.name.replace("TWEAK_", "CONTROL_")))
                 control.use_deform = False
-                control.head = [calfBone.tail[0], calfBone.tail[1], 0]
-                control.tail = [calfBone.tail[0], calfBone.tail[1] + 0.2, 0]
-                control.roll = 0
+                control.head = calfBone.tail if not footBone else footBone.head
+                control.tail = control.head + Vector((0, 0.2, 0)) if not footBone else footBone.tail
+                control.roll = 0 if not footBone else footBone.roll
                 ikTarget.parent = control
 
-                ikTarget.select = True
-                ikTarget.select_head = True
-                ikTarget.select_tail = True
-                bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                bpy.ops.armature.select_all(action="DESELECT")
-                pole.select = True
-                pole.select_head = True
-                pole.select_tail = True
-                control.select = True
-                control.select_head = True
-                control.select_tail = True
-                bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                bpy.ops.armature.select_all(action="DESELECT")
+                # IK BONE
+                ikBone1 = editBones.new(boneName.replace("TWEAK_", "IK_"))
+                ikBone1.use_deform = False
+                ikBone1.head = bone.head
+                ikBone1.tail = bone.tail
+                ikBone1.roll = bone.roll
+                ikBone1.parent = bone.parent
+                ikBone2 = editBones.new(calfBone.name.replace("TWEAK_", "IK_"))
+                ikBone2.use_deform = False
+                ikBone2.head = calfBone.head
+                ikBone2.tail = calfBone.tail
+                ikBone2.roll = calfBone.roll
+                ikBone2.parent = ikBone1
+                ikBone2.use_connect = False
 
                 # FK BONE
-                fkBone1 = editBones.new("FK_" + boneName.replace("TWEAK_", ""))
+                fkBone1 = editBones.new(boneName.replace("TWEAK_", "FK_"))
                 fkBone1.use_deform = False
                 fkBone1.head = bone.head
                 fkBone1.tail = bone.tail
                 fkBone1.roll = bone.roll
                 fkBone1.parent = bone.parent
-                fkBone2 = editBones.new("FK_" + calfBone.name.replace("TWEAK_", ""))
+                fkBone2 = editBones.new(calfBone.name.replace("TWEAK_", "FK_"))
                 fkBone2.use_deform = False
                 fkBone2.head = calfBone.head
                 fkBone2.tail = calfBone.tail
                 fkBone2.roll = calfBone.roll
                 fkBone2.parent = fkBone1
-                fkBone2.use_connect = calfBone.use_connect
+                fkBone2.use_connect = False
+                if footBone:
+                    footBone.use_connect = False
+                    fkBone3 = editBones.new(footBone.name.replace("TWEAK_", "FK_"))
+                    fkBone3.use_deform = False
+                    fkBone3.head = footBone.head
+                    fkBone3.tail = footBone.tail
+                    fkBone3.roll = footBone.roll
+                    fkBone3.parent = fkBone2
+                    fkBone3.use_connect = False
 
-                # Move to second layer
-                fkBone1.select = True
-                fkBone1.select_head = True
-                fkBone1.select_tail = True
-                fkBone2.select = True
-                fkBone2.select_head = True
-                fkBone2.select_tail = True
-                bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                bpy.ops.armature.select_all(action="DESELECT")
+                # STRETCH BONE
+                stretchBone1 = editBones.new(boneName.replace("TWEAK_", "STRETCH_"))
+                stretchBone1.use_deform = False
+                stretchBone1.head = bone.head
+                stretchBone1.tail = bone.tail
+                stretchBone1.roll = bone.roll
+                stretchBone1.parent = ikBone1
+                stretchBone2 = editBones.new(calfBone.name.replace("TWEAK_", "STRETCH_"))
+                stretchBone2.use_deform = False
+                stretchBone2.head = calfBone.head
+                stretchBone2.tail = calfBone.tail
+                stretchBone2.roll = calfBone.roll
+                stretchBone2.parent = stretchBone1
+                stretchBone2.use_connect = False
 
-                # move to third layer
-                bone.select = True
-                bone.select_head = True
-                bone.select_tail = True
-                calfBone.select = True
-                calfBone.select_head = True
-                calfBone.select_tail = True
-                bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                bpy.ops.armature.select_all(action="DESELECT")
+                bone["subtargetIK"] = ikTarget.name
+                bone["subtargetPole"] = pole.name
+                bone["footBone"] = bool(footBone)
+                bone["toeBone"] = bool(toeBone)
 
-                poseBone = self.poseBone(boneName)
-                if poseBone is not None:
-                    poseBone["IKTarget"] = ikTarget.name
-                    poseBone["IKPole"] = pole.name
-                    poseBone["BoneSide"] = calfBone.roll
-                # CHECK IF FOOT EXIST
-                isFootExist = [bn for bn in calfBone.children if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name]
-                if isFootExist:
-                    footBone = isFootExist[0]
-                    mimikFoot = editBones.new("MIMIK_" + footBone.name.replace("TWEAK_", ""))
-                    mimikFoot.use_deform = False
-                    mimikFoot.head = [footBone.tail[0], footBone.tail[1], footBone.tail[2]]
-                    mimikFoot.tail = [footBone.tail[0], footBone.tail[1] + 0.15, footBone.tail[2]]
-                    mimikFoot.roll = 0
-                    mimikFoot.parent = control
-                    ikTarget.parent = mimikFoot
-                    control.name = "CONTROL_" + footBone.name.replace("TWEAK_", "")
+                # move to 29 layer
+                self.moveBoneLayer([bone, calfBone, ikTarget, ikBone1, ikBone2, stretchBone1, stretchBone2], [29])
 
-                    liftControl = editBones.new("CONTROLLIFT_" + footBone.name.replace("TWEAK_", ""))
-                    liftControl.use_deform = False
-                    liftControl.head = [control.head[0], control.head[1] + 0.15, 0]
-                    liftControl.tail = [control.tail[0], control.tail[1] + 0.15, 0]
-                    liftControl.roll = 0
-                    liftControl.parent = control
+                if footBone:
+                    # PIVOT HEEL, FOOT AND CONTROL
+                    pivotHeel = editBones.new(footBone.name.replace("TWEAK_", "PIVOTHEEL_"))
+                    pivotHeel.use_deform = False
+                    pivotHeel.head = footBone.head - Vector((0, -0.075, footBone.head[2]))
+                    pivotHeel.tail = pivotHeel.head + Vector((0, 0.1, 0))
+                    pivotHeel.roll = 0
+                    pivotHeel.parent = control
 
-                    rotationControl = editBones.new("CONTROLROTATION_" + footBone.name.replace("TWEAK_", ""))
-                    rotationControl.use_deform = False
-                    rotationControl.head = [calfBone.tail[0], footBone.tail[1] - 0.35, calfBone.tail[2]]
-                    rotationControl.tail = [calfBone.tail[0], footBone.tail[1] - 0.2, calfBone.tail[2]]
-                    rotationControl.roll = 0
-                    rotationControl.parent = control
-                    if poseBone is not None:
-                        poseBone["FootController"] = True
+                    heelControl = editBones.new(footBone.name.replace("TWEAK_", "HEELCONTROL_"))
+                    heelControl.use_deform = False
+                    heelControl.head = pivotHeel.head
+                    heelControl.tail = pivotHeel.tail
+                    heelControl.roll = 0
+                    heelControl.parent = control
 
-                    mimikFoot.select = True
-                    mimikFoot.select_head = True
-                    mimikFoot.select_tail = True
-                    bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                    bpy.ops.armature.select_all(action="DESELECT")
-                    liftControl.select = True
-                    liftControl.select_head = True
-                    liftControl.select_tail = True
-                    rotationControl.select = True
-                    rotationControl.select_head = True
-                    rotationControl.select_tail = True
-                    bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                    bpy.ops.armature.select_all(action="DESELECT")
+                    pivotFoot = editBones.new(footBone.name.replace("TWEAK_", "PIVOTFOOT_"))
+                    pivotFoot.use_deform = False
+                    pivotFoot.head = footBone.tail
+                    pivotFoot.tail = footBone.tail + Vector((0, 0.1, 0))
+                    pivotFoot.roll = 0
+                    pivotFoot.parent = pivotHeel
 
-                    # CHECK IF TOE EXIST
-                    isToeExist = [bn for bn in footBone.children if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name]
-                    if isToeExist:
-                        toeBone = isToeExist[0]
-                        toeControl = editBones.new("CONTROL_" + toeBone.name.replace("TWEAK_", ""))
+                    ikTarget.parent = pivotFoot
+
+                    # FLOOR FOOT
+                    floorFoot = editBones.new(footBone.name.replace("TWEAK_", "FLOOR_"))
+                    floorFoot.use_deform = False
+                    floorFoot.head = footBone.head - Vector((0, 0, footBone.head[2]))
+                    floorFoot.tail = floorFoot.head + Vector((0, 0.1, 0))
+                    floorFoot.roll = 0
+                    footBone["boneHasFloor"] = True
+
+                    # move to 29 layer
+                    self.moveBoneLayer([pivotHeel, pivotFoot, footBone], [29])
+
+                    if toeBone:
+                        # TOE PIVOT AND CONTROL
+                        pivotToe = editBones.new(toeBone.name.replace("TWEAK_", "PIVOTTOE_"))
+                        pivotToe.use_deform = False
+                        pivotToe.head = toeBone.tail
+                        pivotToe.tail = toeBone.tail + Vector((0, 0.1, 0))
+                        pivotToe.roll = 0
+                        pivotToe.parent = pivotHeel
+
+                        toeControl = editBones.new(toeBone.name.replace("TWEAK_", "TOECONTROL_"))
                         toeControl.use_deform = False
-                        toeControl.head = [toeBone.head[0], toeBone.head[1], 0]
-                        toeControl.tail = [toeBone.tail[0], toeBone.tail[1], 0]
+                        toeControl.head = toeBone.tail
+                        toeControl.tail = toeBone.tail + Vector((0, 0.1, 0))
                         toeControl.roll = 0
-                        toeControl.parent = footBone
-                        if poseBone is not None:
-                            poseBone["ToeController"] = True
-                        toeControl.select = True
-                        toeControl.select_head = True
-                        toeControl.select_tail = True
-                        bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                        bpy.ops.armature.select_all(action="DESELECT")
+                        toeControl.parent = control
+
+                        pivotFoot.parent = pivotToe
+
+                        ballControl = editBones.new(toeBone.name.replace("TWEAK_", "CONTROL_"))
+                        ballControl.use_deform = False
+                        ballControl.head = toeBone.head
+                        ballControl.tail = toeBone.tail
+                        ballControl.roll = toeBone.roll
+                        ballControl.parent = control
+
+                        # move to 29 layer
+                        self.moveBoneLayer([pivotToe, toeBone], [29])
 
         # ARM_HUMAN
         for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE") == "ARM_HUMAN"]:
+            bone.use_connect = False
             bpy.ops.armature.select_all(action="DESELECT")
             boneName = bone.name
             # POLE BONE
-            canCreatePole = [bn for bn in bone.children if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name]
+            canCreatePole = [bn for bn in bone.children if bn.name.startswith("TWEAK_") and not bn.get("UE4RIGTYPE") and not "_twist_" in bn.name]
             if canCreatePole:
                 lowerarmBone = canCreatePole[0]
-                pole = editBones.new("IKPOLE_" + boneName.replace("TWEAK_", ""))
+                lowerarmBone.use_connect = False
+                # CHECK IF HAND EXIST
+                handBone = [bn for bn in lowerarmBone.children if bn.name.startswith("TWEAK_") and not bn.get("UE4RIGTYPE") and not "_twist_" in bn.name]
+                handBone = handBone[0] if handBone else None
+
+                vA = lowerarmBone.vector
+                vB = lowerarmBone.tail - bone.head
+
+                vKnee = (vA.project(vB) - vA).normalized() * vB.length
+
+                # IK POLE
+
+                pole = editBones.new(boneName.replace("TWEAK_", "IKPOLE_"))
                 pole.use_deform = False
-                pole.head = [lowerarmBone.head[0], lowerarmBone.head[1], lowerarmBone.head[2]]
-                pole.tail = [lowerarmBone.tail[0], lowerarmBone.tail[1], lowerarmBone.tail[2]]
-                pole.roll = lowerarmBone.roll
-                pole.length = 0.25
-                bpy.ops.armature.select_all(action="DESELECT")
-                pole.select = True
-                pole.select_head = True
-                pole.select_tail = True
-                bpy.ops.transform.translate(value=(0.5 if lowerarmBone.roll < 0.0 else -0.5, -0.15, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+                pole.head = bone.tail + vKnee
+                pole.tail = pole.head - vKnee/8
                 pole.roll = 0
-                bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                bpy.ops.armature.select_all(action="DESELECT")
+                pole.length = 0.25
+
+                # VIS POLE
+                visPole = editBones.new(lowerarmBone.name.replace("TWEAK_", "VISPOLE_"))
+                visPole.use_deform = False
+                visPole.head = pole.head
+                visPole.tail = lowerarmBone.head
+                visPole.roll = 0
+
                 # IK TARGET BONE
-                ikTarget = editBones.new("IKTARGET_" + lowerarmBone.name.replace("TWEAK_", ""))
+                ikTarget = editBones.new((lowerarmBone.name.replace("TWEAK_", "CONTROL_") if not handBone else handBone.name.replace("TWEAK_", "CONTROL_")))
                 ikTarget.use_deform = False
-                ikTarget.head = [lowerarmBone.tail[0], lowerarmBone.tail[1], lowerarmBone.tail[2]]
-                ikTarget.tail = [lowerarmBone.tail[0], lowerarmBone.tail[1] + 0.15, lowerarmBone.tail[2]]
-                ikTarget.roll = 0
-                bpy.ops.armature.select_all(action="DESELECT")
-                ikTarget.select = True
-                ikTarget.select_head = True
-                ikTarget.select_tail = True
-                bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                bpy.ops.armature.select_all(action="DESELECT")
+                ikTarget.head = lowerarmBone.head if not handBone else handBone.head
+                ikTarget.tail = lowerarmBone.tail if not handBone else handBone.tail
+                ikTarget.roll = lowerarmBone.roll if not handBone else handBone.roll
+                if not handBone:
+                    tailLoc = (lowerarmBone.y_axis * 0.1) + lowerarmBone.tail
+                    ikTarget.head = lowerarmBone.tail
+                    ikTarget.tail = tailLoc
+
+                # IK BONE
+                ikBone1 = editBones.new(boneName.replace("TWEAK_", "IK_"))
+                ikBone1.use_deform = False
+                ikBone1.head = bone.head
+                ikBone1.tail = bone.tail
+                ikBone1.roll = bone.roll
+                ikBone1.parent = bone.parent
+                ikBone2 = editBones.new(lowerarmBone.name.replace("TWEAK_", "IK_"))
+                ikBone2.use_deform = False
+                ikBone2.head = lowerarmBone.head
+                ikBone2.tail = lowerarmBone.tail
+                ikBone2.roll = lowerarmBone.roll
+                ikBone2.parent = ikBone1
+                ikBone2.use_connect = False
 
                 # FK BONE
-                fkBone1 = editBones.new("FK_" + boneName.replace("TWEAK_", ""))
+                fkBone1 = editBones.new(boneName.replace("TWEAK_", "FK_"))
                 fkBone1.use_deform = False
                 fkBone1.head = bone.head
                 fkBone1.tail = bone.tail
                 fkBone1.roll = bone.roll
                 fkBone1.parent = bone.parent
-                fkBone2 = editBones.new("FK_" + lowerarmBone.name.replace("TWEAK_", ""))
+                fkBone2 = editBones.new(lowerarmBone.name.replace("TWEAK_", "FK_"))
                 fkBone2.use_deform = False
                 fkBone2.head = lowerarmBone.head
                 fkBone2.tail = lowerarmBone.tail
                 fkBone2.roll = lowerarmBone.roll
                 fkBone2.parent = fkBone1
-                fkBone2.use_connect = lowerarmBone.use_connect
+                fkBone2.use_connect = False
+                if handBone:
+                    handBone.use_connect = False
+                    fkBone3 = editBones.new(handBone.name.replace("TWEAK_", "FK_"))
+                    fkBone3.use_deform = False
+                    fkBone3.head = handBone.head
+                    fkBone3.tail = handBone.tail
+                    fkBone3.roll = handBone.roll
+                    fkBone3.parent = fkBone2
+                    fkBone3.use_connect = False
 
-                # Move to second layer
-                fkBone1.select = True
-                fkBone1.select_head = True
-                fkBone1.select_tail = True
-                fkBone2.select = True
-                fkBone2.select_head = True
-                fkBone2.select_tail = True
-                bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                bpy.ops.armature.select_all(action="DESELECT")
+                # STRETCH BONE
+                stretchBone1 = editBones.new(boneName.replace("TWEAK_", "STRETCH_"))
+                stretchBone1.use_deform = False
+                stretchBone1.head = bone.head
+                stretchBone1.tail = bone.tail
+                stretchBone1.roll = bone.roll
+                stretchBone1.parent = ikBone1
+                stretchBone2 = editBones.new(lowerarmBone.name.replace("TWEAK_", "STRETCH_"))
+                stretchBone2.use_deform = False
+                stretchBone2.head = lowerarmBone.head
+                stretchBone2.tail = lowerarmBone.tail
+                stretchBone2.roll = lowerarmBone.roll
+                stretchBone2.parent = stretchBone1
+                stretchBone2.use_connect = False
 
-                # move to third layer
-                bone.select = True
-                bone.select_head = True
-                bone.select_tail = True
-                lowerarmBone.select = True
-                lowerarmBone.select_head = True
-                lowerarmBone.select_tail = True
-                bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                bpy.ops.armature.select_all(action="DESELECT")
+                bone["subtargetIK"] = ikTarget.name
+                bone["subtargetPole"] = pole.name
+                bone["handBone"] = bool(handBone)
 
-                # CONTROLLER BONE
-                isHandExist = [bn for bn in lowerarmBone.children if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name]
-                if isHandExist:
-                    handBone = isHandExist[0]
-                    control = editBones.new("CONTROL_" + handBone.name.replace("TWEAK_", ""))
-                    control.use_deform = False
-                    control.head = handBone.head
-                    control.tail = handBone.tail
-                    control.roll = handBone.roll
-                    control.length = 0.2
-                    ikTarget.parent = control
-                    bpy.ops.armature.select_all(action="DESELECT")
-                    control.select = True
-                    control.select_head = True
-                    control.select_tail = True
-                    bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                    bpy.ops.armature.select_all(action="DESELECT")
-                else:
-                    bpy.ops.armature.select_all(action="DESELECT")
-                    control = editBones.new("CONTROL_" + lowerarmBone.name.replace("TWEAK_", ""))
-                    control.use_deform = False
-                    control.head = lowerarmBone.head
-                    control.tail = lowerarmBone.tail
-                    control.roll = lowerarmBone.roll
-                    control.length = 0.2
-                    control.select = True
-                    control.select_head = True
-                    control.select_tail = True
-                    bpy.ops.transform.translate(value=(0, lowerarmBone.length, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-                    control.select = False
-                    control.select_head = False
-                    control.select_tail = False
-                    ikTarget.parent = control
-                    bpy.ops.armature.select_all(action="DESELECT")
-                    control.select = True
-                    control.select_head = True
-                    control.select_tail = True
-                    bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                    bpy.ops.armature.select_all(action="DESELECT")
+                if handBone:
+                    # FLOOR HAND
+                    floorFoot = editBones.new(handBone.name.replace("TWEAK_", "FLOOR_"))
+                    floorFoot.use_deform = False
+                    floorFoot.head = handBone.head - Vector((0, 0, handBone.head[2]))
+                    floorFoot.tail = floorFoot.head + Vector((0, 0.1, 0))
+                    floorFoot.roll = 0
+                    handBone["boneHasFloor"] = True
 
-                poseBone = self.poseBone(boneName)
-                if poseBone is not None:
-                    poseBone["IKTarget"] = ikTarget.name
-                    poseBone["IKPole"] = pole.name
-                    poseBone["BoneSide"] = 1.0 if lowerarmBone.roll < 0.0 else -1.0
+                # move to 29 layer
+                boneToMove = [bone, lowerarmBone, ikBone1, ikBone2, stretchBone1, stretchBone2]
+                if handBone:
+                    boneToMove.append(handBone)
+                self.moveBoneLayer(boneToMove, [29])
+
+        # PELVIS
+        for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE") == "PELVIS"]:
+            bone.use_connect = False
+
+            # CONTROL BONE
+            control = editBones.new(bone.name.replace("TWEAK_", "CONTROL_"))
+            control.use_deform = False
+            control.head = bone.head
+            control.tail = bone.tail
+            control.roll = bone.roll
+
+        # SPINE
+        for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE") == "SPINE"]:
+            bone.use_connect = False
+
+            targetBone = editBones.get(bone.name.replace("TWEAK_", "TARGET_"))
+
+            childBone = next(iter([x for x in bone.children if x is not targetBone]), None)
+
+            if childBone:
+                # STRETCH BONE
+                stretchBone = editBones.new(bone.name.replace("TWEAK_", "STRETCH_"))
+                stretchBone.use_deform = False
+                stretchBone.head = bone.head
+                stretchBone.tail =  bone.tail
+                stretchBone.roll = bone.roll
+                stretchBone.parent = bone
+
+                targetBone.parent = stretchBone
+
+                bone["stretchBoneTarget"] = childBone.name
+
+        # NECK
+        for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE") == "NECK"]:
+            bone.use_connect = False
+
+            targetBone = editBones.get(bone.name.replace("TWEAK_", "TARGET_"))
+
+            childBone = next(iter([x for x in bone.children if x is not targetBone]), None)
+
+            if childBone:
+                # STRETCH BONE
+                stretchBone = editBones.new(bone.name.replace("TWEAK_", "STRETCH_"))
+                stretchBone.use_deform = False
+                stretchBone.head = bone.head
+                stretchBone.tail =  bone.tail
+                stretchBone.roll = bone.roll
+                stretchBone.parent = bone
+
+                targetBone.parent = stretchBone
+
+                bone["stretchBoneTarget"] = childBone.name
+
+        # HEAD
+        for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE") == "HEAD"]:
+            bone.use_connect = False
+
+            # CONTROL BONE
+            control = editBones.new("CONTROL_" + bone.name.replace("TWEAK_", ""))
+            control.use_deform = False
+            control.head = (bone.z_axis * 0.2) + bone.head
+            control.tail =  control.head + Vector((0, 0.25, 0))
+            control.roll = 0
+            control.length = 0.01
+
+            # VIS CONTROL
+            visControl = editBones.new("VISCONTROL_" + bone.name.replace("TWEAK_", ""))
+            visControl.use_deform = False
+            visControl.head = control.head
+            visControl.tail = bone.head
+            visControl.roll = 0
 
         # switch case function for face bone
-        def SC_FaceJawHuman(bone, faceAttach):
-            """FACE JAW CONTROL"""
-            # move to third layer
-            bone.select = True
-            bone.select_head = True
-            bone.select_tail = True
-            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            bpy.ops.armature.select_all(action="DESELECT")
+        def SC_Jaw(bone, faceAttach):
+            """JAW CONTROL"""
+            bone.name = bone.name.replace("TWEAK_", "") + "_TWEAK"
+            # move to 0 layer
+            self.moveBoneLayer([bone], [0])
             # CONTROL BONE
-            boneName = bone.name
-            control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
+            control = editBones.new(bone.name.replace("_TWEAK", "_CONTROL"))
             control.use_deform = False
             control.head = [bone.tail[0], bone.tail[1] - 0.025, bone.tail[2]]
             control.tail = bone.tail
             control.roll = bone.roll
             control.length = 0.05
             control.parent = bone.parent
-            control.select = True
-            control.select_head = True
-            control.select_tail = True
-            # bpy.ops.transform.translate(value=(0, -0.025, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            control.select = False
-            control.select_head = False
-            control.select_tail = False
 
-            poseBone = self.poseBone(boneName)
-            if poseBone is not None:
-                poseBone["BONE_CONTROL"] = boneName.replace("TWEAK_", "") + "_CONTROL"
+            bone["subtargetIK"] = control.name
 
-        def SC_FaceControlHuman(bone, faceAttach):
-            """FACE CONTROL"""
-            # move to third layer
-            bone.select = True
-            bone.select_head = True
-            bone.select_tail = True
-            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            bpy.ops.armature.select_all(action="DESELECT")
+        def SC_Landmark(bone, faceAttach):
+            """LANDMARK CONTROL"""
+            bone.name = bone.name.replace("TWEAK_", "") + "_TWEAK"
+            # move to 29 layer
+            self.moveBoneLayer([bone], [29])
             # CONTROL BONE
-            boneName = bone.name
-            control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
+            control = editBones.new(bone.name.replace("_TWEAK", "_CONTROL"))
             control.use_deform = False
             control.head = bone.head
             control.tail = bone.tail
             control.roll = bone.roll
             control.length = 0.05
             control.parent = bone.parent
-            control.select = True
-            control.select_head = True
-            control.select_tail = True
-            bpy.ops.transform.translate(value=(0, -0.025, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            control.select = False
-            control.select_head = False
-            control.select_tail = False
 
-            poseBone = self.poseBone(boneName)
-            if poseBone is not None:
-                poseBone["BONE_CONTROL"] = boneName.replace("TWEAK_", "") + "_CONTROL"
+            bone["subtargetIK"] = control.name
 
-        def SC_FaceNoseHuman(bone, faceAttach):
-            """FACE NOSE CONTROL"""
-            # move to third layer
-            bone.select = True
-            bone.select_head = True
-            bone.select_tail = True
-            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            bpy.ops.armature.select_all(action="DESELECT")
+        def SC_Eye(bone, faceAttach):
+            """EYE CONTROL"""
+            bone.name = bone.name.replace("TWEAK_", "") + "_TWEAK"
+            headBone = faceAttach.parent
+            controlHeadBone = editBones.get(headBone.name.replace("TWEAK_", "CONTROL_"))
             # CONTROL BONE
-            boneName = bone.name
-            control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
+            control = editBones.new(bone.name.replace("_TWEAK", "_CONTROL"))
             control.use_deform = False
-            control.head = bone.head
+            control.head = (bone.y_axis * abs(controlHeadBone.head.y - bone.head.y)) + bone.head
             control.tail = bone.tail
             control.roll = bone.roll
             control.length = 0.05
-            control.parent = bone.parent
-            control.select = True
-            control.select_head = True
-            control.select_tail = True
-            bpy.ops.transform.translate(value=(0, -0.025, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            control.select = False
-            control.select_head = False
-            control.select_tail = False
+            control.parent = controlHeadBone
 
-            poseBone = self.poseBone(boneName)
-            if poseBone is not None:
-                poseBone["BONE_CONTROL"] = boneName.replace("TWEAK_", "") + "_CONTROL"
+            bone["subtargetIK"] = control.name
 
-        def SC_FaceEyeHuman(bone, faceAttach):
-            """FACE EYE CONTROL"""
-            # move to third layer
-            bone.select = True
-            bone.select_head = True
-            bone.select_tail = True
-            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            bpy.ops.armature.select_all(action="DESELECT")
-            # BONE FOR LOOK CONTROL
-            eyeControl = (editBones.get(faceAttach["BONE_LOOK_CONTROL"]), True) if faceAttach.get("BONE_LOOK_CONTROL") else (editBones.new("LOOK_CONTROL"), False)
-            if eyeControl[1]:
-                eyeControl = eyeControl[0]
-            else:
-                eyeControl = eyeControl[0]
-                eyeControl.use_deform = False
-                eyeControl.head = faceAttach.head
-                eyeControl.tail = faceAttach.tail
-                eyeControl.roll = faceAttach.roll
-                eyeControl.length = 0.05
-                eyeControl["UE4RIGTYPE"] = "FACE_LOOK_CONTROL_HUMAN"
-                eyeControl.select = True
-                eyeControl.select_head = True
-                eyeControl.select_tail = True
-                bpy.ops.transform.translate(value=(0, -0.5, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-                bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-                eyeControl.select = False
-                eyeControl.select_head = False
-                eyeControl.select_tail = False
+            # EYE MECHANISM
+            eyeMCH = editBones.new(bone.name.replace("_TWEAK", "_MCH"))
+            eyeMCH.use_deform = False
+            eyeMCH.head = bone.head
+            eyeMCH.tail = bone.tail
+            eyeMCH.roll = bone.roll
+            eyeMCH.parent = bone.parent
+            # move to 29 layer
+            self.moveBoneLayer([eyeMCH], [29])
 
-                faceAttach["BONE_LOOK_CONTROL"] = eyeControl.name
-                poseBone = self.poseBone(faceAttach.name)
-                if poseBone is not None:
-                    poseBone["BONE_LOOK_CONTROL"] = eyeControl.name
+            # EYELID OPEN<>CLOSE MECHANISM
+            for part in ["UPPER", "LOWER"]:
+                eyelidMCH = editBones.new(bone.name.replace("_TWEAK", "_EYELID_" + part + "_ROTATION"))
+                eyelidMCH.use_deform = False
+                eyelidMCH.head = bone.head
+                eyelidMCH.tail = bone.tail
+                eyelidMCH.roll = bone.roll
+                eyelidMCH.parent = eyeMCH
 
-            # CONTROL BONE
-            boneName = bone.name
-            control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
-            control.use_deform = False
-            control.head = bone.head
-            control.tail = bone.tail
-            control.roll = bone.roll
-            control.length = 0.05
-            control.parent = eyeControl
-            control.select = True
-            control.select_head = True
-            control.select_tail = True
-            bpy.ops.transform.translate(value=(0, 0.25, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            control.select = False
-            control.select_head = False
-            control.select_tail = False
+                eyelidBones = [bn for bn in bone.children if bn.get("UE4RIGTYPE") == "EYELID_" + part]
 
-            poseBone = self.poseBone(boneName)
-            if poseBone is not None:
-                poseBone["BONE_CONTROL"] = boneName.replace("TWEAK_", "") + "_CONTROL"
+                if eyelidBones:
+                    zLoc = (max if part == "UPPER" else min)([lid.head.z for lid in eyelidBones])
+                    eyelidPivotMCH = editBones.new(bone.name.replace("_TWEAK", "_EYELID_" + part + "_PIVOT_ROTATION"))
+                    eyelidPivotMCH.use_deform = False
+                    eyelidPivotMCH.head = (bone.head.x, (bone.head.y - bone.length) - 0.005, zLoc)
+                    eyelidPivotMCH.tail = (bone.tail.x, (bone.tail.y - bone.length) - 0.005, zLoc)
+                    eyelidPivotMCH.roll = bone.roll
+                    eyelidPivotMCH.parent = eyelidMCH
+                    # move to 29 layer
+                    self.moveBoneLayer([eyelidPivotMCH], [29])
 
-        def SC_FaceTeethHuman(bone, faceAttach):
-            """FACE TEETH CONTROL"""
-            # move to third layer
-            bone.select = True
-            bone.select_head = True
-            bone.select_tail = True
-            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            bpy.ops.armature.select_all(action="DESELECT")
-            # CONTROL BONE
-            boneName = bone.name
-            control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
-            control.use_deform = False
-            control.head = bone.head
-            control.tail = bone.tail
-            control.roll = bone.roll
-            control.length = 0.05
-            control.parent = bone.parent
-            control.select = True
-            control.select_head = True
-            control.select_tail = True
-            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            control.select = False
-            control.select_head = False
-            control.select_tail = False
+                    for eyelidBone in eyelidBones:
+                        """EYELID CONTROL"""
+                        eyelidBone.name = eyelidBone.name.replace("TWEAK_", "") + "_TWEAK"
+                        # move to 29 layer
+                        self.moveBoneLayer([eyelidBone], [29])
+                        # CONTROL BONE
+                        control = editBones.new(eyelidBone.name.replace("_TWEAK", "_CONTROL"))
+                        control.use_deform = False
+                        control.head = eyelidBone.head
+                        control.tail = eyelidBone.tail
+                        control.roll = eyelidBone.roll
+                        control.length = 0.01
+                        control.parent = eyelidMCH
 
-            poseBone = self.poseBone(boneName)
-            if poseBone is not None:
-                poseBone["BONE_CONTROL"] = boneName.replace("TWEAK_", "") + "_CONTROL"
+                        # COPY BONE
+                        eyelidBoneCopy = editBones.new(eyelidBone.name.replace("_TWEAK", "_COPY"))
+                        eyelidBoneCopy.use_deform = False
+                        eyelidBoneCopy.head = eyelidBone.head
+                        eyelidBoneCopy.tail = eyelidBone.tail
+                        eyelidBoneCopy.roll = eyelidBone.roll
+                        eyelidBoneCopy.parent = control
+                        # move to 29 layer
+                        self.moveBoneLayer([eyelidBoneCopy], [29])
 
-        def SC_FaceTongueHuman(bone, faceAttach):
-            """FACE TONGUE CONTROL"""
-            # move to third layer
-            bone.select = True
-            bone.select_head = True
-            bone.select_tail = True
-            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            bpy.ops.armature.select_all(action="DESELECT")
-            # CONTROL BONE
-            boneName = bone.name
-            control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
-            control.use_deform = False
-            control.head = bone.head
-            control.tail = bone.tail
-            control.roll = bone.roll
-            control.length = 0.05
-            control.parent = bone.parent
-            control.select = True
-            control.select_head = True
-            control.select_tail = True
-            bpy.ops.transform.translate(value=(0, 0, 0.01), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            control.select = False
-            control.select_head = False
-            control.select_tail = False
+                        eyelidBone["subtargetIK"] = eyelidBoneCopy.name
 
-            poseBone = self.poseBone(boneName)
-            if poseBone is not None:
-                poseBone["BONE_CONTROL"] = boneName.replace("TWEAK_", "") + "_CONTROL"
-
-        def SC_FaceEyelidHuman(bone, faceAttach):
-            """FACE EYELID CONTROL"""
-            # move to third layer
-            bone.select = True
-            bone.select_head = True
-            bone.select_tail = True
-            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            bpy.ops.armature.select_all(action="DESELECT")
-            # CONTROL BONE
-            boneName = bone.name
-            control = editBones.new(boneName.replace("TWEAK_", "") + "_CONTROL")
-            control.use_deform = False
-            control.head = bone.head
-            control.tail = bone.tail
-            control.roll = bone.roll
-            control.length = 0.05
-            control.parent = faceAttach
-            control.select = True
-            control.select_head = True
-            control.select_tail = True
-            bpy.ops.transform.translate(value=(0, 0.025, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", constraint_axis=(False, False, True), mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
-            bpy.ops.armature.bone_layers(layers=(False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            control.select = False
-            control.select_head = False
-            control.select_tail = False
-
-            poseBone = self.poseBone(boneName)
-            if poseBone is not None:
-                poseBone["BONE_CONTROL"] = boneName.replace("TWEAK_", "") + "_CONTROL"
-
-        # FACE_HUMAN
-        for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE") == "FACE_HUMAN"]:
-            # move to third layer
-            bone.select = True
-            bone.select_head = True
-            bone.select_tail = True
-            bpy.ops.armature.bone_layers(layers=(False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-            bpy.ops.armature.select_all(action="DESELECT")
+        # FACE_ATTACH
+        for bone in [bone for bone in editBones if bone.get("UE4RIGTYPE") == "FACE_ATTACH"]:
+            # move to 29 layer
+            self.moveBoneLayer([bone], [29])
             # filter bone
-            arrFaceBones = [bone for bone in bone.children_recursive if bone.get("UE4RIGTYPE") in ["FACE_JAW_HUMAN", "FACE_CONTROL_HUMAN", "FACE_NOSE_HUMAN", "FACE_EYE_HUMAN", "FACE_TEETH_HUMAN", "FACE_TONGUE_HUMAN", "FACE_EYELID_UPPER_HUMAN", "FACE_EYELID_LOWER_HUMAN"]]
+            arrFaceBones = [bone for bone in bone.children_recursive if bone.get("UE4RIGTYPE") in ["JAW", "LANDMARK", "EYE"]]
             # switch case with dict
             switchCaseRigType = {
-                "FACE_JAW_HUMAN": SC_FaceJawHuman,
-                "FACE_CONTROL_HUMAN": SC_FaceControlHuman,
-                "FACE_NOSE_HUMAN": SC_FaceNoseHuman,
-                "FACE_EYE_HUMAN": SC_FaceEyeHuman,
-                "FACE_TEETH_HUMAN": SC_FaceTeethHuman,
-                "FACE_TONGUE_HUMAN": SC_FaceTongueHuman,
-                "FACE_EYELID_UPPER_HUMAN": SC_FaceEyelidHuman,
-                "FACE_EYELID_LOWER_HUMAN": SC_FaceEyelidHuman
+                "JAW": SC_Jaw,
+                "LANDMARK": SC_Landmark,
+                "EYE": SC_Eye
             }
             for faceBone in arrFaceBones:
                 doSwitch = switchCaseRigType.get(faceBone.get("UE4RIGTYPE"), None)
                 if doSwitch is not None:
                     doSwitch(faceBone, bone)
+
+        self.moveBoneLayer([eB for eB in editBones if eB.layers[0]], [0])
 
         bpy.ops.armature.select_all(action="DESELECT")
         self.context.scene.tool_settings.transform_pivot_point = oldPivot
@@ -1174,8 +1169,8 @@ class BoneManipulation:
             constraints.target = self.activeObject
             constraints.subtarget = bone.name
             constraints.mix_mode = "REPLACE"
-            constraints.target_space = "LOCAL_WITH_PARENT"
-            constraints.owner_space = "LOCAL_WITH_PARENT"
+            constraints.target_space = "POSE"
+            constraints.owner_space = "POSE"
 
         # IK BONE
         for bone in [poseBones.get("ik_foot_root"), poseBones.get("ik_hand_root")]:
@@ -1200,107 +1195,85 @@ class BoneManipulation:
                         constraints.target_space = "POSE"
                         constraints.owner_space = "POSE"
 
-        # Generate Control Finger Shape
-        verticesFingerShape = [(-0.19999998807907104, 0.0, 0.0), (0.19999998807907104, 0.0, 0.0), (-0.19999998807907104, 1.0, 0.0), (0.19999998807907104, 1.0, 0.0)]
-        edgesFingerShape = [(2, 0), (0, 1), (1, 3), (3, 2)]
-        objControlFingerShape = None
-
-        # Generate Finger Shape
-        fingerTweakVertices = [(0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.5, 0.20000000298023224), (-0.07653669267892838, 0.5, 0.18477590382099152), (-0.1414213627576828, 0.5, 0.1414213627576828), (-0.18477590382099152, 0.5, 0.07653668522834778), (-0.20000000298023224, 0.5, -8.742278012618954e-09), (-0.18477590382099152, 0.5, -0.07653670758008957), (-0.1414213627576828, 0.5, -0.1414213627576828), (-0.07653670012950897, 0.5, -0.18477590382099152), (-3.019916050561733e-08, 0.5, -0.20000000298023224), (0.0765366479754448, 0.5, -0.1847759336233139), (0.14142131805419922, 0.5, -0.14142140746116638), (0.18477590382099152, 0.5, -0.07653671503067017), (0.20000000298023224, 0.5, 2.384976216518453e-09), (0.18477588891983032, 0.5, 0.07653672248125076), (0.14142130315303802, 0.5, 0.14142140746116638), (0.07653659582138062, 0.5, 0.1847759485244751)]
-        fingerTweakEdges = [(0, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (16, 15), (17, 16), (2, 17)]
-        objFingerShape = None
-
         # FINGER
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FINGER"]:
-            constraints = bone.constraints.new(type="COPY_ROTATION")
-            constraints.name = "fingerROTATION"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("subtargetRotation")
-            constraints.mix_mode = "ADD"
-            constraints.target_space = "LOCAL"
-            constraints.owner_space = "LOCAL"
-            # Generate Custom Shape
-            if objFingerShape is None:
-                mesh = bpy.data.meshes.new("UE4WSBoneShape_Finger_Tweak")
-                objFingerShape = bpy.data.objects.new(mesh.name,mesh)
-                collection.objects.link(objFingerShape)
-                mesh.from_pydata([v if i < 2 else ((v[0] * 0.11) / bone.length, v[1], (v[2] * 0.11) / bone.length) for i, v in enumerate(fingerTweakVertices)], fingerTweakEdges, [])
-            bone.custom_shape = objFingerShape
-            bone.bone_group = yellowGroup
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "FINGER"]:
+            constraint = bone.constraints.new(type="COPY_ROTATION")
+            constraint.name = "fingerROTATION"
+            constraint.show_expanded = False
+            constraint.target = self.activeObject
+            constraint.subtarget = bone.bone.subtargetRotation
+            constraint.mix_mode = "ADD"
+            constraint.target_space = "LOCAL"
+            constraint.owner_space = "LOCAL"
+
+            # generate tweak finger block shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(bone, collection, getBoneShape(*getBoneShapeParam), leftSideGroup if bone.bone.head_local.x >= 0 else rightSideGroup, False)
+
+            # CONTROL bone
+            controlBone = poseBones.get(constraint.subtarget)
             # lock location controller
-            poseBones.get(constraints.subtarget).lock_location = [True, True, True]
-            # assign custom bone shape
-            targetBone = poseBones.get(bone.get("subtargetRotation"))
-            if targetBone is not None:
-                if objControlFingerShape is None:
-                    mesh = bpy.data.meshes.new("UE4WSBoneShape_Control_Finger")
-                    objControlFingerShape = bpy.data.objects.new(mesh.name,mesh)
-                    collection.objects.link(objControlFingerShape)
-                    mesh.from_pydata(verticesFingerShape, edgesFingerShape, [])
-                targetBone.custom_shape = objControlFingerShape
-                targetBone.bone_group = redGroup
+            controlBone.lock_location = [True, True, True]
+
+            # generate control rotation custom shape
+            self.generateCustomBoneShape(controlBone, collection, boneShape.controlRotationFinger(), redGroup, False)
+
             # filter children with starts string "TWEAK_"
-            filterChildren = [bone for bone in bone.children_recursive if bone.name.startswith("TWEAK_")]
+            filterChildren = [bone for bone in bone.children_recursive if bone.name.startswith("TWEAK_") and not bone.bone.UE4RIGTYPE]
             # get index bone that have RIGTYPE
-            endIndex = next((index for (index, bn) in enumerate(filterChildren) if bn.get("UE4RIGTYPE", False)), None)
+            endIndex = next((index for (index, bn) in enumerate(filterChildren) if bn.bone.UE4RIGTYPE), None)
             if endIndex is not None:
                 filterChildren = filterChildren[:endIndex:]
             for bn in filterChildren[::-1]:
-                constraints = bn.constraints.new(type="COPY_ROTATION")
-                constraints.name = "fingerROTATION"
-                constraints.show_expanded = False
-                constraints.target = self.activeObject
-                constraints.subtarget = bone.get("subtargetRotation")
-                constraints.mix_mode = "ADD"
-                constraints.target_space = "LOCAL"
-                constraints.owner_space = "LOCAL"
-                constraints.use_y = False
-                constraints.use_z = False
-                if objFingerShape is not None:
-                    bn.custom_shape = objFingerShape
-                    bn.bone_group = yellowGroup
+                constraint = bn.constraints.new(type="COPY_ROTATION")
+                constraint.name = "fingerROTATION"
+                constraint.show_expanded = False
+                constraint.target = self.activeObject
+                constraint.subtarget = bone.bone.subtargetRotation
+                constraint.mix_mode = "ADD"
+                constraint.target_space = "LOCAL"
+                constraint.owner_space = "LOCAL"
+                constraint.use_y = False
+                constraint.use_z = False
 
-        # Generate Pole Shape
-        verticesPoleShape = [(-0.19999998807907104, 0.1383724808692932, 0.0), (0.19999998807907104, 0.1383724808692932, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 0.0), (1.4901161193847656e-08, 0.1383724957704544, 0.19999998807907104), (-1.4901161193847656e-08, 0.1383724957704544, -0.19999998807907104), (0.0, 1.0, 0.0), (0.0, 2.9802322387695312e-08, 0.0)]
-        edgesPoleShape = [(2, 0), (3, 1), (1, 2), (0, 3), (6, 4), (7, 5), (5, 6), (4, 7), (1, 4), (0, 4), (0, 5), (1, 5)]
-        objPole = None
+                # generate tweak finger block shape
+                getBoneShape = getattr(boneShape, bn.bone.customShapeType)
+                getBoneShapeParam = bn.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+                self.generateCustomBoneShape(bn, collection, getBoneShape(*getBoneShapeParam), leftSideGroup if bone.bone.head_local.x >= 0 else rightSideGroup, False)
 
-        # Generate FK Shape
-        FKvertices = [(0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.5, 0.20000000298023224), (-0.07653669267892838, 0.5, 0.18477590382099152), (-0.1414213627576828, 0.5, 0.1414213627576828), (-0.18477590382099152, 0.5, 0.07653668522834778), (-0.20000000298023224, 0.5, -8.742278012618954e-09), (-0.18477590382099152, 0.5, -0.07653670758008957), (-0.1414213627576828, 0.5, -0.1414213627576828), (-0.07653670012950897, 0.5, -0.18477590382099152), (-3.019916050561733e-08, 0.5, -0.20000000298023224), (0.0765366479754448, 0.5, -0.1847759336233139), (0.14142131805419922, 0.5, -0.14142140746116638), (0.18477590382099152, 0.5, -0.07653671503067017), (0.20000000298023224, 0.5, 2.384976216518453e-09), (0.18477588891983032, 0.5, 0.07653672248125076), (0.14142130315303802, 0.5, 0.14142140746116638), (0.07653659582138062, 0.5, 0.1847759485244751)]
-        FKedges = [(0, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (16, 15), (17, 16), (2, 17)]
+            controlBone.custom_shape_transform = filterChildren[-1]
+            constraint = filterChildren[-1].constraints.new(type="IK")
+            constraint.name = "fingerIK"
+            constraint.show_expanded = False
+            constraint.target = self.activeObject
+            constraint.subtarget = bone.bone.subtargetIK
+            constraint.chain_count = len(filterChildren) + 1
 
-        # Generate Foot Shape
-        verticesFootShape = [(-0.39742353558540344, 0.38750335574150085, 0.0), (-0.2849268913269043, 0.5, 0.0), (-0.382351815700531, 0.4437516927719116, 0.0), (-0.3411751985549927, 0.48492833971977234, 0.0), (0.39742353558540344, 0.38750335574150085, 0.0), (0.2849268913269043, 0.5, 0.0), (0.382351815700531, 0.4437516927719116, 0.0), (0.3411751985549927, 0.48492833971977234, 0.0), (-0.39742353558540344, -0.7603926062583923, 0.0), (-0.33357056975364685, -0.8242455720901489, 0.0), (-0.38886886835098267, -0.7923190593719482, 0.0), (-0.36549705266952515, -0.815690815448761, 0.0), (0.33357056975364685, -0.8242455720901489, 0.0), (0.39742353558540344, -0.7603926062583923, 0.0), (0.36549705266952515, -0.815690815448761, 0.0), (0.38886886835098267, -0.7923190593719482, 0.0), (-0.2625647187232971, -0.8242455720901489, 0.0), (-0.15565043687820435, -0.7770977020263672, 0.0), (-0.22486911714076996, -0.8179289698600769, 0.0), (-0.1857357770204544, -0.8006716370582581, 0.0), (-0.04306132346391678, -0.6538237929344177, 0.0), (0.04306134954094887, -0.6538237929344177, 0.0), (-0.01576152816414833, -0.6365664601325989, 0.0), (0.01576155610382557, -0.6365664601325989, 0.0), (0.2625647187232971, -0.8242455720901489, 0.0), (0.15565043687820435, -0.7770977020263672, 0.0), (0.22486911714076996, -0.8179289698600769, 0.0), (0.1857357770204544, -0.8006716370582581, 0.0)]
-        edgesFootShape = [(0, 2), (2, 3), (3, 1), (4, 6), (6, 7), (7, 5), (1, 5), (8, 10), (10, 11), (11, 9), (12, 14), (14, 15), (15, 13), (16, 18), (18, 19), (19, 17), (20, 22), (22, 23), (23, 21), (24, 26), (26, 27), (27, 25), (8, 0), (9, 16), (12, 24), (13, 4), (17, 20), (21, 25)]
-        objFootShape = None
+            ikControl = poseBones.get(bone.bone.subtargetIK)
+            ikControl.bone.controlFingerIK = True
 
-        # Generate Tweak Foot Shape
-        verticesTweakFootShape = [(-0.3, 0.0, 0.0), (0.3, 0.0, 0.0), (-0.3, 1.0, 0.0), (0.3, 1.0, 0.0)]
-        edgesTweakFootShape = [(2, 0), (0, 1), (1, 3), (3, 2)]
+            # IK INFLUENCE DRIVER
+            influenceDriver = constraint.driver_add("influence").driver
+            influenceDriver.type = "SCRIPTED"
+            var = influenceDriver.variables.new()
+            var.type = "SINGLE_PROP"
+            target = var.targets[0]
+            target.id_type = "ARMATURE"
+            target.id = self.activeObject.data
+            target.data_path = ikControl.bone.path_from_id("switchIK")
+            influenceDriver.expression = var.name + " == 0"
 
-        # Generate Control Rotation Shape
-        verticesControlRotationShape = [(0.0, 0.0, -0.5), (0.0, 0.0, 0.5), (-0.1249999925494194, 0.0, 0.1666666567325592), (-0.1249999925494194, 0.0, -0.1666666567325592), (0.1249999925494194, 0.0, -0.1666666567325592), (0.1249999925494194, 0.0, 0.1666666567325592), (-0.3749999701976776, 0.0, 0.1666666567325592), (0.3749999701976776, 0.0, 0.1666666567325592), (-0.3749999701976776, 0.0, -0.1666666567325592), (0.3749999701976776, 0.0, -0.1666666567325592)]
-        edgesControlRotationShape = [(0, 8), (6, 1), (2, 3), (9, 0), (4, 5), (2, 6), (5, 7), (3, 8), (4, 9), (1, 7)]
-        objControlRotationShape = None
+            # generate control ik custom shape
+            self.generateCustomBoneShape(ikControl, collection, boneShape.circle(16, 1, 0.25), redGroup, False)
 
-        # Generate Control Lift Shape
-        verticesControlLiftShape = [(0.0, 0.0, 0.4966666102409363), (-0.1249999925494194, 0.0, 0.16333331167697906), (-0.1249999925494194, 0.0, -0.003333345055580139), (0.1249999925494194, 0.0, -0.003333345055580139), (0.1249999925494194, 0.0, 0.16333331167697906), (-0.3749999701976776, 0.0, 0.16333331167697906), (0.3749999701976776, 0.0, 0.16333331167697906)]
-        edgesControlLiftShape = [(5, 0), (1, 2), (3, 4), (1, 5), (4, 6), (2, 3), (0, 6)]
-        objControlLiftShape = None
-
-        # # Generate Toe Shape
-        verticesToeShape = [(-1.0, 0.35884571075439453, 0.0), (-0.8312775492668152, 0.220088928937912, 0.0), (-0.9505823850631714, 0.24697744846343994, 0.0), (1.0, 0.35884571075439453, 0.0), (0.8312775492668152, 0.220088928937912, 0.0), (0.9505823850631714, 0.24697744846343994, 0.0), (-1.0, 1.328041911125183, 0.0), (-0.8280418515205383, 1.5, 0.0), (-0.9496345520019531, 1.4496347904205322, 0.0), (1.0, 1.328041911125183, 0.0), (0.8280418515205383, 1.5, 0.0), (0.9496345520019531, 1.4496347904205322, 0.0), (-0.6687224507331848, 0.252076655626297, 0.0), (-0.3849330246448517, 0.15749229490756989, 0.0), (-0.5157153606414795, 0.2381259948015213, 0.0), (-0.11506698280572891, -0.14220289885997772, 0.0), (0.11506698280572891, -0.14220289885997772, 0.0), (0.0, -0.19513346254825592, 0.0), (0.6687224507331848, 0.252076655626297, 0.0), (0.3849330246448517, 0.15749229490756989, 0.0), (0.5157153606414795, 0.2381259948015213, 0.0)]
-        edgesToeShape = [(0, 2), (2, 1), (3, 5), (5, 4), (6, 8), (8, 7), (9, 11), (11, 10), (12, 14), (14, 13), (15, 17), (17, 16), (18, 20), (20, 19), (0, 6), (1, 12), (3, 9), (4, 18), (7, 10), (13, 15), (16, 19)]
-        objToeShape = None
-
-        # Generate Tweak Foot Shape
-        verticesTweakToeShape = [(-0.7, 0.0, 0.0), (0.7, 0.0, 0.0), (-0.7, 1.0, 0.0), (0.7, 1.0, 0.0)]
-        edgesTweakToeShape = [(2, 0), (0, 1), (1, 3), (3, 2)]
+            if ikControl.parent is not None and ikControl.parent.bone.boneHasFloor:
+                # FLOOR FINGERTIP
+                self.addFloorConstraint(ikControl, "FLOOR_" + ikControl.parent.name.replace("TWEAK_", ""), 0)
 
         # LEG_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "LEG_HUMAN"]:
-            boneChildren = [bn for bn in bone.children_recursive if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name and not bn.get("UE4RIGTYPE")]
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "LEG_HUMAN"]:
+            boneChildren = [bn for bn in bone.children_recursive if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name and not bn.bone.UE4RIGTYPE]
             if boneChildren:
                 calf = None
                 foot = None
@@ -1315,341 +1288,452 @@ class BoneManipulation:
                 customPropertyName = None
 
                 if calf is not None:
-                    constraints = calf.constraints.new(type="IK")
-                    constraints.name = "IK"
-                    constraints.show_expanded = False
-                    constraints.chain_count = 2
-                    constraints.target = self.activeObject
-                    constraints.subtarget = bone.get("IKTarget")
-                    constraints.pole_target = self.activeObject
-                    constraints.pole_subtarget = bone.get("IKPole")
-                    constraints.pole_angle = (0, -3.14159)[bone.get("BoneSide") < 0]
-                    ikBone = poseBones.get(bone.get("IKTarget"))
-                    poleBone = poseBones.get(bone.get("IKPole"))
-                    IKInfluenceDrive = constraints.driver_add("influence").driver
-                    if poleBone is not None:
-                        if objPole is None:
-                            mesh = bpy.data.meshes.new("UE4WSBoneShape_Pole")
-                            objPole = bpy.data.objects.new(mesh.name,mesh)
-                            collection.objects.link(objPole)
-                            mesh.from_pydata(verticesPoleShape, edgesPoleShape, [])
-                        poleBone.custom_shape = objPole
-                        poleBone.bone_group = redGroup
-                    if ikBone is not None:
-                        ikBone.lock_scale = [True, True, True]
-                        ikBone.lock_rotation = [True, True, True]
-                        ikBone.lock_location = [True, True, True]
-                        if foot is not None:
-                            constraints = ikBone.constraints.new(type="TRANSFORM")
-                            constraints.name = "ROTATION_CONTROL"
-                            constraints.show_expanded = False
-                            constraints.target = self.activeObject
-                            constraints.subtarget = "CONTROLROTATION_" + foot.name.replace("TWEAK_", "")
-                            constraints.from_min_z = -10
-                            constraints.from_max_z = 10
-                            constraints.map_to_x_from = "Z"
-                            constraints.map_to_z_from = "X"
-                            constraints.map_to = "ROTATION"
-                            constraints.mix_mode_rot = "ADD"
-                            constraints.to_min_x_rot = 1.5708
-                            constraints.to_max_x_rot = -1.5708
-                            constraints.target_space = "LOCAL"
-                            constraints.owner_space = "LOCAL"
-                    # FK
-                    fk = bone.constraints.new(type="COPY_TRANSFORMS")
-                    fk.name = "TRANSFORM"
-                    fk.show_expanded = False
-                    fk.target = self.activeObject
-                    fk.subtarget = "FK_" + bone.name.replace("TWEAK_", "")
-                    fk.mix_mode = "REPLACE"
-                    fk.target_space = "LOCAL"
-                    fk.owner_space = "LOCAL"
-                    fk.influence = 0.0
-                    FK1InfluenceDrive = fk.driver_add("influence").driver
+                    ikTargetBone = poseBones.get(bone.bone.subtargetIK)
+                    ikPoleBone = poseBones.get(bone.bone.subtargetPole)
 
-                    # Generate Custom Shape
-                    mesh = bpy.data.meshes.new("UE4WSBoneShape_FK_" + bone.name.replace("TWEAK_", ""))
-                    objFKShape = bpy.data.objects.new(mesh.name,mesh)
-                    collection.objects.link(objFKShape)
-                    mesh.from_pydata([v if i < 2 else ((v[0] * 0.5) / bone.length, v[1], (v[2] * 0.5) / bone.length) for i, v in enumerate(FKvertices)], FKedges, [])
+                    ikBone1 = poseBones.get("IK_" + bone.name.replace("TWEAK_", ""))
+                    ikBone1.ik_stretch = 0.1
+                    ikBone2 = poseBones.get("IK_" + calf.name.replace("TWEAK_", ""))
+                    ikBone2.ik_stretch = 0.1
+
+                    poleAngle = self.get_pole_angle(bone, calf, ikPoleBone.matrix.translation)
+
+                    constraint = ikBone2.constraints.new(type="IK")
+                    constraint.name = "IK"
+                    constraint.show_expanded = False
+                    constraint.chain_count = 2
+                    constraint.target = self.activeObject
+                    constraint.subtarget = bone.bone.subtargetIK
+                    constraint.pole_target = self.activeObject
+                    constraint.pole_subtarget = bone.bone.subtargetPole
+                    constraint.pole_angle = poleAngle
+
+                    # generate ik pole custom shape
+                    self.generateCustomBoneShape(ikPoleBone, collection, boneShape.sphere(8, 4, 4), redGroup, False)
+
+                    # CONTROL FOOT
+                    controlBone = poseBones.get("CONTROL_" + foot.name.replace("TWEAK_", "")) if bone.bone.footBone and foot else poseBones.get("CONTROL_" + calf.name.replace("TWEAK_", ""))
+
+                    # STRETCH IK DRIVER
+                    for ikBoneStretch in [ikBone1, ikBone2]:
+                        influenceIKStretch = ikBoneStretch.driver_add("ik_stretch").driver
+                        influenceIKStretch.type = "SCRIPTED"
+                        var = influenceIKStretch.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = controlBone.bone.path_from_id("stretchBone")
+                        influenceIKStretch.expression =  "0 if " + var.name + " == 0 else 0.05"
+
+                    # COPY TRASFORM STRETCH AND FK + DIRVER
+                    # poseBone and target bone
+                    for pB in [bone, calf]:
+                        constraint = pB.constraints.new(type="COPY_TRANSFORMS")
+                        constraint.name = "TRANSFORM"
+                        constraint.show_expanded = False
+                        constraint.target = self.activeObject
+                        constraint.subtarget = "STRETCH_" + pB.name.replace("TWEAK_", "")
+                        constraint.mix_mode = "REPLACE"
+                        constraint.target_space = "POSE"
+                        constraint.owner_space = "POSE"
+                        # IK DRIVER
+                        influenceDriver = constraint.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = controlBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 0"
+
+                        constraint = pB.constraints.new(type="COPY_TRANSFORMS")
+                        constraint.name = "TRANSFORM_STRETCH"
+                        constraint.show_expanded = False
+                        constraint.target = self.activeObject
+                        constraint.subtarget = "FK_" + pB.name.replace("TWEAK_", "")
+                        constraint.mix_mode = "REPLACE"
+                        constraint.target_space = "POSE"
+                        constraint.owner_space = "POSE"
+
+                        # FK DRIVER
+                        influenceDriver = constraint.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = controlBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 1"
+
+                    stretchBone1 = poseBones.get("STRETCH_" + bone.name.replace("TWEAK_", ""))
+                    stretchBone2 = poseBones.get("STRETCH_" + calf.name.replace("TWEAK_", ""))
+
+                    # LIMIT SCALE FROM PARENT
+                    for pB in [stretchBone1, stretchBone2]:
+                        constraint = pB.constraints.new(type="LIMIT_SCALE")
+                        constraint.name = "LIMIT_SCALE"
+                        constraint.show_expanded = False
+                        constraint.use_transform_limit = True
+                        constraint.owner_space = "LOCAL_WITH_PARENT"
+                        for axis in ["x", "y", "z"]:
+                            setattr(constraint, "use_max_"+ axis, True)
+                            setattr(constraint, "max_"+ axis, 1)
+
+                    # DAMPED_TRACK stretchBone2 TO IK TARGET
+                    constraint = stretchBone2.constraints.new(type="DAMPED_TRACK")
+                    constraint.name = "DAMPED_TRACK"
+                    constraint.show_expanded = False
+                    constraint.head_tail = 1
+                    constraint.target = self.activeObject
+                    constraint.subtarget = ikBone2.name
+                    constraint.track_axis = "TRACK_Y"
+
+                    # STRETCH TO + DRIVER
+                    for pB, tB in [(stretchBone1, ikBone1.name), (stretchBone2, ikBone2.name)]:
+                        constraint = pB.constraints.new(type="STRETCH_TO")
+                        constraint.show_expanded = False
+                        constraint.head_tail = 1
+                        constraint.target = self.activeObject
+                        constraint.subtarget = tB
+                        constraint.rest_length = pB.length * 100
+
+                        # STRETCH INFLUENCE DRIVER
+                        influenceDriver = constraint.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = controlBone.bone.path_from_id("stretchBone")
+                        influenceDriver.expression = var.name
+
+                        # STRETCH VOLUME DRIVER
+                        influenceDriver = constraint.driver_add("volume").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = controlBone.bone.path_from_id("stretchBoneMode")
+                        influenceDriver.expression = var.name
+
+                    # VIS POLE
+                    visPole = poseBones.get("VISPOLE_" + calf.name.replace("TWEAK_", ""))
+                    visPole.bone.hide_select = True
+
+                    visPoleLocation = visPole.constraints.new(type="COPY_LOCATION")
+                    visPoleLocation.name = "GET_POLE_LOCATION"
+                    visPoleLocation.show_expanded = False
+                    visPoleLocation.target = self.activeObject
+                    visPoleLocation.subtarget = bone.bone.subtargetPole
+                    visPoleLocation.target_space = "POSE"
+                    visPoleLocation.owner_space = "POSE"
+
+                    visPoleStretch = visPole.constraints.new(type="STRETCH_TO")
+                    visPoleStretch.name = "STRETCH_TO_CALF"
+                    visPoleStretch.show_expanded = False
+                    visPoleStretch.target = self.activeObject
+                    visPoleStretch.subtarget = "STRETCH_" + calf.name.replace("TWEAK_", "")
+                    visPoleStretch.rest_length = visPole.length * 100
+                    visPoleStretch.volume = "NO_VOLUME"
+
+                    # Vis Hide Driver
+                    VisHideDriver = visPole.bone.driver_add("hide").driver
+                    VisHideDriver.type = "SCRIPTED"
+                    var = VisHideDriver.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id_type = "ARMATURE"
+                    target.id = self.activeObject.data
+                    target.data_path = "hideVis"
+                    VisHideDriver.expression = var.name
+
+                    # generate line custom shape
+                    self.generateCustomBoneShape(visPole, collection, boneShape.line, redGroup, True)
+
+                    # FK THIGH
 
                     FKBone = poseBones.get("FK_" + bone.name.replace("TWEAK_", ""))
-                    FKBone.custom_shape = objFKShape
-                    FKBone.bone_group = greenGroup
 
-                    fk = calf.constraints.new(type="COPY_TRANSFORMS")
-                    fk.name = "TRANSFORM"
-                    fk.show_expanded = False
-                    fk.target = self.activeObject
-                    fk.subtarget = "FK_" + calf.name.replace("TWEAK_", "")
-                    fk.mix_mode = "REPLACE"
-                    fk.target_space = "LOCAL"
-                    fk.owner_space = "LOCAL"
-                    fk.influence = 0.0
-                    FK2InfluenceDrive = fk.driver_add("influence").driver
+                    # generate fk custom shape
+                    getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+                    getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+                    self.generateCustomBoneShape(FKBone, collection, getBoneShape(*getBoneShapeParam), leftSideGroup if FKBone.bone.head_local.x >= 0 else rightSideGroup, False)
 
-                    # Generate Custom Shape
-                    mesh = bpy.data.meshes.new("UE4WSBoneShape_FK_" + calf.name.replace("TWEAK_", ""))
-                    objFKShape = bpy.data.objects.new(mesh.name,mesh)
-                    collection.objects.link(objFKShape)
-                    mesh.from_pydata([v if i < 2 else ((v[0] * 0.5) / calf.length, v[1], (v[2] * 0.5) / calf.length) for i, v in enumerate(FKvertices)], FKedges, [])
+                    # FK Hide Driver
+                    FKHideDriver = FKBone.bone.driver_add("hide").driver
+                    FKHideDriver.type = "SCRIPTED"
+                    var = FKHideDriver.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id_type = "ARMATURE"
+                    target.id = self.activeObject.data
+                    target.data_path = "hideFK"
+                    FKHideDriver.expression = var.name
+
+                    # FK CALF
 
                     FKBone = poseBones.get("FK_" + calf.name.replace("TWEAK_", ""))
-                    FKBone.custom_shape = objFKShape
-                    FKBone.bone_group = greenGroup
 
-                    # CONTROL RIG
-                    if not self.activeObject.get("_RNA_UI"): # set RNA UI
-                        self.activeObject["_RNA_UI"] = {}
+                    # generate fk custom shape
+                    getBoneShape = getattr(boneShape, calf.bone.customShapeType)
+                    getBoneShapeParam = calf.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+                    self.generateCustomBoneShape(FKBone, collection, getBoneShape(*getBoneShapeParam), leftSideGroup if FKBone.bone.head_local.x >= 0 else rightSideGroup, False)
 
-                    # SNAP bone property
-                    # SNAP to FK
-                    boneListPropertyName = foot.name.replace("TWEAK", "CR_SNAPFK") if foot is not None else calf.name.replace("TWEAK", "CR_SNAPFK")
-                    self.activeObject[boneListPropertyName] = bone.name + "|" + calf.name
-                    # SNAP to IK
-                    boneListPropertyName = foot.name.replace("TWEAK", "CR_SNAPIK") if foot is not None else calf.name.replace("TWEAK", "CR_SNAPIK")
-                    self.activeObject[boneListPropertyName] = calf.name + "|" + bone.get("IKPole") + "|" + boneListPropertyName.replace("CR_SNAPIK", "CONTROL")
-
-                    # IK and FK influence
-                    customPropertyName = foot.name.replace("TWEAK", "CR_IK") if foot is not None else calf.name.replace("TWEAK", "CR_IK")
-                    self.activeObject[customPropertyName] = 1.0
-                    self.activeObject["_RNA_UI"][customPropertyName] = {
-                        "description": "Influence For Use IK",
-                        "default": 1.0,
-                        "min": 0.0,
-                        "max": 1.0,
-                        "soft_min": 0.0,
-                        "soft_max": 1.0,
-                    }
-
-                    # IK Driver
-                    IKInfluenceDrive.type = "SCRIPTED"
-                    var = IKInfluenceDrive.variables.new()
+                    # FK Hide Driver
+                    FKHideDriver = FKBone.bone.driver_add("hide").driver
+                    FKHideDriver.type = "SCRIPTED"
+                    var = FKHideDriver.variables.new()
                     var.type = "SINGLE_PROP"
                     target = var.targets[0]
-                    target.id = self.activeObject
-                    target.data_path = "[\""+ customPropertyName + "\"]"
-                    IKInfluenceDrive.expression = var.name
+                    target.id_type = "ARMATURE"
+                    target.id = self.activeObject.data
+                    target.data_path = "hideFK"
+                    FKHideDriver.expression = var.name
 
-                    # FK Driver
-                    FK1InfluenceDrive.type = "SCRIPTED"
-                    var = FK1InfluenceDrive.variables.new()
-                    var.type = "SINGLE_PROP"
-                    target = var.targets[0]
-                    target.id = self.activeObject
-                    target.data_path = "[\""+ customPropertyName + "\"]"
-                    FK1InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
+                    if foot:
+                        # FK FOOT
 
-                    FK2InfluenceDrive.type = "SCRIPTED"
-                    var = FK2InfluenceDrive.variables.new()
-                    var.type = "SINGLE_PROP"
-                    target = var.targets[0]
-                    target.id = self.activeObject
-                    target.data_path = "[\""+ customPropertyName + "\"]"
-                    FK2InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
+                        FKBone = poseBones.get("FK_" + foot.name.replace("TWEAK_", ""))
 
-                if foot is not None:
-                    inheritRotationDriver = foot.bone.driver_add("use_inherit_rotation").driver
-                    inheritRotationDriver.type = "SCRIPTED"
-                    var = inheritRotationDriver.variables.new()
-                    var.type = "SINGLE_PROP"
-                    target = var.targets[0]
-                    target.id = self.activeObject
-                    target.data_path = "[\""+ customPropertyName + "\"]"
-                    inheritRotationDriver.expression = var.name + " == 0"
+                        # generate fk custom shape
+                        getBoneShape = getattr(boneShape, foot.bone.customShapeType)
+                        getBoneShapeParam = foot.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+                        self.generateCustomBoneShape(FKBone, collection, getBoneShape(*getBoneShapeParam), leftSideGroup if FKBone.bone.head_local.x >= 0 else rightSideGroup, False)
 
-                    constraints = foot.constraints.new(type="COPY_ROTATION")
-                    constraints.name = "FOOT_CONTROL_ROTATION"
-                    constraints.show_expanded = False
-                    constraints.target = self.activeObject
-                    constraints.subtarget = "CONTROL_" + foot.name.replace("TWEAK_", "")
-                    constraints.mix_mode = "ADD"
-                    constraints.target_space = "POSE"
-                    constraints.owner_space = "POSE"
-                    constraints.use_x = True
-                    constraints.use_y = True
-                    constraints.use_z = True
-                    constraints.invert_x = True
-                    constraints.invert_y = True
+                        # FK Hide Driver
+                        FKHideDriver = FKBone.bone.driver_add("hide").driver
+                        FKHideDriver.type = "SCRIPTED"
+                        var = FKHideDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = "hideFK"
+                        FKHideDriver.expression = var.name
 
-                    mesh = bpy.data.meshes.new("UE4WSBoneShape_" + foot.name)
-                    objTweakFootShape = bpy.data.objects.new(mesh.name,mesh)
-                    collection.objects.link(objTweakFootShape)
-                    mesh.from_pydata(verticesTweakFootShape, edgesTweakFootShape, [])
-                    foot.custom_shape = objTweakFootShape
-                    foot.bone_group = yellowGroup
+                    # register control ik to bone
+                    controlBone.bone.controlIK = True
+                    controlBone.bone.pointABoneIK = bone.name.replace("TWEAK_", "")
+                    controlBone.bone.pointBBoneIK = calf.name.replace("TWEAK_", "")
 
-                    targetBone = poseBones.get("CONTROL_" + foot.name.replace("TWEAK_", ""))
-                    if targetBone is not None:
-                        if objFootShape is None:
-                            mesh = bpy.data.meshes.new("UE4WSBoneShape_Foot")
-                            objFootShape = bpy.data.objects.new(mesh.name,mesh)
-                            collection.objects.link(objFootShape)
-                            mesh.from_pydata(verticesFootShape, edgesFootShape, [])
-                        targetBone.custom_shape = objFootShape
-                        targetBone.bone_group = redGroup
+                    if bone.bone.footBone and foot:
+                        controlRotationFootIK = foot.constraints.new(type="COPY_TRANSFORMS")
+                        controlRotationFootIK.name = "FOOT_CONTROL"
+                        controlRotationFootIK.show_expanded = False
+                        controlRotationFootIK.target = self.activeObject
+                        controlRotationFootIK.subtarget = bone.bone.subtargetIK
+                        controlRotationFootIK.mix_mode = "REPLACE"
+                        controlRotationFootIK.target_space = "POSE"
+                        controlRotationFootIK.owner_space = "POSE"
+                        # IK DRIVER
+                        influenceDriver = controlRotationFootIK.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = controlBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 0"
 
-                    constraints = foot.constraints.new(type="COPY_ROTATION")
-                    constraints.name = "FOOT_X_ROTATION"
-                    constraints.show_expanded = False
-                    constraints.target = self.activeObject
-                    constraints.subtarget = bone.get("IKTarget")
-                    constraints.mix_mode = "ADD"
-                    constraints.target_space = "LOCAL"
-                    constraints.owner_space = "LOCAL"
-                    constraints.use_x = True
-                    constraints.use_y = False
-                    constraints.use_z = False
-                    constraints.invert_x = True
+                        # LIMIT LOCATION IN IK MODE
+                        limitLocationIK = foot.constraints.new(type="LIMIT_LOCATION")
+                        limitLocationIK.name = "LIMIT_LOCATION_IK"
+                        limitLocationIK.show_expanded = False
+                        limitLocationIK.owner_space = "LOCAL"
+                        limitLocationIK.min_x = 0
+                        limitLocationIK.min_y = 0
+                        limitLocationIK.min_z = 0
+                        limitLocationIK.max_x = 0
+                        limitLocationIK.max_y = 0
+                        limitLocationIK.max_z = 0
+                        limitLocationIK.use_min_x = True
+                        limitLocationIK.use_min_y = True
+                        limitLocationIK.use_min_z = True
+                        limitLocationIK.use_max_x = True
+                        limitLocationIK.use_max_y = True
+                        limitLocationIK.use_max_z = True
+                        # IK DRIVER
+                        influenceDriver = limitLocationIK.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = controlBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 0"
 
-                    constraints = foot.constraints.new(type="COPY_ROTATION")
-                    constraints.name = "FOOT_MIMIK_ROTATION"
-                    constraints.show_expanded = False
-                    constraints.target = self.activeObject
-                    constraints.subtarget = "MIMIK_" + foot.name.replace("TWEAK_", "")
-                    constraints.mix_mode = "ADD"
-                    constraints.target_space = "LOCAL"
-                    constraints.owner_space = "LOCAL"
-                    constraints.use_x = True
-                    constraints.use_y = False
-                    constraints.use_z = True
-                    constraints.invert_x = True
+                        controlRotationFootFK = foot.constraints.new(type="COPY_TRANSFORMS")
+                        controlRotationFootFK.name = "FOOT_CONTROL_FK"
+                        controlRotationFootFK.show_expanded = False
+                        controlRotationFootFK.target = self.activeObject
+                        controlRotationFootFK.subtarget = "FK_" + foot.name.replace("TWEAK_", "")
+                        controlRotationFootFK.mix_mode = "REPLACE"
+                        controlRotationFootFK.target_space = "POSE"
+                        controlRotationFootFK.owner_space = "POSE"
+                        # FK DRIVER
+                        influenceDriver = controlRotationFootFK.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = controlBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 1"
 
-                    controlRotation = poseBones.get("CONTROLROTATION_" + foot.name.replace("TWEAK_", ""))
-                    if controlRotation is not None:
-                        controlRotation.lock_scale = [True, True, True]
-                        controlRotation.lock_rotation = [True, True, True]
-                        controlRotation.lock_location = [True, True, False]
-                        constraints = controlRotation.constraints.new(type="LIMIT_LOCATION")
-                        constraints.show_expanded = False
-                        constraints.owner_space = "LOCAL"
-                        constraints.use_min_x = True
-                        constraints.use_max_x = True
-                        constraints.use_min_y = True
-                        constraints.use_max_y = True
-                        constraints.use_min_z = True
-                        constraints.use_max_z = True
-                        constraints.min_z = -10
-                        constraints.max_z = 10
-                        if objControlRotationShape is None:
-                            mesh = bpy.data.meshes.new("UE4WSBoneShape_ControlRotation")
-                            objControlRotationShape = bpy.data.objects.new(mesh.name,mesh)
-                            collection.objects.link(objControlRotationShape)
-                            mesh.from_pydata(verticesControlRotationShape, edgesControlRotationShape, [])
-                        controlRotation.custom_shape = objControlRotationShape
-                        controlRotation.bone_group = blueGroup
-                    mimikFoot = poseBones.get("MIMIK_" + foot.name.replace("TWEAK_", ""))
-                    if mimikFoot is not None:
-                        mimikFoot.lock_scale = [True, True, True]
-                        mimikFoot.lock_rotation = [True, True, True]
-                        mimikFoot.lock_location = [True, True, True]
-                        constraints = mimikFoot.constraints.new(type="LIMIT_ROTATION")
-                        constraints.show_expanded = False
-                        constraints.owner_space = "LOCAL"
-                        constraints.use_limit_x = True
-                        constraints.min_x = 0
-                        constraints.max_x = 0.785398
+                        # Generate Custom Shape
+                        mesh = bpy.data.meshes.new("UE4WSBS_" + controlBone.name)
+                        objCustomShape = bpy.data.objects.new(mesh.name,mesh)
+                        collection.objects.link(objCustomShape)
+                        mesh.from_pydata(*boneShape.block(11, 3, 0, 15))
 
-                        constraints = mimikFoot.constraints.new(type="TRANSFORM")
-                        constraints.name = "LIFT_CONTROL"
-                        constraints.show_expanded = False
-                        constraints.target = self.activeObject
-                        constraints.subtarget = "CONTROLLIFT_" + foot.name.replace("TWEAK_", "")
-                        constraints.from_min_z = -10
-                        constraints.from_max_z = 10
-                        constraints.map_to_x_from = "Z"
-                        constraints.map_to_z_from = "X"
-                        constraints.map_to = "ROTATION"
-                        constraints.mix_mode_rot = "ADD"
-                        constraints.to_min_x_rot = -0.785398
-                        constraints.to_max_x_rot = 0.785398
-                        constraints.target_space = "LOCAL"
-                        constraints.owner_space = "LOCAL"
-                    controlLift = poseBones.get("CONTROLLIFT_" + foot.name.replace("TWEAK_", ""))
-                    if controlLift is not None:
-                        controlLift.lock_scale = [True, True, True]
-                        controlLift.lock_rotation = [True, True, True]
-                        controlLift.lock_location = [True, True, False]
-                        constraints = controlLift.constraints.new(type="LIMIT_LOCATION")
-                        constraints.show_expanded = False
-                        constraints.owner_space = "LOCAL"
-                        constraints.use_min_x = True
-                        constraints.use_max_x = True
-                        constraints.use_min_y = True
-                        constraints.use_max_y = True
-                        constraints.use_min_z = True
-                        constraints.use_max_z = True
-                        constraints.min_z = 0
-                        constraints.max_z = 10
-                        if objControlLiftShape is None:
-                            mesh = bpy.data.meshes.new("UE4WSBoneShape_ControlLift")
-                            objControlLiftShape = bpy.data.objects.new(mesh.name,mesh)
-                            collection.objects.link(objControlLiftShape)
-                            mesh.from_pydata(verticesControlLiftShape, edgesControlLiftShape, [])
-                        controlLift.custom_shape = objControlLiftShape
-                        controlLift.bone_group = blueGroup
+                        controlBone.custom_shape = objCustomShape
+                        controlBone.use_custom_shape_bone_size = False
+                        controlBone.bone_group = redGroup
 
-                if toe is not None:
-                    constraints = toe.constraints.new(type="COPY_ROTATION")
-                    constraints.name = "CONTROL_ROTATION"
-                    constraints.show_expanded = False
-                    constraints.target = self.activeObject
-                    constraints.subtarget = "CONTROL_" + toe.name.replace("TWEAK_", "")
-                    constraints.mix_mode = "ADD"
-                    constraints.target_space = "LOCAL"
-                    constraints.owner_space = "LOCAL"
-                    constraints.use_x = True
-                    constraints.use_y = True
-                    constraints.use_z = True
-                    constraints.invert_x = True
-                    constraints.invert_y = False
-                    constraints.invert_z = True
+                        # PIVOTHEEL
+                        pivotHeel = poseBones.get("PIVOTHEEL_" + foot.name.replace("TWEAK_", ""))
+                        pivotHeel.lock_location = [True, True, True]
+                        pivotHeel.lock_rotation = [True, True, True]
+                        pivotHeel.rotation_mode = "XYZ"
+                        for index, rotAxis, expr in [(0, "ROT_X", "max(min(ROT_X, 0), -0.5)"), (1, "ROT_Y", "ROT_Y"), (2, "ROT_Z", "ROT_Z")]:
+                            axisDriver = pivotHeel.driver_add("rotation_euler", index).driver
+                            axisDriver.type = "SCRIPTED"
+                            var = axisDriver.variables.new()
+                            var.name = rotAxis
+                            var.type = "TRANSFORMS"
+                            target = var.targets[0]
+                            target.id = self.activeObject
+                            target.bone_target = "HEELCONTROL_" + foot.name.replace("TWEAK_", "")
+                            target.transform_type = rotAxis
+                            target.transform_space = "TRANSFORM_SPACE"
+                            axisDriver.expression = expr
 
-                    mesh = bpy.data.meshes.new("UE4WSBoneShape_" + toe.name)
-                    objTweakToeShape = bpy.data.objects.new(mesh.name,mesh)
-                    collection.objects.link(objTweakToeShape)
-                    mesh.from_pydata(verticesTweakToeShape, edgesTweakToeShape, [])
-                    toe.custom_shape = objTweakToeShape
-                    toe.bone_group = yellowGroup
+                        # HEEL CONTROL
+                        heelControl = poseBones.get("HEELCONTROL_" + foot.name.replace("TWEAK_", ""))
 
-                    toeControl = poseBones.get("CONTROL_" + toe.name.replace("TWEAK_", ""))
-                    if toeControl is not None:
-                        toeControl.lock_scale = [True, True, True]
-                        toeControl.lock_rotation = [False, False, False]
-                        toeControl.lock_location = [True, True, True]
-                        constraints = toeControl.constraints.new(type="COPY_ROTATION")
-                        constraints.name = "COPY_ROTATION_FROM_MIMIK_FOOT"
-                        constraints.show_expanded = False
-                        constraints.target = self.activeObject
-                        constraints.subtarget = "MIMIK_" + foot.name.replace("TWEAK_", "")
-                        constraints.mix_mode = "ADD"
-                        constraints.target_space = "LOCAL"
-                        constraints.owner_space = "LOCAL"
-                        constraints.use_x = True
-                        constraints.use_y = True
-                        constraints.use_z = True
-                        constraints.invert_x = False
-                        constraints.invert_y = False
-                        constraints.invert_z = False
-                        if objToeShape is None:
-                            mesh = bpy.data.meshes.new("UE4WSBoneShape_Toe")
-                            objToeShape = bpy.data.objects.new(mesh.name,mesh)
-                            collection.objects.link(objToeShape)
-                            mesh.from_pydata(verticesToeShape, edgesToeShape, [])
-                        toeControl.custom_shape = objToeShape
-                        toeControl.bone_group = redGroup
+                        # generate hell control custom shape
+                        self.generateCustomBoneShape(heelControl, collection, boneShape.controlRotation(8, 2.5 , 0, False), redGroup, False)
 
-        # Generate Hand Shape
-        verticeshandShape = [(0.1347789168357849, 0.8774998188018799, 0.25), (0.04295855015516281, 0.958526611328125, 0.25), (0.10367729514837265, 0.9347944259643555, 0.25), (-0.1347789168357849, 0.8774998188018799, 0.25), (-0.04295855015516281, 0.958526611328125, 0.25), (-0.10367729514837265, 0.9347944259643555, 0.25), (0.23906441032886505, 0.045745983719825745, 0.25), (0.18389254808425903, 0.01646287366747856, 0.25), (0.22743460536003113, 0.0010417178273200989, 0.25), (-0.18389254808425903, 0.01646287366747856, 0.25), (-0.23906441032886505, 0.045745983719825745, 0.25), (-0.22743460536003113, 0.0010417178273200989, 0.25), (-0.06610745936632156, 0.11968913674354553, 0.25), (0.06610745936632156, 0.11968913674354553, 0.25), (0.0, 0.14368712902069092, 0.25)]
-        edgeshandShape = [(0, 2), (2, 1), (3, 5), (5, 4), (1, 4), (6, 8), (8, 7), (9, 11), (11, 10), (12, 14), (14, 13), (6, 0), (7, 13), (9, 12), (10, 3)]
-        objHandShape = None
-        handTweakVertices = [(0.0, 0.5, 0.20000000298023224), (-0.07653669267892838, 0.5, 0.18477590382099152), (-0.1414213627576828, 0.5, 0.1414213627576828), (-0.18477590382099152, 0.5, 0.07653668522834778), (-0.20000000298023224, 0.5, -8.742278012618954e-09), (-0.18477590382099152, 0.5, -0.07653670758008957), (-0.1414213627576828, 0.5, -0.1414213627576828), (-0.07653670012950897, 0.5, -0.18477590382099152), (-3.019916050561733e-08, 0.5, -0.20000000298023224), (0.0765366479754448, 0.5, -0.1847759336233139), (0.14142131805419922, 0.5, -0.14142140746116638), (0.18477590382099152, 0.5, -0.07653671503067017), (0.20000000298023224, 0.5, 2.384976216518453e-09), (0.18477588891983032, 0.5, 0.07653672248125076), (0.14142130315303802, 0.5, 0.14142140746116638), (0.07653659582138062, 0.5, 0.1847759485244751)]
-        handTweakEdges = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (0, 15)]
-        objHandTweakShape = None
+                        # PIVOTFOOT
+                        pivotHeel = poseBones.get("PIVOTFOOT_" + foot.name.replace("TWEAK_", ""))
+                        pivotHeel.lock_location = [True, True, True]
+                        pivotHeel.lock_rotation = [True, True, True]
+                        pivotHeel.rotation_mode = "XYZ"
+                        for index, rotAxis, expr in [(0, "ROT_X", "min(max(ROT_X, 0), 0.9)")]:
+                            axisDriver = pivotHeel.driver_add("rotation_euler", index).driver
+                            axisDriver.type = "SCRIPTED"
+                            var = axisDriver.variables.new()
+                            var.name = rotAxis
+                            var.type = "TRANSFORMS"
+                            target = var.targets[0]
+                            target.id = self.activeObject
+                            target.bone_target = "HEELCONTROL_" + foot.name.replace("TWEAK_", "")
+                            target.transform_type = rotAxis
+                            target.transform_space = "TRANSFORM_SPACE"
+                            axisDriver.expression = expr
+
+                        # FLOOR FOOT
+                        floorFoot = poseBones.get("FLOOR_" + foot.name.replace("TWEAK_", ""))
+
+                        # ADD FLOOR CONSTRAINT
+                        self.addFloorConstraint(controlBone, floorFoot.name, foot.bone.head_local[2] * 100)
+
+                        # generate floor custom shape
+                        self.generateCustomBoneShape(floorFoot, collection, boneShape.floor(1, 1), yellowGroup, False)
+
+                        if bone.bone.toeBone and toe:
+                            controlToe = poseBones.get("CONTROL_" + toe.name.replace("TWEAK_", ""))
+
+                            # generate control toe custom shape
+                            getBoneShape = getattr(boneShape, toe.bone.customShapeType)
+                            getBoneShapeParam = toe.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+                            self.generateCustomBoneShape(controlToe, collection, getBoneShape(*getBoneShapeParam), leftSideGroup if controlToe.bone.head_local.x >= 0 else rightSideGroup, False)
+
+                            controlToe.custom_shape_transform = toe
+
+                            # PIVOTTOE
+                            pivotToe = poseBones.get("PIVOTTOE_" + toe.name.replace("TWEAK_", ""))
+                            pivotToe.lock_location = [True, True, True]
+                            pivotToe.lock_rotation = [True, True, True]
+                            pivotToe.rotation_mode = "XYZ"
+
+                            for index, rotAxis, expr in [(0, "ROT_X", "min(max(ROT_X, 0), 1)"), (1, "ROT_Y", "ROT_Y"), (2, "ROT_Z", "ROT_Z")]:
+                                axisDriver = pivotToe.driver_add("rotation_euler", index).driver
+                                axisDriver.type = "SCRIPTED"
+                                var = axisDriver.variables.new()
+                                var.name = rotAxis
+                                var.type = "TRANSFORMS"
+                                target = var.targets[0]
+                                target.id = self.activeObject
+                                target.bone_target = "TOECONTROL_" + toe.name.replace("TWEAK_", "")
+                                target.transform_type = rotAxis
+                                target.transform_space = "TRANSFORM_SPACE"
+                                axisDriver.expression = expr
+
+                            # TOE CONTROL
+                            toeControl = poseBones.get("TOECONTROL_" + toe.name.replace("TWEAK_", ""))
+
+                            # generate control toe custom shape
+                            self.generateCustomBoneShape(toeControl, collection, boneShape.controlRotation(8, 2.5 , 0, True), redGroup, False)
+
+                            # TWEAK BALL DRIVER LOCATION AND ROTATION
+                            for index, transformAxis, expr in [(0, "LOC_X", "LOC_X"), (1, "LOC_Y", "LOC_Y"), (2, "LOC_Z", "LOC_Z")]:
+                                axisDriver = toe.driver_add("location", index).driver
+                                axisDriver.type = "SCRIPTED"
+
+                                var = axisDriver.variables.new()
+                                var.name = transformAxis
+                                var.type = "TRANSFORMS"
+                                target = var.targets[0]
+                                target.id = self.activeObject
+                                target.bone_target = "CONTROL_" + toe.name.replace("TWEAK_", "")
+                                target.transform_type = transformAxis
+                                target.transform_space = "TRANSFORM_SPACE"
+                                axisDriver.expression = expr
+
+                            toe.rotation_mode = "XYZ"
+                            for index, transformAxis, expr in [(0, "ROT_X", "ROT_X"), (1, "ROT_Y", "ROT_Y"), (2, "ROT_Z", "ROT_Z")]:
+                                axisDriver = toe.driver_add("rotation_euler", index).driver
+                                axisDriver.type = "SCRIPTED"
+
+                                var = axisDriver.variables.new()
+                                var.name = transformAxis
+                                var.type = "TRANSFORMS"
+                                target = var.targets[0]
+                                target.id = self.activeObject
+                                target.bone_target = "CONTROL_" + toe.name.replace("TWEAK_", "")
+                                target.transform_type = transformAxis
+                                target.transform_space = "TRANSFORM_SPACE"
+
+                                if transformAxis == "ROT_X":
+                                    var = axisDriver.variables.new()
+                                    var.name = "COPY_X"
+                                    var.type = "TRANSFORMS"
+                                    target = var.targets[0]
+                                    target.id = self.activeObject
+                                    target.bone_target = "HEELCONTROL_" + foot.name.replace("TWEAK_", "")
+                                    target.transform_type = transformAxis
+                                    target.transform_space = "TRANSFORM_SPACE"
+
+                                axisDriver.expression = expr if not (transformAxis == "ROT_X") else "-min(max(COPY_X, 0), 0.9) + ROT_X"
+
+                    # CALF CONTROL
+                    else:
+                        # generate control toe custom shape
+                        self.generateCustomBoneShape(controlBone, collection, boneShape.block(10, 10, -5, 5), redGroup, False)
 
         # ARM_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "ARM_HUMAN"]:
-            boneChildren = [bn for bn in bone.children_recursive if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name and not bn.get("UE4RIGTYPE")]
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "ARM_HUMAN"]:
+            boneChildren = [bn for bn in bone.children_recursive if bn.name.startswith("TWEAK_") and not "_twist_" in bn.name and not bn.bone.UE4RIGTYPE]
             if boneChildren:
                 lowerarm = None
                 hand = None
@@ -1661,486 +1745,565 @@ class BoneManipulation:
                 customPropertyName = None
 
                 if lowerarm is not None:
-                    constraints = lowerarm.constraints.new(type="IK")
-                    constraints.name = "IK"
-                    constraints.show_expanded = False
-                    constraints.chain_count = 2
-                    constraints.target = self.activeObject
-                    constraints.subtarget = bone.get("IKTarget")
-                    constraints.pole_target = self.activeObject
-                    constraints.pole_subtarget = bone.get("IKPole")
-                    constraints.pole_angle = (0, -3.14159)[bone.get("BoneSide") < 0]
-                    ikBone = poseBones.get(bone.get("IKTarget"))
-                    if ikBone is not None:
-                        ikBone.lock_scale = [True, True, True]
-                        ikBone.lock_rotation = [True, True, True]
-                        ikBone.lock_location = [True, True, True]
-                    poleBone = poseBones.get(bone.get("IKPole"))
-                    IKInfluenceDrive = constraints.driver_add("influence").driver
-                    if poleBone is not None:
-                        if objPole is None:
-                            mesh = bpy.data.meshes.new("UE4WSBoneShape_Pole")
-                            objPole = bpy.data.objects.new(mesh.name,mesh)
-                            collection.objects.link(objPole)
-                            mesh.from_pydata(verticesPoleShape, edgesPoleShape, [])
-                        poleBone.custom_shape = objPole
-                        poleBone.bone_group = redGroup
+                    ikBone = poseBones.get(bone.bone.subtargetIK)
+                    poleBone = poseBones.get(bone.bone.subtargetPole)
 
-                    # FK
-                    fk = bone.constraints.new(type="COPY_TRANSFORMS")
-                    fk.name = "TRANSFORM"
-                    fk.show_expanded = False
-                    fk.target = self.activeObject
-                    fk.subtarget = "FK_" + bone.name.replace("TWEAK_", "")
-                    fk.mix_mode = "REPLACE"
-                    fk.target_space = "LOCAL"
-                    fk.owner_space = "LOCAL"
-                    fk.influence = 0.0
-                    FK1InfluenceDrive = fk.driver_add("influence").driver
+                    ikBone1 = poseBones.get("IK_" + bone.name.replace("TWEAK_", ""))
+                    ikBone1.ik_stretch = 0.1
+                    ikBone2 = poseBones.get("IK_" + lowerarm.name.replace("TWEAK_", ""))
+                    ikBone2.ik_stretch = 0.1
 
-                    # Generate Custom Shape
-                    mesh = bpy.data.meshes.new("UE4WSBoneShape_FK_" + bone.name.replace("TWEAK_", ""))
-                    objFKShape = bpy.data.objects.new(mesh.name,mesh)
-                    collection.objects.link(objFKShape)
-                    mesh.from_pydata([v if i < 2 else ((v[0] * 0.5) / bone.length, v[1], (v[2] * 0.5) / bone.length) for i, v in enumerate(FKvertices)], FKedges, [])
+                    poleAngle = self.get_pole_angle(bone, lowerarm, poleBone.matrix.translation)
+
+                    constraint = ikBone2.constraints.new(type="IK")
+                    constraint.name = "IK"
+                    constraint.show_expanded = False
+                    constraint.chain_count = 2
+                    constraint.target = self.activeObject
+                    constraint.subtarget = bone.bone.subtargetIK
+                    constraint.pole_target = self.activeObject
+                    constraint.pole_subtarget = bone.bone.subtargetPole
+                    constraint.pole_angle = poleAngle
+
+                    # generate ik bone custom shape
+                    self.generateCustomBoneShape(ikBone, collection, boneShape.block(9, 3, 0, 9), redGroup, False)
+
+                    # generate pole bone custom shape
+                    self.generateCustomBoneShape(poleBone, collection, boneShape.sphere(8, 4, 4), redGroup, False)
+
+                    # STRETCH IK DRIVER
+                    for ikBoneStretch in [ikBone1, ikBone2]:
+                        influenceIKStretch = ikBoneStretch.driver_add("ik_stretch").driver
+                        influenceIKStretch.type = "SCRIPTED"
+                        var = influenceIKStretch.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = ikBone.bone.path_from_id("stretchBone")
+                        influenceIKStretch.expression =  "0 if " + var.name + " == 0 else 0.05"
+
+                    # COPY TRASFORM STRETCH AND FK + DIRVER
+                    # poseBone and target bone
+                    for pB in [bone, lowerarm]:
+                        constraint = pB.constraints.new(type="COPY_TRANSFORMS")
+                        constraint.name = "TRANSFORM_STRETCH"
+                        constraint.show_expanded = False
+                        constraint.target = self.activeObject
+                        constraint.subtarget = "STRETCH_" + pB.name.replace("TWEAK_", "")
+                        constraint.mix_mode = "REPLACE"
+                        constraint.target_space = "POSE"
+                        constraint.owner_space = "POSE"
+                        # IK DRIVER
+                        influenceDriver = constraint.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = ikBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 0"
+
+                        constraint = pB.constraints.new(type="COPY_TRANSFORMS")
+                        constraint.name = "TRANSFORM_STRETCH"
+                        constraint.show_expanded = False
+                        constraint.target = self.activeObject
+                        constraint.subtarget = "FK_" + pB.name.replace("TWEAK_", "")
+                        constraint.mix_mode = "REPLACE"
+                        constraint.target_space = "POSE"
+                        constraint.owner_space = "POSE"
+
+                        # FK DRIVER
+                        influenceDriver = constraint.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = ikBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 1"
+
+                    stretchBone1 = poseBones.get("STRETCH_" + bone.name.replace("TWEAK_", ""))
+                    stretchBone2 = poseBones.get("STRETCH_" + lowerarm.name.replace("TWEAK_", ""))
+
+                    # LIMIT SCALE FROM PARENT
+                    for pB in [stretchBone1, stretchBone2]:
+                        constraint = pB.constraints.new(type="LIMIT_SCALE")
+                        constraint.name = "LIMIT_SCALE"
+                        constraint.show_expanded = False
+                        constraint.use_transform_limit = True
+                        constraint.owner_space = "LOCAL_WITH_PARENT"
+                        for axis in ["x", "y", "z"]:
+                            setattr(constraint, "use_max_"+ axis, True)
+                            setattr(constraint, "max_"+ axis, 1)
+
+                    # DAMPED_TRACK stretchBone2 TO IK TARGET
+                    constraint = stretchBone2.constraints.new(type="DAMPED_TRACK")
+                    constraint.name = "DAMPED_TRACK"
+                    constraint.show_expanded = False
+                    constraint.head_tail = 1
+                    constraint.target = self.activeObject
+                    constraint.subtarget = ikBone2.name
+                    constraint.track_axis = "TRACK_Y"
+
+                    # STRETCH TO + DRIVER
+                    for pB, tB in [(stretchBone1, ikBone1.name), (stretchBone2, ikBone2.name)]:
+                        constraint = pB.constraints.new(type="STRETCH_TO")
+                        constraint.show_expanded = False
+                        constraint.head_tail = 1
+                        constraint.target = self.activeObject
+                        constraint.subtarget = tB
+                        constraint.rest_length = pB.length * 100
+
+                        # STRETCH INFLUENCE DRIVER
+                        influenceDriver = constraint.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = ikBone.bone.path_from_id("stretchBone")
+                        influenceDriver.expression = var.name
+
+                        # STRETCH VOLUME DRIVER
+                        influenceDriver = constraint.driver_add("volume").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = ikBone.bone.path_from_id("stretchBoneMode")
+                        influenceDriver.expression = var.name
+
+                    # VIS POLE
+                    visPole = poseBones.get("VISPOLE_" + lowerarm.name.replace("TWEAK_", ""))
+                    visPole.bone.hide_select = True
+
+                    visPoleLocation = visPole.constraints.new(type="COPY_LOCATION")
+                    visPoleLocation.name = "GET_POLE_LOCATION"
+                    visPoleLocation.show_expanded = False
+                    visPoleLocation.target = self.activeObject
+                    visPoleLocation.subtarget = bone.bone.subtargetPole
+                    visPoleLocation.target_space = "POSE"
+                    visPoleLocation.owner_space = "POSE"
+
+                    visPoleStretch = visPole.constraints.new(type="STRETCH_TO")
+                    visPoleStretch.name = "STRETCH_TO_LOWERARM"
+                    visPoleStretch.show_expanded = False
+                    visPoleStretch.target = self.activeObject
+                    visPoleStretch.subtarget = "STRETCH_" + lowerarm.name.replace("TWEAK_", "")
+                    visPoleStretch.rest_length = visPole.length * 100
+                    visPoleStretch.volume = "NO_VOLUME"
+
+                    # Vis Hide Driver
+                    VisHideDriver = visPole.bone.driver_add("hide").driver
+                    VisHideDriver.type = "SCRIPTED"
+                    var = VisHideDriver.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id_type = "ARMATURE"
+                    target.id = self.activeObject.data
+                    target.data_path = "hideVis"
+                    VisHideDriver.expression = var.name
+
+                    # generate line custom shape
+                    self.generateCustomBoneShape(visPole, collection, boneShape.line, redGroup, True)
+
+                    # FK UPPERARM
 
                     FKBone = poseBones.get("FK_" + bone.name.replace("TWEAK_", ""))
-                    FKBone.custom_shape = objFKShape
-                    FKBone.bone_group = greenGroup
 
-                    fk = lowerarm.constraints.new(type="COPY_TRANSFORMS")
-                    fk.name = "TRANSFORM"
-                    fk.show_expanded = False
-                    fk.target = self.activeObject
-                    fk.subtarget = "FK_" + lowerarm.name.replace("TWEAK_", "")
-                    fk.mix_mode = "REPLACE"
-                    fk.target_space = "LOCAL"
-                    fk.owner_space = "LOCAL"
-                    fk.influence = 0.0
-                    FK2InfluenceDrive = fk.driver_add("influence").driver
+                    # generate fk custom shape
+                    getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+                    getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+                    self.generateCustomBoneShape(FKBone, collection, getBoneShape(*getBoneShapeParam), leftSideGroup if FKBone.bone.head_local.x >= 0 else rightSideGroup, False)
 
-                    # Generate Custom Shape
-                    mesh = bpy.data.meshes.new("UE4WSBoneShape_FK_" + lowerarm.name.replace("TWEAK_", ""))
-                    objFKShape = bpy.data.objects.new(mesh.name,mesh)
-                    collection.objects.link(objFKShape)
-                    mesh.from_pydata([v if i < 2 else ((v[0] * 0.4) / lowerarm.length, v[1], (v[2] * 0.4) / lowerarm.length) for i, v in enumerate(FKvertices)], FKedges, [])
+                    # FK Hide Driver
+                    FKHideDriver = FKBone.bone.driver_add("hide").driver
+                    FKHideDriver.type = "SCRIPTED"
+                    var = FKHideDriver.variables.new()
+                    var.type = "SINGLE_PROP"
+                    target = var.targets[0]
+                    target.id_type = "ARMATURE"
+                    target.id = self.activeObject.data
+                    target.data_path = "hideFK"
+                    FKHideDriver.expression = var.name
+
+                    # FK LOWERARM
 
                     FKBone = poseBones.get("FK_" + lowerarm.name.replace("TWEAK_", ""))
-                    FKBone.custom_shape = objFKShape
-                    FKBone.bone_group = greenGroup
 
-                    # CONTROL RIG
-                    if not self.activeObject.get("_RNA_UI"): # set RNA UI
-                        self.activeObject["_RNA_UI"] = {}
+                    # generate fk custom shape
+                    getBoneShape = getattr(boneShape, lowerarm.bone.customShapeType)
+                    getBoneShapeParam = lowerarm.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+                    self.generateCustomBoneShape(FKBone, collection, getBoneShape(*getBoneShapeParam), leftSideGroup if FKBone.bone.head_local.x >= 0 else rightSideGroup, False)
 
-                    # SNAP bone property
-                    # SNAP to FK
-                    boneListPropertyName = hand.name.replace("TWEAK", "CR_SNAPFK") if foot is not None else lowerarm.name.replace("TWEAK", "CR_SNAPFK")
-                    self.activeObject[boneListPropertyName] = bone.name + "|" + lowerarm.name
-                    # SNAP to IK
-                    boneListPropertyName = hand.name.replace("TWEAK", "CR_SNAPIK") if foot is not None else lowerarm.name.replace("TWEAK", "CR_SNAPIK")
-                    self.activeObject[boneListPropertyName] = lowerarm.name + "|" + bone.get("IKPole") + "|" + boneListPropertyName.replace("CR_SNAPIK", "CONTROL")
-
-                    # IK and FK influence
-                    customPropertyName = hand.name.replace("TWEAK", "CR_IK") if hand is not None else lowerarm.name.replace("TWEAK", "CR_IK")
-                    self.activeObject[customPropertyName] = 1.0
-                    self.activeObject["_RNA_UI"][customPropertyName] = {
-                        "description": "Influence For Use IK",
-                        "default": 1.0,
-                        "min": 0.0,
-                        "max": 1.0,
-                        "soft_min": 0.0,
-                        "soft_max": 1.0,
-                    }
-
-                    # IK Driver
-                    IKInfluenceDrive.type = "SCRIPTED"
-                    var = IKInfluenceDrive.variables.new()
+                    # FK Hide Driver
+                    FKHideDriver = FKBone.bone.driver_add("hide").driver
+                    FKHideDriver.type = "SCRIPTED"
+                    var = FKHideDriver.variables.new()
                     var.type = "SINGLE_PROP"
                     target = var.targets[0]
-                    target.id = self.activeObject
-                    target.data_path = "[\""+ customPropertyName + "\"]"
-                    IKInfluenceDrive.expression = var.name
+                    target.id_type = "ARMATURE"
+                    target.id = self.activeObject.data
+                    target.data_path = "hideFK"
+                    FKHideDriver.expression = var.name
 
-                    # FK Driver
-                    FK1InfluenceDrive.type = "SCRIPTED"
-                    var = FK1InfluenceDrive.variables.new()
-                    var.type = "SINGLE_PROP"
-                    target = var.targets[0]
-                    target.id = self.activeObject
-                    target.data_path = "[\""+ customPropertyName + "\"]"
-                    FK1InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
+                    if hand:
+                        # FK HAND
 
-                    FK2InfluenceDrive.type = "SCRIPTED"
-                    var = FK2InfluenceDrive.variables.new()
-                    var.type = "SINGLE_PROP"
-                    target = var.targets[0]
-                    target.id = self.activeObject
-                    target.data_path = "[\""+ customPropertyName + "\"]"
-                    FK2InfluenceDrive.expression = "abs("+ var.name + " - 1.0)"
+                        FKBone = poseBones.get("FK_" + hand.name.replace("TWEAK_", ""))
 
-                if hand is not None:
-                    inheritRotationDriver = hand.bone.driver_add("use_inherit_rotation").driver
-                    inheritRotationDriver.type = "SCRIPTED"
-                    var = inheritRotationDriver.variables.new()
-                    var.type = "SINGLE_PROP"
-                    target = var.targets[0]
-                    target.id = self.activeObject
-                    target.data_path = "[\""+ customPropertyName + "\"]"
-                    inheritRotationDriver.expression = var.name + " == 0"
+                        # generate fk custom shape
+                        getBoneShape = getattr(boneShape, hand.bone.customShapeType)
+                        getBoneShapeParam = hand.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+                        self.generateCustomBoneShape(FKBone, collection, getBoneShape(*getBoneShapeParam), leftSideGroup if FKBone.bone.head_local.x >= 0 else rightSideGroup, False)
 
-                    constraints = hand.constraints.new(type="COPY_ROTATION")
-                    constraints.name = "HAND_CONTROL_ROTATION"
-                    constraints.show_expanded = False
-                    constraints.target = self.activeObject
-                    constraints.subtarget = "CONTROL_" + hand.name.replace("TWEAK_", "")
-                    constraints.mix_mode = "ADD"
-                    constraints.target_space = "LOCAL"
-                    constraints.owner_space = "LOCAL"
-                    constraints.use_x = True
-                    constraints.use_y = True
-                    constraints.use_z = True
-                    constraints.invert_x = False
-                    constraints.invert_y = False
-                    constraints.invert_z = False
+                        # FK Hide Driver
+                        FKHideDriver = FKBone.bone.driver_add("hide").driver
+                        FKHideDriver.type = "SCRIPTED"
+                        var = FKHideDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = "hideFK"
+                        FKHideDriver.expression = var.name
 
-                    if objHandTweakShape is None:
-                        mesh = bpy.data.meshes.new("UE4WSBoneShape_Hand_Tweak")
-                        objHandTweakShape = bpy.data.objects.new(mesh.name,mesh)
-                        collection.objects.link(objHandTweakShape)
-                        mesh.from_pydata([((v[0] * 0.3) / hand.length, v[1], (v[2] * 0.2) / hand.length) for i, v in enumerate(handTweakVertices)], handTweakEdges, [])
-                    hand.custom_shape = objHandTweakShape
-                    hand.bone_group = yellowGroup
+                    # register control ik to bone
+                    ikBone.bone.controlIK = True
+                    ikBone.bone.pointABoneIK = bone.name.replace("TWEAK_", "")
+                    ikBone.bone.pointBBoneIK = lowerarm.name.replace("TWEAK_", "")
 
-                    poseBone = poseBones.get("CONTROL_" + hand.name.replace("TWEAK_", ""))
-                    if poseBones is not None:
-                        if objHandShape is None:
-                            mesh = bpy.data.meshes.new("UE4WSBoneShape_Hand")
-                            objHandShape = bpy.data.objects.new(mesh.name,mesh)
-                            collection.objects.link(objHandShape)
-                            mesh.from_pydata(verticeshandShape, edgeshandShape, [])
-                        poseBone.custom_shape = objHandShape
-                        poseBone.bone_group = redGroup
+                    if bone.bone.handBone and hand:
+                        controlRotationHandIK = hand.constraints.new(type="COPY_TRANSFORMS")
+                        controlRotationHandIK.name = "HAND_CONTROL_IK"
+                        controlRotationHandIK.show_expanded = False
+                        controlRotationHandIK.target = self.activeObject
+                        controlRotationHandIK.subtarget = bone.bone.subtargetIK
+                        controlRotationHandIK.mix_mode = "REPLACE"
+                        controlRotationHandIK.target_space = "POSE"
+                        controlRotationHandIK.owner_space = "POSE"
+                        # IK DRIVER
+                        influenceDriver = controlRotationHandIK.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = ikBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 0"
 
-        TwistVertices = [(0.0, 0.5, 0.20000000298023224), (-0.07653669267892838, 0.5, 0.18477590382099152), (-0.1414213627576828, 0.5, 0.1414213627576828), (-0.18477590382099152, 0.5, 0.07653668522834778), (-0.20000000298023224, 0.5, -8.742278012618954e-09), (-0.18477590382099152, 0.5, -0.07653670758008957), (-0.1414213627576828, 0.5, -0.1414213627576828), (-0.07653670012950897, 0.5, -0.18477590382099152), (-3.019916050561733e-08, 0.5, -0.20000000298023224), (0.0765366479754448, 0.5, -0.1847759336233139), (0.14142131805419922, 0.5, -0.14142140746116638), (0.18477590382099152, 0.5, -0.07653671503067017), (0.20000000298023224, 0.5, 2.384976216518453e-09), (0.18477588891983032, 0.5, 0.07653672248125076), (0.14142130315303802, 0.5, 0.14142140746116638), (0.07653659582138062, 0.5, 0.1847759485244751)]
-        TwistEdges = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (0, 15)]
+                        # LIMIT LOCATION IN IK MODE
+                        limitLocationIK = hand.constraints.new(type="LIMIT_LOCATION")
+                        limitLocationIK.name = "LIMIT_LOCATION_IK"
+                        limitLocationIK.show_expanded = False
+                        limitLocationIK.owner_space = "LOCAL"
+                        limitLocationIK.min_x = 0
+                        limitLocationIK.min_y = 0
+                        limitLocationIK.min_z = 0
+                        limitLocationIK.max_x = 0
+                        limitLocationIK.max_y = 0
+                        limitLocationIK.max_z = 0
+                        limitLocationIK.use_min_x = True
+                        limitLocationIK.use_min_y = True
+                        limitLocationIK.use_min_z = True
+                        limitLocationIK.use_max_x = True
+                        limitLocationIK.use_max_y = True
+                        limitLocationIK.use_max_z = True
+                        # IK DRIVER
+                        influenceDriver = limitLocationIK.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = ikBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 0"
+
+                        controlRotationHandFK = hand.constraints.new(type="COPY_TRANSFORMS")
+                        controlRotationHandFK.name = "HAND_CONTROL_FK"
+                        controlRotationHandFK.show_expanded = False
+                        controlRotationHandFK.target = self.activeObject
+                        controlRotationHandFK.subtarget = "FK_" + hand.name.replace("TWEAK_", "")
+                        controlRotationHandFK.mix_mode = "REPLACE"
+                        controlRotationHandFK.target_space = "POSE"
+                        controlRotationHandFK.owner_space = "POSE"
+                        # FK DRIVER
+                        influenceDriver = controlRotationHandFK.driver_add("influence").driver
+                        influenceDriver.type = "SCRIPTED"
+                        var = influenceDriver.variables.new()
+                        var.type = "SINGLE_PROP"
+                        target = var.targets[0]
+                        target.id_type = "ARMATURE"
+                        target.id = self.activeObject.data
+                        target.data_path = ikBone.bone.path_from_id("switchIK")
+                        influenceDriver.expression = var.name + " == 1"
+
+                        # FLOOR HAND
+                        floorHand = poseBones.get("FLOOR_" + hand.name.replace("TWEAK_", ""))
+
+                        # ADD FLOOR CONSTRAINT
+                        self.addFloorConstraint(ikBone, floorHand.name, 3)
+
+                        # generate floor custom shape
+                        self.generateCustomBoneShape(floorHand, collection, boneShape.floor(1, 1), yellowGroup, False)
+
         # TWIST BONE CUSTOM SHAPE
-        for bone in [bone for bone in poseBones if bone.name.startswith("TWEAK_") and "_twist_" in bone.name and bone.custom_shape is None]:
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + bone.name.replace("TWEAK_", ""))
-            objCustomShape = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objCustomShape)
-            mesh.from_pydata([((v[0] * 0.4) / bone.length, v[1], (v[2] * 0.4) / bone.length) for i, v in enumerate(TwistVertices)], TwistEdges, [])
-            bone.custom_shape = objCustomShape
-            bone.bone_group = yellowGroup
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "TWIST_BONE" and bone.custom_shape is None]:
+            # generate twist custom shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(bone, collection, getBoneShape(*getBoneShapeParam), greenGroup if bone.bone.head_local.x == 0 else leftSideGroup if bone.bone.head_local.x > 0 else rightSideGroup, False)
 
-        # Generate Pelvis Shape
-        pelvisVertices = [(-2.9555113911783337e-08, 0.0, 0.20663587749004364), (-0.07907618582248688, 0.0, 0.19090662896633148), (-0.14611367881298065, 0.0, 0.1461135596036911), (-0.19090674817562103, 7.450580596923828e-09, 0.07907604426145554), (-0.2066359966993332, 9.313225746154785e-09, -1.28688327549753e-07), (-0.19090674817562103, 1.4901161193847656e-08, -0.07907629758119583), (-0.14611367881298065, 1.4901161193847656e-08, -0.1461138278245926), (-0.07907618582248688, 1.4901161193847656e-08, -0.19090689718723297), (-6.075627823065588e-08, 1.4901161193847656e-08, -0.20663608610630035), (0.07907608151435852, 1.4901161193847656e-08, -0.19090689718723297), (0.14611361920833588, 1.4901161193847656e-08, -0.14611388742923737), (0.19090674817562103, 1.4901161193847656e-08, -0.07907629758119583), (0.20663593709468842, 9.313225746154785e-09, -1.1719187398284703e-07), (0.19090668857097626, 7.450580596923828e-09, 0.07907607406377792), (0.14611361920833588, 0.0, 0.14611361920833588), (0.07907605171203613, 0.0, 0.19090668857097626)]
-        pelvisEdges = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (0, 15)]
         # PELVIS
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "PELVIS" and bone.custom_shape is None]:
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + bone.name)
-            objPelvis = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objPelvis)
-            mesh.from_pydata([(v[0] / bone.length, v[1], v[2] / bone.length) for v in pelvisVertices], pelvisEdges, [])
-            bone.custom_shape = objPelvis
-            bone.bone_group = yellowGroup
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "PELVIS" and bone.custom_shape is None]:
+            bone.lock_location = [True, True, True]
+            control = poseBones.get("CONTROL_" + bone.name.replace("TWEAK_", ""))
+            control.rotation_mode = "XYZ"
+            control.lock_rotation =[True, True, True]
 
-        # Generate Spine Shape
-        spineVertices = [(-2.9555113911783337e-08, 0.0, 0.20663587749004364), (-0.07907618582248688, 0.0, 0.19090662896633148), (-0.14611367881298065, 0.0, 0.1461135596036911), (-0.19090674817562103, 7.450580596923828e-09, 0.07907604426145554), (-0.2066359966993332, 9.313225746154785e-09, -1.28688327549753e-07), (-0.19090674817562103, 1.4901161193847656e-08, -0.07907629758119583), (-0.14611367881298065, 1.4901161193847656e-08, -0.1461138278245926), (-0.07907618582248688, 1.4901161193847656e-08, -0.19090689718723297), (-6.075627823065588e-08, 1.4901161193847656e-08, -0.20663608610630035), (0.07907608151435852, 1.4901161193847656e-08, -0.19090689718723297), (0.14611361920833588, 1.4901161193847656e-08, -0.14611388742923737), (0.19090674817562103, 1.4901161193847656e-08, -0.07907629758119583), (0.20663593709468842, 9.313225746154785e-09, -1.1719187398284703e-07), (0.19090668857097626, 7.450580596923828e-09, 0.07907607406377792), (0.14611361920833588, 0.0, 0.14611361920833588), (0.07907605171203613, 0.0, 0.19090668857097626)]
-        spineEdges = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (0, 15)]
+            # generate pelvis custom shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(bone, collection, getBoneShape(*getBoneShapeParam), greenGroup, False)
+
+            locConstraint = bone.constraints.new("COPY_LOCATION")
+            locConstraint.name = "LOCATION"
+            locConstraint.show_expanded = False
+            locConstraint.target = self.activeObject
+            locConstraint.subtarget = control.name
+            locConstraint.target_space = "POSE"
+            locConstraint.owner_space = "POSE"
+
+            # generate pelvis control custom shape
+            diameterBlock = (bone.bone.customShapeParam[1] * 2) + 2.5
+            self.generateCustomBoneShape(control, collection, boneShape.block(diameterBlock, diameterBlock, -1, 1), redGroup, False)
+
         # SPINE
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "SPINE" and bone.custom_shape is None]:
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + bone.name)
-            objSpine = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objSpine)
-            mesh.from_pydata([(v[0] / bone.length, 0.5, v[2] / bone.length) for v in pelvisVertices], pelvisEdges, [])
-            bone.custom_shape = objSpine
-            bone.bone_group = yellowGroup
-            self.spineRecursiveBone(bone.children, collection, spineVertices, spineEdges, yellowGroup)
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "SPINE" and bone.custom_shape is None]:
+            # generate spine custom shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(bone, collection, getBoneShape(*getBoneShapeParam), greenGroup, False)
 
-        # Generate Neck Shape
-        neckVertices = [(-2.9555113911783337e-08, 0.0, 0.20663587749004364), (-0.07907618582248688, 0.0, 0.19090662896633148), (-0.14611367881298065, 0.0, 0.1461135596036911), (-0.19090674817562103, 7.450580596923828e-09, 0.07907604426145554), (-0.2066359966993332, 9.313225746154785e-09, -1.28688327549753e-07), (-0.19090674817562103, 1.4901161193847656e-08, -0.07907629758119583), (-0.14611367881298065, 1.4901161193847656e-08, -0.1461138278245926), (-0.07907618582248688, 1.4901161193847656e-08, -0.19090689718723297), (-6.075627823065588e-08, 1.4901161193847656e-08, -0.20663608610630035), (0.07907608151435852, 1.4901161193847656e-08, -0.19090689718723297), (0.14611361920833588, 1.4901161193847656e-08, -0.14611388742923737), (0.19090674817562103, 1.4901161193847656e-08, -0.07907629758119583), (0.20663593709468842, 9.313225746154785e-09, -1.1719187398284703e-07), (0.19090668857097626, 7.450580596923828e-09, 0.07907607406377792), (0.14611361920833588, 0.0, 0.14611361920833588), (0.07907605171203613, 0.0, 0.19090668857097626)]
-        neckEdges = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (0, 15)]
-        # Neck
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "NECK" and bone.custom_shape is None]:
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + bone.name)
-            objCustomShape = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objCustomShape)
-            mesh.from_pydata([(v[0] * 5, 0.5, v[2] * 5) for v in pelvisVertices], pelvisEdges, [])
-            bone.custom_shape = objCustomShape
-            bone.bone_group = yellowGroup
-            self.neckRecursiveBone(bone.children, collection, neckVertices, neckEdges, yellowGroup)
+            # STRETCH BONE + DRIVER
+            if bone.bone.stretchBoneTarget:
+                stretchBone = poseBones.get("STRETCH_" + bone.name.replace("TWEAK_", ""))
+                stretchBoneConstraint = stretchBone.constraints.new("STRETCH_TO")
+                stretchBoneConstraint.name = "STRETCH_TO_BONE"
+                stretchBoneConstraint.show_expanded = False
+                stretchBoneConstraint.target = self.activeObject
+                stretchBoneConstraint.subtarget = bone.bone.stretchBoneTarget
+                stretchBoneConstraint.rest_length = stretchBone.length * 100
+                stretchBoneConstraint.influence = 0.5
 
-        # Generate Head Human Shape
-        headVertices = [(-1.6763809895792292e-08, 1.0, 0.550000011920929), (-0.21047590672969818, 1.0, 0.5081337094306946), (-0.3889086842536926, 1.0, 0.3889087438583374), (-0.5081337094306946, 1.0, 0.21047590672969818), (-0.5499999523162842, 1.0, -2.273741372960103e-08), (-0.5081337094306946, 1.0, -0.21047592163085938), (-0.3889086842536926, 1.0, -0.3889087438583374), (-0.21047593653202057, 1.0, -0.5081337094306946), (-9.981150128623995e-08, 1.0, -0.550000011920929), (0.21047572791576385, 1.0, -0.5081338286399841), (0.38890859484672546, 1.0, -0.38890886306762695), (0.5081336498260498, 1.0, -0.21047595143318176), (0.5499998927116394, 1.0, 7.86253551154914e-09), (0.508133590221405, 1.0, 0.21047599613666534), (0.3889085650444031, 1.0, 0.38890886306762695), (0.2104756087064743, 1.0, 0.5081338882446289)]
-        headEdges = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (0, 15)]
-        # HEAD_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "HEAD_HUMAN" and bone.custom_shape is None]:
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + bone.name)
-            objHeadHuman = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objHeadHuman)
-            mesh.from_pydata(headVertices, headEdges, [])
-            bone.custom_shape = objHeadHuman
-            bone.bone_group= yellowGroup
+                # generate stretch box custom shape
+                self.generateCustomBoneShape(stretchBone, collection, boneShape.block(4, 4, 0, 4), redGroup, False)
 
-        # Generate Copy Bone
-        copyBoneVertices = [(-0.01, 0.0, -0.01), (0.01, 0.0, -0.01), (-0.01, 1.0, -0.01), (0.01, 1.0, -0.01), (-0.01, 0.0, 0.01), (0.01, 0.0, 0.01), (-0.01, 1.0, 0.01), (0.01, 1.0, 0.01)]
-        copyBoneEdges = [(2, 0), (0, 1), (1, 3), (3, 2), (6, 4), (4, 5), (5, 7), (7, 6), (1, 5), (4, 0), (3, 7), (6, 2)]
-        # COPY_BONE
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "COPY_BONE" and bone.custom_shape is None]:
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + bone.name)
-            objCopyBone = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objCopyBone)
-            mesh.from_pydata([(v[0] / bone.length, v[1], v[2] / bone.length) for v in copyBoneVertices], copyBoneEdges, [])
-            bone.custom_shape = objCopyBone
-            bone.bone_group = yellowGroup
+                # STRETCH INFLUENCE DRIVER
+                influenceDriver = stretchBoneConstraint.driver_add("influence").driver
+                influenceDriver.type = "SCRIPTED"
+                var = influenceDriver.variables.new()
+                var.type = "SINGLE_PROP"
+                target = var.targets[0]
+                target.id_type = "ARMATURE"
+                target.id = self.activeObject.data
+                target.data_path = bone.bone.path_from_id("stretchBone")
+                influenceDriver.expression = var.name
 
-        # Generate Face Control Bone Humanoid
-        faceControlHumanoidVertices = [(-5.3341501882187004e-08, 0.0, 0.04125000908970833), (-0.015785744413733482, 0.0, 0.03811003640294075), (-0.029168201610445976, 0.0, 0.029168162494897842), (-0.038110073655843735, 0.0, 0.01578569784760475), (-0.04125004634261131, 0.0, 3.137571091826885e-09), (-0.038110073655843735, 0.0, -0.015785690397024155), (-0.029168201610445976, 0.0, -0.029168155044317245), (-0.015785744413733482, 0.0, -0.03811001405119896), (-5.9570076871295896e-08, 0.0, -0.04124998673796654), (0.01578562892973423, 0.0, -0.03811004385352135), (0.029168086126446724, 0.0, -0.029168155044317245), (0.038109976798295975, 0.0, -0.015785690397024155), (0.04124993458390236, 0.0, 5.432567284913148e-09), (0.03810996189713478, 0.0, 0.01578570529818535), (0.029168086126446724, 0.0, 0.029168177396059036), (0.015785621479153633, 0.0, 0.038110051304101944)]
-        faceControlHumanoidEdges = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (0, 15)]
-        # FACE_CONTROL_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_CONTROL_HUMAN" and bone.get("BONE_CONTROL")]:
-            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
-            # constraint
-            constraints = bone.constraints.new(type="COPY_TRANSFORMS")
-            constraints.name = "TRANSFORM"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("BONE_CONTROL")
-            constraints.mix_mode = "REPLACE"
-            constraints.target_space = "LOCAL"
-            constraints.owner_space = "LOCAL"
-            # custom shape
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
-            objFaceControl = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objFaceControl)
-            mesh.from_pydata(faceControlHumanoidVertices, faceControlHumanoidEdges, [])
-            boneControl.custom_shape = objFaceControl
-            boneControl.bone_group= yellowGroup
+                # STRETCH VOLUME DRIVER
+                influenceDriver = stretchBoneConstraint.driver_add("volume").driver
+                influenceDriver.type = "SCRIPTED"
+                var = influenceDriver.variables.new()
+                var.type = "SINGLE_PROP"
+                target = var.targets[0]
+                target.id_type = "ARMATURE"
+                target.id = self.activeObject.data
+                target.data_path = bone.bone.path_from_id("stretchBoneMode")
+                influenceDriver.expression = var.name
 
-        # Generate Face Jaw Control Bone Humanoid
-        faceJawControlHumanoidVertices = [(-0.2499999850988388, 0.0, 0.25), (0.2499999850988388, 0.0, 0.25), (-0.2499999850988388, 0.0, -0.12901227176189423), (-0.12901225686073303, 0.0, -0.25), (0.12901225686073303, 0.0, -0.25), (0.2499999850988388, 0.0, -0.12901227176189423)]
-        faceJawControlHumanoidEdges = [(1, 0), (2, 3), (4, 5), (2, 0), (3, 4), (5, 1)]
-        # FACE_JAW_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_JAW_HUMAN" and bone.get("BONE_CONTROL")]:
-            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
-            # constraint
-            constraints = bone.constraints.new(type="DAMPED_TRACK")
-            constraints.name = "TRACK"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("BONE_CONTROL")
-            constraints.track_axis = "TRACK_Y"
-            constraints.head_tail = 0.5
-            # custom shape
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
-            objFaceJawControl = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objFaceJawControl)
-            mesh.from_pydata(faceJawControlHumanoidVertices, faceJawControlHumanoidEdges, [])
-            boneControl.custom_shape = objFaceJawControl
-            boneControl.bone_group= redGroup
+        # NECK
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "NECK" and bone.custom_shape is None]:
+            # generate neck custom shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(bone, collection, getBoneShape(*getBoneShapeParam), greenGroup, False)
 
-        # Generate Face Nose Control Bone Humanoid
-        faceNoseControlHumanoidVertices = [(-0.32910746335983276, 0.0, -0.32910752296447754), (0.32910746335983276, 0.0, -0.32910752296447754), (-0.16455373167991638, 0.0, 0.32910752296447754), (0.16455373167991638, 0.0, 0.32910752296447754)]
-        faceNoseControlHumanoidEdges = [(2, 0), (0, 1), (1, 3), (3, 2)]
-        # FACE_NOSE_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_NOSE_HUMAN" and bone.get("BONE_CONTROL")]:
-            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
-            # constraint
-            constraints = bone.constraints.new(type="COPY_TRANSFORMS")
-            constraints.name = "TRANSFORM"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("BONE_CONTROL")
-            constraints.mix_mode = "REPLACE"
-            constraints.target_space = "LOCAL"
-            constraints.owner_space = "LOCAL"
-            # custom shape
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
-            objFaceNoseControl = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objFaceNoseControl)
-            mesh.from_pydata(faceNoseControlHumanoidVertices, faceNoseControlHumanoidEdges, [])
-            boneControl.custom_shape = objFaceNoseControl
-            boneControl.bone_group= yellowGroup
+            # STRETCH BONE
+            if bone.bone.stretchBoneTarget:
+                stretchBone = poseBones.get("STRETCH_" + bone.name.replace("TWEAK_", ""))
+                stretchBoneConstraint = stretchBone.constraints.new("STRETCH_TO")
+                stretchBoneConstraint.name = "STRETCH_TO_BONE"
+                stretchBoneConstraint.show_expanded = False
+                stretchBoneConstraint.target = self.activeObject
+                stretchBoneConstraint.subtarget = bone.bone.stretchBoneTarget
+                stretchBoneConstraint.rest_length = stretchBone.length * 100
+                stretchBoneConstraint.influence = 1
 
-        # Generate Face Eye Control Bone Humanoid
-        faceEyeControlHumanoidVertices = [(-0.3058179020881653, 0.0, -0.07159699499607086), (-0.03911216929554939, 0.0, -0.167062908411026), (0.03911216929554939, 0.0, -0.167062908411026), (0.3058179020881653, 0.0, -0.07159699499607086), (-0.3058179020881653, 0.0, 0.07159699499607086), (-0.03911216929554939, 0.0, 0.167062908411026), (0.3058179020881653, 0.0, 0.07159699499607086), (0.03911216929554939, 0.0, 0.167062908411026), (0.0, -6.119594164744058e-09, 0.14000000059604645), (-0.07000000029802322, -5.29972377094623e-09, 0.12124355137348175), (-0.12124356627464294, -3.059796860327424e-09, 0.06999999284744263), (-0.14000000059604645, 2.6749596935822344e-16, -6.119594164744058e-09), (-0.12124355137348175, 3.0597975264612387e-09, -0.07000000774860382), (-0.07000000774860382, 5.29972377094623e-09, -0.12124355137348175), (-2.1139411998660762e-08, 6.119594164744058e-09, -0.14000000059604645), (0.06999997049570084, 5.299725103213859e-09, -0.12124357372522354), (0.12124352902173996, 3.059799080773473e-09, -0.0700000450015068), (0.14000000059604645, 2.845074614335236e-15, -6.508771832614002e-08), (0.12124359607696533, -3.05979397374756e-09, 0.06999992579221725), (0.07000008225440979, -5.2997224386786e-09, 0.12124351412057877)]
-        faceEyeControlHumanoidEdges = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 4), (1, 2), (3, 6), (5, 7), (9, 8), (10, 9), (11, 10), (12, 11), (13, 12), (14, 13), (15, 14), (16, 15), (17, 16), (18, 17), (19, 18), (8, 19)]
-        # FACE_EYE_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_EYE_HUMAN" and bone.get("BONE_CONTROL")]:
-            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
-            # constraint
-            constraints = bone.constraints.new(type="TRACK_TO")
-            constraints.name = "LOOK_TO"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("BONE_CONTROL")
-            constraints.track_axis = "TRACK_Y"
-            constraints.up_axis = "UP_Z"
-            constraints.target_space = "POSE"
-            constraints.owner_space = "POSE"
-            # custom shape
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
-            objFaceEyeControl = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objFaceEyeControl)
-            mesh.from_pydata(faceEyeControlHumanoidVertices, faceEyeControlHumanoidEdges, [])
-            boneControl.custom_shape = objFaceEyeControl
-            boneControl.bone_group= blueGroup
+                # generate stretch box custom shape
+                self.generateCustomBoneShape(stretchBone, collection, boneShape.block(4, 4, 0, 4), redGroup, False)
+                # STRETCH INFLUENCE DRIVER
+                influenceDriver = stretchBoneConstraint.driver_add("influence").driver
+                influenceDriver.type = "SCRIPTED"
+                var = influenceDriver.variables.new()
+                var.type = "SINGLE_PROP"
+                target = var.targets[0]
+                target.id_type = "ARMATURE"
+                target.id = self.activeObject.data
+                target.data_path = bone.bone.path_from_id("stretchBone")
+                influenceDriver.expression = var.name
 
-        # Generate Face Look Control Bone Humanoid
-        faceLookControlHumanoidVertices = [(-0.25, -0.25, -0.25), (-0.25, -0.25, 0.25), (-0.25, 0.25, -0.25), (-0.25, 0.25, 0.25), (0.25, -0.25, -0.25), (0.25, -0.25, 0.25), (0.25, 0.25, -0.25), (0.25, 0.25, 0.25)]
-        faceLookControlHumanoidEdges = [(2, 0), (0, 1), (1, 3), (3, 2), (6, 2), (3, 7), (7, 6), (4, 6), (7, 5), (5, 4), (0, 4), (5, 1)]
-        # BONE_LOOK_CONTROL
-        for bone, faceAttach in [(self.poseBone(bone.get("BONE_LOOK_CONTROL")), bone) for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_HUMAN" and bone.get("BONE_LOOK_CONTROL")]:
-            bone["UE4RIGTYPE"]= "FACE_LOOK_CONTROL"
-            # constraint
-            constraints = bone.constraints.new(type="CHILD_OF")
-            constraints.name = "LOOK_CONTROL_PARENT"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = faceAttach.name
-            LookInfluenceDrive = constraints.driver_add("influence").driver
-            # custom shape
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
-            objFaceLookControl = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objFaceLookControl)
-            mesh.from_pydata(faceLookControlHumanoidVertices, faceLookControlHumanoidEdges, [])
-            bone.custom_shape = objFaceLookControl
-            bone.bone_group= greenGroup
+                # STRETCH VOLUME DRIVER
+                influenceDriver = stretchBoneConstraint.driver_add("volume").driver
+                influenceDriver.type = "SCRIPTED"
+                var = influenceDriver.variables.new()
+                var.type = "SINGLE_PROP"
+                target = var.targets[0]
+                target.id_type = "ARMATURE"
+                target.id = self.activeObject.data
+                target.data_path = bone.bone.path_from_id("stretchBoneMode")
+                influenceDriver.expression = var.name
 
-            # CONTROL RIG
-            if not self.activeObject.get("_RNA_UI"): # set RNA UI
-                self.activeObject["_RNA_UI"] = {}
+        # HEAD
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "HEAD" and bone.custom_shape is None]:
+            # generate head custom shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(bone, collection, getBoneShape(*getBoneShapeParam), greenGroup, False)
 
-            # LOOK influence
-            customPropertyName = "CR_LOOK_" + bone.name
-            self.activeObject[customPropertyName] = 1.0
-            self.activeObject["_RNA_UI"][customPropertyName] = {
-                "description": "Influence For Look Head Rotation",
-                "default": 1.0,
-                "min": 0.0,
-                "max": 1.0,
-                "soft_min": 0.0,
-                "soft_max": 1.0,
-            }
+            lookConstraint = bone.constraints.new("DAMPED_TRACK")
+            lookConstraint.name = "LOOK_CONTROL"
+            lookConstraint.show_expanded = False
+            lookConstraint.target = self.activeObject
+            lookConstraint.subtarget = "CONTROL_" + bone.name.replace("TWEAK_", "")
+            lookConstraint.track_axis = "TRACK_Z"
 
-            # LOOK Driver
-            LookInfluenceDrive.type = "SCRIPTED"
-            var = LookInfluenceDrive.variables.new()
+            controlBone = poseBones.get(lookConstraint.subtarget)
+
+            # generate head control custom shape
+            self.generateCustomBoneShape(controlBone, collection, boneShape.circle(16, 2.5, 0), redGroup, False)
+
+            # VIS CONTROL
+            visControl = poseBones.get("VISCONTROL_" + bone.name.replace("TWEAK_", ""))
+            visControl.bone.hide_select = True
+
+            visControlLocation = visControl.constraints.new(type="COPY_LOCATION")
+            visControlLocation.name = "GET_CONTROL_LOCATION"
+            visControlLocation.show_expanded = False
+            visControlLocation.target = self.activeObject
+            visControlLocation.subtarget = lookConstraint.subtarget
+            visControlLocation.target_space = "POSE"
+            visControlLocation.owner_space = "POSE"
+
+            visControlStretch = visControl.constraints.new(type="STRETCH_TO")
+            visControlStretch.name = "STRETCH_TO_LOWERARM"
+            visControlStretch.show_expanded = False
+            visControlStretch.target = self.activeObject
+            visControlStretch.subtarget = bone.name
+            visControlStretch.rest_length = visControl.length*100
+            visControlStretch.volume = "NO_VOLUME"
+
+            # generate line custom shape
+            self.generateCustomBoneShape(visControl, collection, boneShape.line, redGroup, True)
+
+            # Vis Hide Driver
+            VisHideDriver = visControl.bone.driver_add("hide").driver
+            VisHideDriver.type = "SCRIPTED"
+            var = VisHideDriver.variables.new()
             var.type = "SINGLE_PROP"
             target = var.targets[0]
-            target.id = self.activeObject
-            target.data_path = "[\""+ customPropertyName + "\"]"
-            LookInfluenceDrive.expression = var.name
+            target.id_type = "ARMATURE"
+            target.id = self.activeObject.data
+            target.data_path = "hideVis"
+            VisHideDriver.expression = var.name
 
-        # Generate Face Teeth Control Bone Humanoid
-        faceTeethControlHumanoidVertices = [(-0.42000001668930054, 1.8358782938321383e-08, -0.12920930981636047), (0.42000001668930054, 1.8358782938321383e-08, -0.12920930981636047), (-0.42000001668930054, -1.8358782938321383e-08, 0.12920930981636047), (0.42000001668930054, -1.8358782938321383e-08, 0.12920930981636047), (-0.42000001668930054, 0.23703818023204803, -0.12920930981636047), (0.42000001668930054, 0.23703818023204803, -0.12920930981636047), (-0.42000001668930054, 0.23703815042972565, 0.12920930981636047), (0.42000001668930054, 0.23703815042972565, 0.12920930981636047)]
-        faceTeethControlHumanoidEdges = [(2, 0), (0, 1), (1, 3), (3, 2), (6, 4), (4, 5), (5, 7), (7, 6), (2, 6), (7, 3), (1, 5), (4, 0)]
-        # FACE_TEETH_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_TEETH_HUMAN" and bone.get("BONE_CONTROL")]:
-            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
+        # COPY_BONE
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "COPY_BONE" and bone.custom_shape is None]:
+            # generate copy_bone custom shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(bone, collection, getBoneShape(*getBoneShapeParam), greenGroup if bone.bone.head_local.x == 0 else leftSideGroup if bone.bone.head_local.x > 0 else rightSideGroup, False)
+
+        # LANDMARK
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "LANDMARK"]:
+            boneControl = self.poseBone(bone.bone.subtargetIK)
             # constraint
-            constraints = bone.constraints.new(type="COPY_TRANSFORMS")
-            constraints.name = "TRANSFORM"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("BONE_CONTROL")
-            constraints.mix_mode = "REPLACE"
-            constraints.target_space = "LOCAL"
-            constraints.owner_space = "LOCAL"
-            # custom shape
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
-            objFaceTeethControl = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objFaceTeethControl)
-            mesh.from_pydata(faceTeethControlHumanoidVertices, faceTeethControlHumanoidEdges, [])
-            boneControl.custom_shape = objFaceTeethControl
-            boneControl.bone_group= yellowGroup
+            constraint = bone.constraints.new(type="COPY_TRANSFORMS")
+            constraint.name = "TRANSFORM"
+            constraint.show_expanded = False
+            constraint.target = self.activeObject
+            constraint.subtarget = bone.bone.subtargetIK
+            constraint.mix_mode = "REPLACE"
+            constraint.target_space = "LOCAL"
+            constraint.owner_space = "LOCAL"
+            # generate landmark control custom shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(boneControl, collection, getBoneShape(*getBoneShapeParam), greenGroup, False)
 
-        # Generate Face Tongue Control Bone Humanoid
-        faceTongueControlHumanoidVertices = [(-0.3256967067718506, 0.47867369651794434, 0.0), (0.3256967067718506, 0.47867369651794434, 0.0), (0.0, 0.47867369651794434, 0.0), (-0.3039208650588989, -0.2570299506187439, 0.0), (-0.07561969757080078, -0.47867369651794434, 0.0), (-0.23433561623096466, -0.41375574469566345, 0.0), (0.3039208650588989, -0.2570299506187439, 0.0), (0.07561969757080078, -0.47867369651794434, 0.0), (0.23433561623096466, -0.41375574469566345, 0.0), (0.0, -0.15590238571166992, 0.0)]
-        faceTongueControlHumanoidEdges = [(2, 1), (0, 2), (3, 5), (5, 4), (6, 8), (8, 7), (3, 0), (4, 7), (6, 1), (2, 9)]
-        # FACE_TONGUE_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_TONGUE_HUMAN" and bone.get("BONE_CONTROL")]:
-            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
+        # JAW
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "JAW"]:
+            boneControl = self.poseBone(bone.bone.subtargetIK)
+            # generate jaw custom shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(bone, collection, getBoneShape(*getBoneShapeParam), greenGroup, False)
             # constraint
-            constraints = bone.constraints.new(type="COPY_TRANSFORMS")
-            constraints.name = "TRANSFORM"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("BONE_CONTROL")
-            constraints.mix_mode = "REPLACE"
-            constraints.target_space = "LOCAL"
-            constraints.owner_space = "LOCAL"
-            # custom shape
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
-            objFaceTeethControl = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objFaceTeethControl)
-            mesh.from_pydata(faceTongueControlHumanoidVertices, faceTongueControlHumanoidEdges, [])
-            boneControl.custom_shape = objFaceTeethControl
-            boneControl.bone_group= yellowGroup
+            constraint = bone.constraints.new(type="DAMPED_TRACK")
+            constraint.name = "TRACK"
+            constraint.show_expanded = False
+            constraint.target = self.activeObject
+            constraint.subtarget = bone.bone.subtargetIK
+            constraint.track_axis = "TRACK_Y"
+            constraint.head_tail = 0.5
+            # generate jaw control custom shape
+            self.generateCustomBoneShape(boneControl, collection, boneShape.rectangle(2.5, 2.5, 0), redGroup, False)
 
-        # Generate Face Eyelid Control Bone Humanoid
-        EyelidUpperControlHumanoidVertices = [(0.2574883699417114, 2.849847078323364e-07, 1.8610592178447405e-07), (-0.25748831033706665, 2.849847078323364e-07, -6.331407575999037e-07), (0.08769719302654266, 2.849847078323364e-07, 0.22647202014923096), (0.2574883699417114, 2.849847078323364e-07, 0.05668110400438309), (-0.08769707381725311, 2.849847078323364e-07, 0.22647172212600708), (-0.25748831033706665, 2.849847078323364e-07, 0.056680239737033844)]
-        EyelidLowerControlHumanoidVertices = [(-0.2574883699417114, 2.849847078323364e-07, -2.086162567138672e-07), (0.25748831033706665, 2.849847078323364e-07, 6.556510925292969e-07), (-0.08769716322422028, 2.849847078323364e-07, -0.22647202014923096), (-0.2574883699417114, 2.849847078323364e-07, -0.05668112635612488), (0.0876971036195755, 2.849847078323364e-07, -0.22647172212600708), (0.25748831033706665, 2.849847078323364e-07, -0.05668021738529205)]
-        EyelidControlHumanoidEdges = [(0, 1), (2, 3), (4, 5), (2, 4), (3, 0), (5, 1)]
-        # FACE_EYELID_UPPER_HUMAN and FACE_EYELID_LOWER_HUMAN
-        for bone in [bone for bone in poseBones if bone.get("UE4RIGTYPE") in ["FACE_EYELID_UPPER_HUMAN", "FACE_EYELID_LOWER_HUMAN"] and bone.get("BONE_CONTROL")]:
-            boneControl = self.poseBone(bone.get("BONE_CONTROL"))
-            # constraint
-            constraints = bone.constraints.new(type="LIMIT_LOCATION")
-            constraints.name = "LIMIT_LOCATION"
-            constraints.show_expanded = False
-            constraints.use_min_y = True
-            constraints.use_min_x = True
-            constraints.use_min_z = True
-            constraints.use_max_y = True
-            constraints.use_max_x = True
-            constraints.use_max_z = True
-            constraints.use_transform_limit = True
-            constraints.owner_space = "LOCAL_WITH_PARENT"
+        # EYE
+        for bone in [bone for bone in poseBones if bone.bone.UE4RIGTYPE == "EYE"]:
+            boneControl = self.poseBone(bone.bone.subtargetIK)
+            # generate eye custom shape
+            getBoneShape = getattr(boneShape, bone.bone.customShapeType)
+            getBoneShapeParam = bone.bone.customShapeParam[:len(inspect.getfullargspec(getBoneShape)[0])]
+            self.generateCustomBoneShape(bone, collection, getBoneShape(*getBoneShapeParam), greenGroup, False)
+            # generate eye control custom shape
+            self.generateCustomBoneShape(boneControl, collection, boneShape.circle(16, 1, 0), redGroup, False)
 
-            constraints = bone.constraints.new(type="CHILD_OF")
-            constraints.name = "LID_PARENT"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = boneControl.parent.name
-            # constraints.mute = True
+            lookConstraint = bone.constraints.new("DAMPED_TRACK")
+            lookConstraint.name = "LOOK_CONTROL"
+            lookConstraint.show_expanded = False
+            lookConstraint.target = self.activeObject
+            lookConstraint.subtarget = bone.bone.subtargetIK
+            lookConstraint.track_axis = "TRACK_Y"
 
-            constraints = bone.constraints.new(type="COPY_LOCATION")
-            constraints.name = "LOCATION"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("BONE_CONTROL")
-            constraints.target_space = "LOCAL"
-            constraints.owner_space = "LOCAL"
-            constraints.use_offset = True
+            for part in ["UPPER", "LOWER"]:
+                eyelidRotation = self.poseBone(bone.name.replace("_TWEAK", "_EYELID_" + part + "_ROTATION"))
+                eyelidRotation.lock_location = (True, True, True)
+                # generate eyelid rotation control custom shape
+                self.generateCustomBoneShape(eyelidRotation, collection, boneShape.rectangle(0.5, 0.5, 0), redGroup, False)
+                eyelidRotation.custom_shape_transform = self.poseBone(bone.name.replace("_TWEAK", "_EYELID_" + part + "_PIVOT_ROTATION"))
 
-            constraints = bone.constraints.new(type="COPY_SCALE")
-            constraints.name = "SCALE"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("BONE_CONTROL")
-            constraints.target_space = "LOCAL"
-            constraints.owner_space = "LOCAL"
+            for eyelid in [eyelid for eyelid in bone.children if eyelid.bone.UE4RIGTYPE in ["EYELID_UPPER", "EYELID_LOWER"]]:
+                eyelidControl = self.poseBone(eyelid.name.replace("_TWEAK", "_CONTROL"))
+                constraint = eyelid.constraints.new(type="COPY_TRANSFORMS")
+                constraint.name = "TRANSFORM"
+                constraint.show_expanded = False
+                constraint.target = self.activeObject
+                constraint.subtarget = eyelid.bone.subtargetIK
+                constraint.mix_mode = "REPLACE"
+                constraint.target_space = "POSE"
+                constraint.owner_space = "POSE"
+                # generate eyelid control custom shape
+                self.generateCustomBoneShape(eyelidControl, collection, boneShape.block(0.5, 0.5, -0.25, 0.25), greenGroup, False)
 
-            constraints = bone.constraints.new(type="COPY_ROTATION")
-            constraints.name = "ROTATION"
-            constraints.show_expanded = False
-            constraints.target = self.activeObject
-            constraints.subtarget = bone.get("BONE_CONTROL")
-            constraints.mix_mode = "REPLACE"
-            constraints.target_space = "LOCAL_WITH_PARENT"
-            constraints.owner_space = "LOCAL_WITH_PARENT"
-
-            # custom shape
-            mesh = bpy.data.meshes.new("UE4WSBoneShape_" + boneControl.name)
-            objFaceEyelidControl = bpy.data.objects.new(mesh.name,mesh)
-            collection.objects.link(objFaceEyelidControl)
-            mesh.from_pydata((EyelidLowerControlHumanoidVertices, EyelidUpperControlHumanoidVertices)[bone.get("UE4RIGTYPE") == "FACE_EYELID_UPPER_HUMAN"], EyelidControlHumanoidEdges, [])
-            boneControl.custom_shape = objFaceEyelidControl
-            boneControl.bone_group= yellowGroup
-
-        bpy.ops.armature.armature_layers(layers=(True, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
+        bpy.ops.armature.armature_layers(layers=(True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
         bpy.ops.pose.select_all(action="DESELECT")
         bpy.ops.object.mode_set(mode="OBJECT")
         # Deselect all object
@@ -2151,31 +2314,10 @@ class BoneManipulation:
         bpy.ops.object.transform_apply(location = False, scale = True, rotation = False)
         self.activeObject.scale = (0.01, 0.01, 0.01)
         self.activeObject.select_set(state=False)
-
-        # set inverse for eyelid and look control
-        bpy.ops.object.mode_set(mode="POSE")
-        for pbone, constraint in [(bone, bone.constraints.get("LID_PARENT")) for bone in poseBones if bone.get("UE4RIGTYPE") in ["FACE_EYELID_UPPER_HUMAN", "FACE_EYELID_LOWER_HUMAN"] and bone.constraints.get("LID_PARENT")]:
-            # show third layer
-            self.activeObject.data.layers[2] = True
-            context_copy = bpy.context.copy()
-            context_copy["constraint"] = constraint
-            self.activeObject.data.bones.active = pbone.bone
-            bpy.ops.constraint.childof_set_inverse(context_copy, constraint=constraint.name, owner="BONE")
-            # hide third layer
-            self.activeObject.data.layers[2] = False
-        for pbone, constraint in [(bone, bone.constraints.get("LOOK_CONTROL_PARENT")) for bone in poseBones if bone.get("UE4RIGTYPE") == "FACE_LOOK_CONTROL" and bone.constraints.get("LOOK_CONTROL_PARENT")]:
-            # show third layer
-            self.activeObject.data.layers[2] = True
-            context_copy = bpy.context.copy()
-            context_copy["constraint"] = constraint
-            self.activeObject.data.bones.active = pbone.bone
-            bpy.ops.constraint.childof_set_inverse(context_copy, constraint=constraint.name, owner="BONE")
-            # hide third layer
-            self.activeObject.data.layers[2] = False
-        bpy.ops.object.mode_set(mode="OBJECT")
+        self.activeObject.lock_scale = [True, True, True]
 
         self.activeObject.show_in_front = False
-        del self.activeObject["UE4RIG"]
-        self.activeObject["UE4RIGGED"] = True
+        self.activeObject.data.UE4RIG = False
+        self.activeObject.data.UE4RIGGED = True
 
         bpy.ops.object.mode_set(mode=oldMode)

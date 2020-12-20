@@ -4,9 +4,307 @@ import time
 import re
 import bpy
 from mathutils import Matrix
-from bpy.types import (Panel, Operator)
-from bpy.props import (EnumProperty, StringProperty)
+from bpy.types import (Panel, Operator, Menu)
+from bpy.props import (EnumProperty, FloatProperty, FloatVectorProperty, StringProperty, BoolProperty)
 from . UE4WS_CharacterBoneManipulation import (BoneManipulation)
+
+# Extend Armature Menu [Shift+A]
+
+class UE4WORKSPACE_MT_skeleton_preset_submenu(Menu):
+    bl_idname = "UE4WORKSPACE_MT_skeleton_preset_submenu"
+    bl_label = "Skeleton Preset"
+    bl_options = {"UNDO"}
+
+    def draw(self, context):
+        layout = self.layout
+
+        layout.operator("ue4workspace.importunrealenginerig", icon="GROUP_BONE", text="From Scratch")
+        layout.separator()
+        layout.label(icon="PRESET", text="Preset")
+        openFile = open(os.path.join(os.path.dirname(__file__), "Data", "skeletonPreset.json"), "r")
+        jsonSetting = openFile.read()
+        openFile.close()
+        jsonSetting = json.loads(jsonSetting)
+
+        for key, setting in jsonSetting["skeleton"].items():
+            layout.operator("ue4workspace.importunrealenginerig", icon="LAYER_ACTIVE", text=setting["name"]).presetKey = key
+
+def extendLayout(self, context):
+    self.layout.menu("UE4WORKSPACE_MT_skeleton_preset_submenu", text="Skeleton Preset", icon="BONE_DATA")
+
+# export append type
+appendType = [
+    ("VIEW3D_MT_armature_add", extendLayout)
+]
+
+# PROPS
+
+Props = [
+    {
+        "type": "armature",
+        "name": "UE4RIG",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "armature",
+        "name": "UE4RIGGED",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "armature",
+        "name": "UE4RIGTYPE",
+        "value": EnumProperty(
+            items=[
+                ("HUMANOID", "HUMANOID", "Humanoid Skeleton Compatible With Unreal Engine Mannequin")
+            ],
+            default="HUMANOID"
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "UE4RIGTYPE",
+        "value": StringProperty(
+            default=""
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "rotateBone",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "rotationRadian",
+        "value": FloatProperty(
+            subtype="ANGLE",
+            default=0.0
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "orientAxis",
+        "value": EnumProperty(
+            items=[
+                ("X", "X", ""),
+                ("Y", "Y", ""),
+                ("Z", "Z", "")
+            ],
+            default="X"
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "orientRoll",
+        "value": FloatProperty(
+            subtype="ANGLE",
+            default=0.0
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "subtargetRotation",
+        "value": StringProperty(
+            default=""
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "subtargetIK",
+        "value": StringProperty(
+            default=""
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "subtargetPole",
+        "value": StringProperty(
+            default=""
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "footBone",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "toeBone",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "handBone",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "boneHasFloor",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "armature",
+        "name": "hideFK",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "armature",
+        "name": "hideVis",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "stretchBoneTarget",
+        "value": StringProperty(
+            default=""
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "controlFingerIK",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "controlIK",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "switchIK",
+        "value": EnumProperty(
+            items=[
+                ("IK", "IK", "Inverse Kinematic Mode"),
+                ("FK", "FK", "Forward Kinematic Mode")
+            ],
+            default="IK"
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "IKLastMatrix",
+        "value": FloatVectorProperty(
+            size=16,
+            subtype="MATRIX"
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "pointABoneIK",
+        "value": StringProperty(
+            default=""
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "pointBBoneIK",
+        "value": StringProperty(
+            default=""
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "stretchBone",
+        "value": FloatProperty(
+            name="Stretch Bone",
+            default=0.0,
+            min=0.0,
+            max=1.0
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "stretchBoneMode",
+        "value": EnumProperty(
+            items=[
+                ("VOLUME_XZX", "XZ", ""),
+                ("VOLUME_X", "X", ""),
+                ("VOLUME_Z", "Z", ""),
+                ("NO_VOLUME", "None", "")
+            ],
+            default="NO_VOLUME"
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "customShape",
+        "value": BoolProperty(
+            default=False
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "customShapeType",
+        "value": EnumProperty(
+            items=[
+                ("block", "Block", ""),
+                ("sphere", "Sphere", ""),
+                ("circle", "Circle", "")
+            ],
+            default="block"
+        ),
+        "resetVariable": False
+    },
+    {
+        "type": "bone",
+        "name": "customShapeParam",
+        "value": FloatVectorProperty(
+            size=10,
+            default=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        ),
+        "resetVariable": False
+    }
+]
+
+# PANEL
 
 class PANEL(Panel):
     bl_idname = "UE4WORKSPACE_PT_CharacterPanel"
@@ -36,7 +334,7 @@ class PANEL(Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("ue4workspace.importunrealenginerig",icon="ARMATURE_DATA", text="Import Skeleton")
+        row.operator("ue4workspace.importunrealenginerig",icon="ARMATURE_DATA", text="Import Skeleton").presetKey = preferences.CHAR_SkeletonPreset
 
         col = layout.column()
         row = col.row()
@@ -298,6 +596,12 @@ class OP_IMPORTARMATURE(Operator):
         default=True
         )
 
+    presetKey: StringProperty(
+        name="Preset",
+        default="HUMANOID",
+        options={"HIDDEN"}
+    )
+
     addonVersion = None
 
     @classmethod
@@ -309,22 +613,23 @@ class OP_IMPORTARMATURE(Operator):
         jsonSetting = open(os.path.join(os.path.dirname(__file__), "Data", "skeletonPreset.json"), "r").read()
         jsonSetting = json.loads(jsonSetting)
 
-        skeleton = jsonSetting["skeleton"].get(preferences.CHAR_SkeletonPreset, False)
+        skeleton = jsonSetting["skeleton"].get(self.presetKey, False)
         if skeleton:
-            if skeleton.get("characterPlacement", False) and self.isImportCharacterPlacement:
-                path = os.path.dirname(os.path.realpath(__file__))
-                directory = os.path.join(path, "Data","BLEND.blend", "Object")
-                bpy.ops.wm.append(filename=skeleton["characterPlacement"], directory=directory, active_collection=True, autoselect=False)
+            # if skeleton.get("characterPlacement", False) and self.isImportCharacterPlacement:
+            #     path = os.path.dirname(os.path.realpath(__file__))
+            #     directory = os.path.join(path, "Data","BLEND.blend", "Object")
+            #     bpy.ops.wm.append(filename=skeleton["characterPlacement"], directory=directory, active_collection=True, autoselect=False)
 
             oldMode = context.mode
-            armature = bpy.data.armatures.new(preferences.CHAR_SkeletonPreset)
-            armature_object = bpy.data.objects.new(preferences.CHAR_SkeletonPreset, armature)
+            armature = bpy.data.armatures.new(skeleton["name"])
+            armature_object = bpy.data.objects.new(skeleton["name"], armature)
             armature_object.show_in_front = True
             for key, val in skeleton["prop"].items():
-                armature_object[key] = val
+                if hasattr(armature, key):
+                    setattr(armature, key, val)
             armature_object.data.layers[31] = True
-            armature_object["UE4RIGVERSION"] = self.addonVersion
-            context.scene.collection.objects.link(armature_object)
+            # armature_object["UE4RIGVERSION"] = self.addonVersion
+            context.view_layer.active_layer_collection.collection.objects.link(armature_object)
 
             context.view_layer.objects.active = armature_object
             bpy.ops.object.select_all(action="DESELECT")
@@ -339,18 +644,25 @@ class OP_IMPORTARMATURE(Operator):
                 newBone.head = value["head"]
                 newBone.tail = value["tail"]
                 newBone.roll = value["roll"]
+                newBone.use_connect = value["use_connect"]
                 newBone.parent = parentList[value["parent"]] if value["parent"] is not None else None
-                newBone.use_connect = value["connect"]
-                newBone.use_inherit_rotation = value.get("use_inherit_rotation", True)
                 newBone.use_deform = value.get("use_deform", True)
 
-                for key, propValue in value["prop"].items():
-                    if key == "boneOrient":
-                        newBone[key] = "|".join(str(x) for x in propValue)
-                    else:
-                        newBone[key] = propValue
-
             bpy.ops.armature.select_all(action="DESELECT")
+            bpy.ops.object.mode_set(mode="OBJECT")
+
+            for (boneName, value) in boneLists.items():
+                boneData = armature.bones[boneName]
+                boneData.UE4RIGTYPE = value["UE4RIGTYPE"]
+                boneData.rotateBone = value["rotateBone"]
+                boneData.rotationRadian = value["rotationRadian"]
+                boneData.orientAxis = value["orientAxis"]
+                boneData.orientRoll = value["orientRoll"]
+
+                boneData.customShape = value["customShape"]
+                boneData.customShapeType = value["customShapeType"]
+                boneData.customShapeParam = value["customShapeParam"]
+
             bpy.ops.object.mode_set(mode=oldMode)
 
         # try:
@@ -407,7 +719,7 @@ class OP_CharacterGenerateRig(Operator):
 
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.mode == "OBJECT"
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.data.UE4RIG and context.mode == "OBJECT"
 
     def execute(self, context):
         armature = context.active_object
@@ -450,7 +762,7 @@ class OP_CharacterRotateBone(Operator):
 
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG")
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.data.UE4RIG
 
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
@@ -475,7 +787,7 @@ class OP_CharacterRemoveTemporaryBone(Operator):
     
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.active_object.get("UE4RIGHASTEMPBONE", False)
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.data.UE4RIG and context.active_object.get("UE4RIGHASTEMPBONE", False)
 
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
@@ -504,13 +816,13 @@ class OP_CharacterAddTwistBone(Operator):
 
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.mode == "EDIT_ARMATURE" and context.active_bone is not None and (context.active_bone.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"] or context.active_bone.parent.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"])
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.data.UE4RIG and context.mode == "EDIT_ARMATURE" and context.active_bone is not None and (context.active_bone.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"] or context.active_bone.get("UE4RIGTYPE") == "" and context.active_bone.parent is not None and context.active_bone.parent.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"])
 
     def execute(self, context):
         editBones = context.active_object.data.edit_bones
         activeBone = context.active_bone
         bpy.ops.armature.select_all(action="DESELECT")
-        for bone in [child for child in activeBone.children if "_twist_" in child.name]:
+        for bone in [child for child in activeBone.children if child.get("UE4RIGTYPE") == "TWIST_BONE" or "_twist_" in child.name]:
             editBones.remove(bone)
         if activeBone.parent is not None and activeBone.use_connect:
             activeBone.parent.select_tail = True
@@ -533,11 +845,11 @@ class OP_CharacterAddTwistBone(Operator):
                 bone.select_head = True
                 bone.select_tail = True
                 for key in parent.keys():
-                    if key == "UE4RIGTYPE":
-                        if bone.get(key, False):
-                            del bone[key]
-                    else:
-                        bone[key] = parent[key]
+                    bone[key] = parent[key]
+                bone["UE4RIGTYPE"] = "TWIST_BONE"
+                bone["customShape"] = 1
+                bone["customShapeType"] = 2
+                bone["customShapeParam"] = [16.0, 11.0, 5.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
                 if not activeBone.get("UE4RIGTYPE") == "ARM_HUMAN":
                     bpy.ops.transform.translate(value=(0, parent.length/2, 0), orient_type="NORMAL", orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type="GLOBAL", mirror=True, use_proportional_edit=False, proportional_edit_falloff="SMOOTH", proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
                 bpy.ops.armature.select_all(action="DESELECT")
@@ -558,11 +870,11 @@ class OP_CharacterAddTwistBone(Operator):
                     bone.name = (arrBoneName[0] + "_twist_01_" + side, arrBoneName[0] + "_twist_temp_" + side)[isReverse]
                     bone.parent = parent
                     for key in parent.keys():
-                        if key == "UE4RIGTYPE":
-                            if bone.get(key, False):
-                                del bone[key]
-                        else:
-                            bone[key] = parent[key]
+                        bone[key] = parent[key]
+                    bone["UE4RIGTYPE"] = "TWIST_BONE"
+                    bone["customShape"] = 1
+                    bone["customShapeType"] = 2
+                    bone["customShapeParam"] = [16.0, 11.0, 5.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
                     for index, bn in enumerate((bone.children_recursive, bone.children_recursive[::-1])[isReverse], start=2):
                         if isReverse:
                             index -= 1
@@ -570,11 +882,11 @@ class OP_CharacterAddTwistBone(Operator):
                         bn.name = arrBoneName[0] + "_twist_" + ("", "0")[index < 10] + str(index) + "_" + side
                         bn.parent = parent
                         for key in activeBone.keys():
-                            if key == "UE4RIGTYPE":
-                                if bn.get(key, False):
-                                    del bn[key]
-                            else:
-                                bn[key] = activeBone[key]
+                            bn[key] = activeBone[key]
+                            bn["UE4RIGTYPE"] = "TWIST_BONE"
+                            bn["customShape"] = 1
+                            bn["customShapeType"] = 2
+                            bn["customShapeParam"] = [16.0, 11.0, 5.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
                     editBones.active = activeBone
                     bpy.ops.armature.select_all(action="DESELECT")
                     if isReverse:
@@ -590,13 +902,13 @@ class OP_CharacterRemoveTwistBone(Operator):
 
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.get("UE4RIG") and context.mode == "EDIT_ARMATURE" and context.active_bone is not None and (context.active_bone.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"] or context.active_bone.parent.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"]) and len([child for child in context.active_bone.children if child.name.split("_")[1] == "twist"]) != 0
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.data.UE4RIG and context.mode == "EDIT_ARMATURE" and context.active_bone is not None and (context.active_bone.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"] or context.active_bone.get("UE4RIGTYPE") == "" and context.active_bone.parent is not None and context.active_bone.parent.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"])
 
     def execute(self, context):
         editBones = context.active_object.data.edit_bones
         activeBone = context.active_bone
         bpy.ops.armature.select_all(action="DESELECT")
-        for bone in [child for child in activeBone.children if child.name.split("_")[1] == "twist"]:
+        for bone in [child for child in activeBone.children if child.get("UE4RIGTYPE") == "TWIST_BONE" or child.name.split("_")[1] == "twist"]:
             editBones.remove(bone)
         try:
             bpy.ops.ue4workspace.popup("INVOKE_DEFAULT", msg="Remove Twist Complete")

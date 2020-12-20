@@ -1,7 +1,7 @@
 import os
 import bpy
 from mathutils import (Matrix, Quaternion, Vector)
-from bpy.props import (EnumProperty, StringProperty, PointerProperty)
+from bpy.props import (EnumProperty, BoolProperty, IntProperty, StringProperty, PointerProperty)
 from bpy.types import (Panel, Operator)
 
 class PANEL(Panel):
@@ -15,13 +15,15 @@ class PANEL(Panel):
 
     @classmethod
     def poll(self, context):
-        return context.active_object is not None and context.active_object.get("UE4RIG")
+        return context.active_object is not None and context.active_object.type == "ARMATURE" and context.active_object.data.UE4RIG
 
     def draw(self, context):
         layout = self.layout
         preferences = context.preferences.addons[__package__].preferences
         activeObject = context.active_object
+        activePoseBone = context.active_pose_bone
 
+        layout.label(text="RIG")
         row = layout.row()
         row.scale_y = 1.5
         # operator location on UE4WS_Character.py
@@ -30,28 +32,60 @@ class PANEL(Panel):
         row.scale_y = 1.5
         # operator location on UE4WS_Character.py
         row.operator("ue4workspace.rotatebone",icon="BONE_DATA", text=("Create Preview Orient Bone", "Update Preview Orient Bone")[activeObject.get("UE4RIGHASTEMPBONE", False)])
-        if activeObject.get("UE4RIGHASTEMPBONE", False):
-            row = layout.row()
-            row.scale_y = 1.5
-            # operator location on UE4WS_Character.py
-            row.operator("ue4workspace.characterremovetemporarybone",icon="BONE_DATA", text="Remove Preview Orient Bone")
+
+        row = layout.row()
+        row.scale_y = 1.5
+        # operator location on UE4WS_Character.py
+        row.operator("ue4workspace.characterremovetemporarybone",icon="BONE_DATA", text="Remove Preview Orient Bone")
+
+        layout.label(text="TWIST BONE")
         # add twist bone
-        if context.mode == "EDIT_ARMATURE" and context.active_bone is not None and (context.active_bone.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"] or context.active_bone.parent is not None and context.active_bone.parent.get("UE4RIGTYPE") in ["LEG_HUMAN", "ARM_HUMAN"]) and not "_twist_" in context.active_bone.name:
-            row = layout.row()
-            row.scale_y = 1.5
-            # operator location on UE4WS_Character.py
-            row.operator("ue4workspace.addtwistbone",icon="BONE_DATA", text="Add Twist Bone")
-            if len([child for child in context.active_bone.children if child.name.split("_")[1] == "twist"]) != 0:
-                row = layout.row()
-                row.scale_y = 1.5
-                # operator location on UE4WS_Character.py
-                row.operator("ue4workspace.removetwistbone",icon="BONE_DATA", text="Remove Twist Bone")
-        if context.mode == "POSE":
-            row = layout.row(align=True)
-            row.scale_y = 1.5
-            # operator location on UE4WS_Character.py
-            row.operator("ue4workspace.posetoapose", text="Pose to A-Pose")
-            row.operator("ue4workspace.applypose", text="Apply Pose")
+        row = layout.row(align=True)
+        row.scale_y = 1.5
+        # operator location on UE4WS_Character.py
+        row.operator("ue4workspace.addtwistbone", text="Add Twist")
+        # operator location on UE4WS_Character.py
+        row.operator("ue4workspace.removetwistbone", text="Remove Twist")
+
+        layout.label(text="POSE")
+        row = layout.row(align=True)
+        row.scale_y = 1.5
+        row.operator("ue4workspace.posetoapose", text="Pose to A-Pose")
+        row.operator("ue4workspace.applypose", text="Apply Pose")
+
+        layout.label(text="COMPONENT TO ADD")
+        col = layout.column(align=True)
+        col.scale_y = 1.5
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponentcopy", text="COPY_BONE")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponenteyelid", text="EYELID_UPPER").eyelidPosition = ("U")
+        row.operator("ue4workspace.bonecomponenteyelid", text="EYELID_LOWER").eyelidPosition = ("L")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponenteye", text="EYE")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponentlandmark", text="LANDMARK")
+        row.operator("ue4workspace.bonecomponentjaw", text="JAW")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponentfaceattach", text="FACE_ATTACH")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponenthead", text="HEAD")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponentneck", text="NECK")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponentarmhuman", text="ARM_HUMAN")
+        row.operator("ue4workspace.bonecomponentfinger", text="FINGER")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponentspine", text="SPINE")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponentpelvis", text="PELVIS")
+        row = col.row(align=True)
+        row.operator("ue4workspace.bonecomponentleghuman", text="LEG_HUMAN")
+        row = col.row(align=True)
+        row.operator("ue4workspace.rotatebone", text="TAIL")
+        row.operator("ue4workspace.bonecomponentchain", text="CHAIN")
+        row = col.row(align=True)
+        row.operator("ue4workspace.rotatebone", text="PROP")
 
 # bone rotation (Quaternion)
 APoseBoneRotation = {
@@ -118,7 +152,7 @@ class OP_PoseToAPose(Operator):
     @classmethod
     def poll(cls, context):
         activeObject = context.active_object
-        return activeObject is not None and activeObject.get("UE4RIG") and context.mode == "POSE"
+        return context.mode == "POSE" and activeObject is not None and activeObject.data.UE4RIG
 
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
@@ -145,7 +179,7 @@ class OP_ApplyPose(Operator):
     @classmethod
     def poll(cls, context):
         activeObject = context.active_object
-        return activeObject is not None and activeObject.get("UE4RIG") and context.mode == "POSE"
+        return context.mode == "POSE" and activeObject is not None and activeObject.data.UE4RIG
 
     def execute(self, context):
         preferences = context.preferences.addons[__package__].preferences
@@ -179,9 +213,1980 @@ class OP_ApplyPose(Operator):
 
         return {"FINISHED"}
 
+# base bone component
+
+class OP_MixBoneComponent(Operator):
+    bl_options = {"UNDO", "REGISTER"}
+
+    @classmethod
+    def poll(cls, context):
+        activeObject = context.active_object
+        activeBone = context.active_bone
+        return context.mode == "EDIT_ARMATURE" and activeObject is not None and activeObject.data.UE4RIG
+
+    def buildName(self, listString = []):
+        string = []
+        listString = [a for a in listString if a != ""]
+        for name in listString:
+            string.append(name)
+        return "_".join(string)
+
+class OP_MixFaceAttachComponent(OP_MixBoneComponent):
+    @classmethod
+    def poll(cls, context):
+        activeObject = context.active_object
+        activeBone = context.active_bone
+        return context.mode == "EDIT_ARMATURE" and activeObject is not None and activeObject.data.UE4RIG and activeBone is not None and activeBone.get("UE4RIGTYPE") == "FACE_ATTACH"
+
+class OP_MixEyeComponent(OP_MixFaceAttachComponent):
+    @classmethod
+    def poll(cls, context):
+        activeObject = context.active_object
+        activeBone = context.active_bone
+        return context.mode == "EDIT_ARMATURE" and activeObject is not None and activeObject.data.UE4RIG and activeBone is not None and activeBone.get("UE4RIGTYPE") == "EYE"
+
+class OP_BoneComponent_Copy(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentcopy"
+    bl_label = "Add COPY_BONE"
+    bl_description = "Add Copy Bone Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="bone"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("NONE", "None", ""),
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("NONE")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        boneData = {
+            "NONE": (
+                # roll
+                0,
+                # rotationRadian
+                -1.5708,
+                # orientAxis
+                0,
+                # orientRoll
+                -1.5708
+            ),
+            "l": (
+                # roll
+                1.5708,
+                # rotationRadian
+                -1.5708,
+                # orientAxis
+                2,
+                # orientRoll
+                3.14159
+                ),
+            "r": (
+                # roll
+                -1.5708,
+                # rotationRadian
+                -1.5708,
+                # orientAxis
+                2,
+                # orientRoll
+                0.0
+                )
+        }
+
+        newBone = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (self.sideBone if self.sideBone != "NONE" else "")]))
+
+        roll, rotRad, orientAxis, orientRoll = boneData[self.sideBone]
+
+        newBone.head = context.scene.cursor.location
+        newBone.tail = context.scene.cursor.location + Vector((0.0, 0.0, 0.15))
+        newBone.roll = roll
+
+        newBone["UE4RIGTYPE"] = "COPY_BONE"
+        newBone["rotateBone"] = 1
+        newBone["rotationRadian"] = rotRad
+        newBone["orientAxis"] = orientAxis
+        newBone["orientRoll"] = orientRoll
+
+        newBone["customShape"] = 1
+        newBone["customShapeType"] = 0
+        newBone["customShapeParam"] = [10.0, 10.0, 0.0, 15.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        if self.parentToBone and activeBone:
+            newBone.parent = activeBone
+
+        editBones.active = newBone
+
+        if self.sideMirror and self.sideBone != "NONE":
+            newBoneSide = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, ("r" if self.sideBone == "l" else "l")]))
+
+            roll, rotRad, orientAxis, orientRoll = boneData[("r" if self.sideBone == "l" else "l")]
+
+            newBoneSide.head = newBone.head
+            newBoneSide.head.x = -newBone.head.x
+            newBoneSide.tail = newBone.tail
+            newBoneSide.tail.x = -newBone.tail.x
+            newBoneSide.roll = roll
+
+            newBoneSide["UE4RIGTYPE"] = "COPY_BONE"
+            newBoneSide["rotateBone"] = 1
+            newBoneSide["rotationRadian"] = rotRad
+            newBoneSide["orientAxis"] = orientAxis
+            newBoneSide["orientRoll"] = orientRoll
+
+            newBoneSide["customShape"] = 1
+            newBoneSide["customShapeType"] = 0
+            newBoneSide["customShapeParam"] = [10.0, 10.0, 0.0, 15.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                newBoneSide.parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Pelvis(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentpelvis"
+    bl_label = "Add PELVIS"
+    bl_description = "Add Pelvis Bone Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="pelvis"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("NONE", "None", ""),
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("NONE")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        newBone = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (self.sideBone if self.sideBone != "NONE" else "")]))
+
+        newBone.head = context.scene.cursor.location
+        newBone.tail = context.scene.cursor.location + Vector((0.0, 0.0, 0.2))
+        newBone.roll = 0
+
+        newBone["UE4RIGTYPE"] = "PELVIS"
+        newBone["rotateBone"] = 1
+        newBone["rotationRadian"] = -1.5708
+        newBone["orientAxis"] = 0
+        newBone["orientRoll"] = -1.5708
+
+        newBone["customShape"] = 1
+        newBone["customShapeType"] = 2
+        newBone["customShapeParam"] = [16.0, 25.0, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        if self.parentToBone and activeBone:
+            newBone.parent = activeBone
+
+        editBones.active = newBone
+
+        if self.sideMirror and self.sideBone != "NONE":
+            newBoneSide = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, ("r" if self.sideBone == "l" else "l")]))
+
+            newBoneSide.head = newBone.head
+            newBoneSide.head.x = -newBone.head.x
+            newBoneSide.tail = newBone.tail
+            newBoneSide.tail.x = -newBone.tail.x
+            newBoneSide.roll = 0
+
+            newBoneSide["UE4RIGTYPE"] = "PELVIS"
+            newBoneSide["rotateBone"] = 1
+            newBoneSide["rotationRadian"] = -1.5708
+            newBoneSide["orientAxis"] = 0
+            newBoneSide["orientRoll"] = -1.5708
+
+            newBoneSide["customShape"] = 1
+            newBoneSide["customShapeType"] = 2
+            newBoneSide["customShapeParam"] = [16.0, 25.0, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                newBoneSide.parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Spine(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentspine"
+    bl_label = "Add SPINE"
+    bl_description = "Add Spine Bone Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="spine"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("NONE", "None", ""),
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("NONE")
+    )
+
+    numberBone: IntProperty(
+        name="Number Bone",
+        min=1,
+        default=1
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        listBone = []
+        for index in range(1, self.numberBone+1):
+            newBone = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (("0" if index < 10 else "") + str(index)), (self.sideBone if self.sideBone != "NONE" else "")]))
+
+            newBone.head = context.scene.cursor.location
+            newBone.tail = context.scene.cursor.location + Vector((0.0, 0.0, 0.2 * index))
+            newBone.roll = 0
+
+            newBone["UE4RIGTYPE"] = "SPINE"
+            newBone["rotateBone"] = 1
+            newBone["rotationRadian"] = -1.5708
+            newBone["orientAxis"] = 0
+            newBone["orientRoll"] = -1.5708
+
+            newBone["customShape"] = 1
+            newBone["customShapeType"] = 2
+            newBone["customShapeParam"] = [16.0, 22.5, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            if listBone:
+                newBone.parent = listBone[index-2]
+                newBone.use_connect = True
+
+            listBone.append(newBone)
+
+        if self.parentToBone and activeBone:
+            listBone[0].parent = activeBone
+
+        editBones.active = listBone[0]
+
+        if self.sideMirror and self.sideBone != "NONE":
+            listBone = []
+            for index in range(1, self.numberBone+1):
+                newBoneSide = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (("0" if index < 10 else "") + str(index)), ("r" if self.sideBone == "l" else "l")]))
+
+                newBoneSide.head = context.scene.cursor.location
+                newBoneSide.head.x = -newBoneSide.head.x
+                newBoneSide.tail = context.scene.cursor.location + Vector((0.0, 0.0, 0.2 * index))
+                newBoneSide.tail.x = -newBoneSide.tail.x
+                newBoneSide.roll = 0
+
+                newBoneSide["UE4RIGTYPE"] = "SPINE"
+                newBoneSide["rotateBone"] = 1
+                newBoneSide["rotationRadian"] = -1.5708
+                newBoneSide["orientAxis"] = 0
+                newBoneSide["orientRoll"] = -1.5708
+
+                newBoneSide["customShape"] = 1
+                newBoneSide["customShapeType"] = 2
+                newBoneSide["customShapeParam"] = [16.0, 22.5, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+                if listBone:
+                    newBoneSide.parent = listBone[index-2]
+                    newBoneSide.use_connect = True
+
+                listBone.append(newBoneSide)
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                listBone[0].parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Neck(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentneck"
+    bl_label = "Add NECK"
+    bl_description = "Add Neck Bone Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="neck"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("NONE", "None", ""),
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("NONE")
+    )
+
+    numberBone: IntProperty(
+        name="Number Bone",
+        min=1,
+        default=1
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        listBone = []
+
+        for index in range(1, self.numberBone+1):
+            newBone = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (("0" if index < 10 else "") + str(index)), (self.sideBone if self.sideBone != "NONE" else "")]))
+
+            newBone.head = context.scene.cursor.location
+            newBone.tail = context.scene.cursor.location + Vector((0.0, 0.0, 0.2 * index))
+            newBone.roll = 0
+
+            newBone["UE4RIGTYPE"] = "NECK"
+            newBone["rotateBone"] = 1
+            newBone["rotationRadian"] = -1.5708
+            newBone["orientAxis"] = 0
+            newBone["orientRoll"] = -1.5708
+
+            newBone["customShape"] = 1
+            newBone["customShapeType"] = 2
+            newBone["customShapeParam"] = [16.0, 10.0, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            if listBone:
+                newBone.parent = listBone[index-2]
+                newBone.use_connect = True
+
+            listBone.append(newBone)
+
+        if self.parentToBone and activeBone:
+            listBone[0].parent = activeBone
+
+        editBones.active = listBone[0]
+
+        if self.sideMirror and self.sideBone != "NONE":
+            listBone = []
+            for index in range(1, self.numberBone+1):
+                newBoneSide = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (("0" if index < 10 else "") + str(index)), ("r" if self.sideBone == "l" else "l")]))
+
+                newBoneSide.head = context.scene.cursor.location
+                newBoneSide.head.x = -newBoneSide.head.x
+                newBoneSide.tail = context.scene.cursor.location + Vector((0.0, 0.0, 0.2 * index))
+                newBoneSide.tail.x = -newBoneSide.tail.x
+                newBoneSide.roll = 0
+
+                newBoneSide["UE4RIGTYPE"] = "NECK"
+                newBoneSide["rotateBone"] = 1
+                newBoneSide["rotationRadian"] = -1.5708
+                newBoneSide["orientAxis"] = 0
+                newBoneSide["orientRoll"] = -1.5708
+
+                newBoneSide["customShape"] = 1
+                newBoneSide["customShapeType"] = 2
+                newBoneSide["customShapeParam"] = [16.0, 10.0, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+                if listBone:
+                    newBoneSide.parent = listBone[index-2]
+                    newBoneSide.use_connect = True
+
+                listBone.append(newBoneSide)
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                listBone[0].parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Head(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponenthead"
+    bl_label = "Add HEAD"
+    bl_description = "Add Head Bone Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="head"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("NONE", "None", ""),
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("NONE")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        newBone = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (self.sideBone if self.sideBone != "NONE" else "")]))
+
+        newBone.head = context.scene.cursor.location
+        newBone.tail = context.scene.cursor.location + Vector((0.0, 0.0, 0.2))
+        newBone.roll = 0
+
+        newBone["UE4RIGTYPE"] = "HEAD"
+        newBone["rotateBone"] = 1
+        newBone["rotationRadian"] = -1.5708
+        newBone["orientAxis"] = 0
+        newBone["orientRoll"] = -1.5708
+
+        newBone["customShape"] = 1
+        newBone["customShapeType"] = 0
+        newBone["customShapeParam"] = [14.0, 17.0, -2.0, 17.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        if self.parentToBone and activeBone:
+            newBone.parent = activeBone
+
+        editBones.active = newBone
+
+        if self.sideMirror and self.sideBone != "NONE":
+            newBoneSide = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, ("r" if self.sideBone == "l" else "l")]))
+
+            newBoneSide.head = newBone.head
+            newBoneSide.head.x = -newBone.head.x
+            newBoneSide.tail = newBone.tail
+            newBoneSide.tail.x = -newBone.tail.x
+            newBoneSide.roll = 0
+
+            newBoneSide["UE4RIGTYPE"] = "HEAD"
+            newBoneSide["rotateBone"] = 1
+            newBoneSide["rotationRadian"] = -1.5708
+            newBoneSide["orientAxis"] = 0
+            newBoneSide["orientRoll"] = -1.5708
+
+            newBoneSide["customShape"] = 1
+            newBoneSide["customShapeType"] = 0
+            newBoneSide["customShapeParam"] = [14.0, 17.0, -2.0, 17.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                newBoneSide.parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_FaceAttach(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentfaceattach"
+    bl_label = "Add FACE ATTACH"
+    bl_description = "Add Face Attach To Head Bone Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="faceAttach"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    @classmethod
+    def poll(cls, context):
+        activeObject = context.active_object
+        activeBone = context.active_bone
+        return context.mode == "EDIT_ARMATURE" and activeObject is not None and activeObject.data.UE4RIG and activeBone is not None and activeBone.get("UE4RIGTYPE") == "HEAD"
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        newBone = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName]))
+
+        newBone.head = activeBone.head
+        newBone.tail = activeBone.head + Vector((0.0, 0.2, 0.0))
+        newBone.roll = 0
+        newBone.use_deform = False
+
+        newBone["UE4RIGTYPE"] = "FACE_ATTACH"
+        newBone["rotateBone"] = 1
+        newBone["rotationRadian"] = 0
+        newBone["orientAxis"] = 0
+        newBone["orientRoll"] = -0.785398
+
+        newBone.parent = activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Jaw(OP_MixFaceAttachComponent):
+    bl_idname = "ue4workspace.bonecomponentjaw"
+    bl_label = "Add JAW"
+    bl_description = "Add Jaw Bone To faceAttach Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="jaw"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("C", "Center", ""),
+            ("L", "Left", ""),
+            ("R", "Right", "")
+        ],
+        default=("C")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        newBone = editBones.new(self.buildName([self.sideBone, self.prefixName, self.boneName, self.suffixName]))
+
+        newBone.head = context.scene.cursor.location
+        newBone.tail = context.scene.cursor.location + Vector((0.0, -0.125, -0.075))
+        newBone.roll = 0
+
+        newBone["UE4RIGTYPE"] = "JAW"
+        newBone["rotateBone"] = 1
+        newBone["rotationRadian"] = 0
+        newBone["orientAxis"] = 0
+        newBone["orientRoll"] = 0
+
+        newBone["customShape"] = 1
+        newBone["customShapeType"] = 0
+        newBone["customShapeParam"] = [10.0, 1.0, 0.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        newBone.parent = activeBone
+
+        if self.sideMirror and self.sideBone != "C":
+            newBoneSide = editBones.new(self.buildName([("R" if self.sideBone == "L" else "L"), self.prefixName, self.boneName, self.suffixName]))
+
+            newBoneSide.head = context.scene.cursor.location
+            newBoneSide.head.x = -newBoneSide.head.x
+            newBoneSide.tail = context.scene.cursor.location + Vector((0.0, -0.125, -0.075))
+            newBoneSide.tail.x = -newBoneSide.tail.x
+            newBoneSide.roll = 0
+
+            newBoneSide["UE4RIGTYPE"] = "JAW"
+            newBoneSide["rotateBone"] = 1
+            newBoneSide["rotationRadian"] = 0
+            newBoneSide["orientAxis"] = 0
+            newBoneSide["orientRoll"] = 0
+
+            newBoneSide["customShape"] = 1
+            newBoneSide["customShapeType"] = 0
+            newBoneSide["customShapeParam"] = [10.0, 1.0, 0.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            parentSide = editBones.get(("R" if self.sideBone == "L" else "L") + activeBone.name[1:])
+            newBoneSide.parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Landmark(OP_MixFaceAttachComponent):
+    bl_idname = "ue4workspace.bonecomponentlandmark"
+    bl_label = "Add LANDMARK"
+    bl_description = "Add Landmark Bone To faceAttach Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="landmark"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("C", "Center", ""),
+            ("L", "Left", ""),
+            ("R", "Right", "")
+        ],
+        default=("C")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    @classmethod
+    def poll(cls, context):
+        activeObject = context.active_object
+        activeBone = context.active_bone
+        return context.mode == "EDIT_ARMATURE" and activeObject is not None and activeObject.data.UE4RIG and activeBone is not None and activeBone.get("UE4RIGTYPE") in ["FACE_ATTACH", "JAW"]
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        newBone = editBones.new(self.buildName([self.sideBone, self.prefixName, self.boneName, self.suffixName]))
+
+        newBone.head = context.scene.cursor.location
+        newBone.tail = context.scene.cursor.location + Vector((0.0, 0.015, 0.0))
+        newBone.roll = 0
+
+        newBone["UE4RIGTYPE"] = "LANDMARK"
+        newBone["rotateBone"] = 1
+        newBone["rotationRadian"] = 0
+        newBone["orientAxis"] = 0
+        newBone["orientRoll"] = 0
+
+        newBone["customShape"] = 1
+        newBone["customShapeType"] = 0
+        newBone["customShapeParam"] = [0.5, 0.5, -0.25, 0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        newBone.parent = activeBone
+
+        if self.sideMirror and self.sideBone != "C":
+            newBoneSide = editBones.new(self.buildName([("R" if self.sideBone == "L" else "L"), self.prefixName, self.boneName, self.suffixName]))
+
+            newBoneSide.head = context.scene.cursor.location
+            newBoneSide.head.x = -newBoneSide.head.x
+            newBoneSide.tail = context.scene.cursor.location + Vector((0.0, 0.015, 0.0))
+            newBoneSide.tail.x = -newBoneSide.tail.x
+            newBoneSide.roll = 0
+
+            newBoneSide["UE4RIGTYPE"] = "LANDMARK"
+            newBoneSide["rotateBone"] = 1
+            newBoneSide["rotationRadian"] = 0
+            newBoneSide["orientAxis"] = 0
+            newBoneSide["orientRoll"] = 0
+
+            newBoneSide["customShape"] = 1
+            newBoneSide["customShapeType"] = 0
+            newBoneSide["customShapeParam"] = [0.5, 0.5, -0.25, 0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            parentSide = editBones.get(("R" if self.sideBone == "L" else "L") + activeBone.name[1:])
+            newBoneSide.parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Eye(OP_MixFaceAttachComponent):
+    bl_idname = "ue4workspace.bonecomponenteye"
+    bl_label = "Add EYE"
+    bl_description = "Add Eye Bone To faceAttach Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="eye"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("C", "Center", ""),
+            ("L", "Left", ""),
+            ("R", "Right", "")
+        ],
+        default=("C")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        newBone = editBones.new(self.buildName([self.sideBone, self.prefixName, self.boneName, self.suffixName]))
+
+        newBone.head = context.scene.cursor.location
+        newBone.tail = context.scene.cursor.location + Vector((0.0, -0.015, 0.0))
+        newBone.roll = 0
+
+        newBone["UE4RIGTYPE"] = "EYE"
+        newBone["rotateBone"] = 1
+        newBone["rotationRadian"] = 0
+        newBone["orientAxis"] = 0
+        newBone["orientRoll"] = 0
+
+        newBone["customShape"] = 1
+        newBone["customShapeType"] = 1
+        newBone["customShapeParam"] = [8.0, 4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        newBone.parent = activeBone
+
+        if self.sideMirror and self.sideBone != "C":
+            newBoneSide = editBones.new(self.buildName([("R" if self.sideBone == "L" else "L"), self.prefixName, self.boneName, self.suffixName]))
+
+            newBoneSide.head = context.scene.cursor.location
+            newBoneSide.head.x = -newBoneSide.head.x
+            newBoneSide.tail = context.scene.cursor.location + Vector((0.0, -0.015, 0.0))
+            newBoneSide.tail.x = -newBoneSide.tail.x
+            newBoneSide.roll = 0
+
+            newBoneSide["UE4RIGTYPE"] = "EYE"
+            newBoneSide["rotateBone"] = 1
+            newBoneSide["rotationRadian"] = 0
+            newBoneSide["orientAxis"] = 0
+            newBoneSide["orientRoll"] = 0
+
+            newBoneSide["customShape"] = 1
+            newBoneSide["customShapeType"] = 1
+            newBoneSide["customShapeParam"] = [8.0, 4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            parentSide = editBones.get(("R" if self.sideBone == "L" else "L") + activeBone.name[1:])
+            newBoneSide.parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Eyelid(OP_MixEyeComponent):
+    bl_idname = "ue4workspace.bonecomponenteyelid"
+    bl_label = "Add EYELID"
+    bl_description = "Add Eyelid Bone To Eye Component"
+
+    eyelidPosition: EnumProperty(
+        name="Side Name",
+        items=[
+            ("U", "Upper", ""),
+            ("L", "Lower", "")
+        ],
+        options={"HIDDEN"},
+        default=("U")
+    )
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="eye_lid"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("C", "Center", ""),
+            ("L", "Left", ""),
+            ("R", "Right", "")
+        ],
+        default=("C")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        newBone = editBones.new(self.buildName([self.sideBone, self.prefixName, self.boneName, self.suffixName]))
+
+        newBone.head = context.scene.cursor.location
+        newBone.tail = context.scene.cursor.location + Vector((0.0, -0.015, 0.0))
+        newBone.roll = 0
+
+        newBone["UE4RIGTYPE"] = "EYELID_" + ("UPPER" if self.eyelidPosition == "U" else "LOWER")
+        newBone["rotateBone"] = 1
+        newBone["rotationRadian"] = 0
+        newBone["orientAxis"] = 0
+        newBone["orientRoll"] = 0
+
+        newBone["customShape"] = 1
+        newBone["customShapeType"] = 0
+        newBone["customShapeParam"] = [0.5, 0.5, -0.25, 0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        newBone.parent = activeBone
+
+        if self.sideMirror and self.sideBone != "C":
+            newBoneSide = editBones.new(self.buildName([("R" if self.sideBone == "L" else "L"), self.prefixName, self.boneName, self.suffixName]))
+
+            newBoneSide.head = context.scene.cursor.location
+            newBoneSide.head.x = -newBoneSide.head.x
+            newBoneSide.tail = context.scene.cursor.location + Vector((0.0, -0.015, 0.0))
+            newBoneSide.tail.x = -newBoneSide.tail.x
+            newBoneSide.roll = 0
+
+            newBoneSide["UE4RIGTYPE"] = "EYELID_" + ("UPPER" if self.eyelidPosition == "U" else "LOWER")
+            newBoneSide["rotateBone"] = 1
+            newBoneSide["rotationRadian"] = 0
+            newBoneSide["orientAxis"] = 0
+            newBoneSide["orientRoll"] = 0
+
+            newBoneSide["customShape"] = 1
+            newBoneSide["customShapeType"] = 0
+            newBoneSide["customShapeParam"] = [0.5, 0.5, -0.25, 0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            parentSide = editBones.get(("R" if self.sideBone == "L" else "L") + activeBone.name[1:])
+            newBoneSide.parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Arm_Human(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentarmhuman"
+    bl_label = "Add ARM_HUMAN"
+    bl_description = "Add Arm Human Bone Component"
+
+    boneUpperName: StringProperty(
+        name="Upper Name",
+        default="upperarm"
+    )
+
+    boneLowerName: StringProperty(
+        name="Lower Name",
+        default="lowerarm"
+    )
+
+    boneHandName: StringProperty(
+        name="Hand Name",
+        default="hand"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("l")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        boneData = {
+            "l": [
+                # upperarm left
+                (
+                    # boneName
+                    self.boneUpperName,
+                    # head
+                    Vector((0, 0, 0)),
+                    # tail
+                    Vector((0.3, 0.05, 0)),
+                    # roll
+                    3.14159,
+                    # UE4RIGTYPE
+                    "ARM_HUMAN",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    -1.5707963705062866,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    3.1415927410125732,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [15.0, 15.0, 0.0, 15.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # lowerarm left
+                (
+                    # boneName
+                    self.boneLowerName,
+                    # head
+                    Vector((0.3, 0.05, 0)),
+                    # tail
+                    Vector((0.59, 0.01, 0)),
+                    # roll
+                    3.14159,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    -1.5707963705062866,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    3.1415927410125732,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [10.0, 10.0, 0.0, 15.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # hand left
+                (
+                    # boneName
+                    self.boneHandName,
+                    # head
+                    Vector((0.59, 0.01, 0)),
+                    # tail
+                    Vector((0.69, 0.01, 0)),
+                    # roll
+                    5.06145e-07,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    -1.5707963705062866,
+                    # orientAxis
+                    0,
+                    # orientRoll
+                    -1.5707963705062866,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [10.0, 7.5, 0.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                )
+            ],
+            "r": [
+                # upperarm right
+                (
+                    # boneName
+                    self.boneUpperName,
+                    # head
+                    Vector((-0, 0, 0)),
+                    # tail
+                    Vector((-0.3, 0.05, 0)),
+                    # roll
+                    3.14159,
+                    # UE4RIGTYPE
+                    "ARM_HUMAN",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    -1.5707963705062866,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    0,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [15.0, 15.0, 0.0, 15.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # lowerarm right
+                (
+                    # boneName
+                    self.boneLowerName,
+                    # head
+                    Vector((-0.3, 0.05, 0)),
+                    # tail
+                    Vector((-0.59, 0.01, 0)),
+                    # roll
+                    3.14159,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    -1.5707963705062866,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    0,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [10.0, 10.0, 0.0, 15.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # hand right
+                (
+                    # boneName
+                    self.boneHandName,
+                    # head
+                    Vector((-0.59, 0.01, 0)),
+                    # tail
+                    Vector((-0.69, 0.01, 0)),
+                    # roll
+                    -5.06145e-07,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    1.5707963705062866,
+                    # orientAxis
+                    0,
+                    # orientRoll
+                    -1.5707963705062866,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [10.0, 7.5, 0.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                )
+            ]
+        }
+
+        listBone = []
+        for index, data in enumerate(boneData[self.sideBone]):
+            boneName, head, tail, roll, ue4rigtype, rotBone, rotRad, orientAxis, orientRoll, customShape, customShapeType, customShapeParam = data
+
+            newBone = editBones.new(self.buildName([self.prefixName, boneName, self.suffixName, self.sideBone]))
+
+            newBone.head = context.scene.cursor.location + head
+            newBone.tail = context.scene.cursor.location + tail
+            newBone.roll = roll
+
+            newBone["UE4RIGTYPE"] = ue4rigtype
+            newBone["rotateBone"] = rotBone
+            newBone["rotationRadian"] = rotRad
+            newBone["orientAxis"] = orientAxis
+            newBone["orientRoll"] = orientRoll
+
+            newBone["customShape"] = customShape
+            newBone["customShapeType"] = customShapeType
+            newBone["customShapeParam"] = customShapeParam
+
+            if listBone:
+                newBone.parent = listBone[index-1]
+                newBone.use_connect = True
+
+            listBone.append(newBone)
+
+        if self.parentToBone and activeBone:
+            listBone[0].parent = activeBone
+
+        editBones.active = listBone[0]
+
+        if self.sideMirror:
+            listBone = []
+            for index, data in enumerate(boneData[("r" if self.sideBone == "l" else "l")]):
+                boneName, head, tail, roll, ue4rigtype, rotBone, rotRad, orientAxis, orientRoll, customShape, customShapeType, customShapeParam = data
+
+                newBone = editBones.new(self.buildName([self.prefixName, boneName, self.suffixName, ("r" if self.sideBone == "l" else "l")]))
+
+                baseLocation = context.scene.cursor.location.copy()
+                baseLocation.x = -baseLocation.x
+
+                newBone.head = baseLocation + head
+                newBone.tail = baseLocation + tail
+                newBone.roll = roll
+
+                newBone["UE4RIGTYPE"] = ue4rigtype
+                newBone["rotateBone"] = rotBone
+                newBone["rotationRadian"] = rotRad
+                newBone["orientAxis"] = orientAxis
+                newBone["orientRoll"] = orientRoll
+
+                newBone["customShape"] = customShape
+                newBone["customShapeType"] = customShapeType
+                newBone["customShapeParam"] = customShapeParam
+
+                if listBone:
+                    newBone.parent = listBone[index-1]
+                    newBone.use_connect = True
+
+                listBone.append(newBone)
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                listBone[0].parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Finger(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentfinger"
+    bl_label = "Add FINGER"
+    bl_description = "Add Finger Bone Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="finger"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("l")
+    )
+
+    numberBone: IntProperty(
+        name="Number Bone",
+        min=2,
+        default=3
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        boneData = {
+            "l":
+                # finger left
+                (
+                    # roll
+                    5.58505e-07,
+                    # rotRad
+                    -1.5708
+                )
+            ,
+            "r":
+                # finger right
+                (
+                    # roll
+                    -5.58505e-07,
+                    # rotRad
+                    1.5708
+                )
+        }
+
+
+        listBone = []
+        for index in range(1, self.numberBone+1):
+            roll, rotRad = boneData[self.sideBone]
+            newBone = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (("0" if index < 10 else "") + str(index)), self.sideBone]))
+
+            newBone.head = context.scene.cursor.location
+            newBone.tail = context.scene.cursor.location + Vector(((0.05 * index) if self.sideBone == "l" else (-0.05 * index), 0.0, 0.0))
+            newBone.roll = roll
+
+            newBone["UE4RIGTYPE"] = "FINGER" if index == 1 else ""
+            newBone["rotateBone"] = 1
+            newBone["rotationRadian"] = rotRad
+            newBone["orientAxis"] = 0
+            newBone["orientRoll"] = -1.5708
+
+            newBone["customShape"] = 1
+            newBone["customShapeType"] = 0
+            newBone["customShapeParam"] = [1.8, 1.8, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            if listBone:
+                newBone.parent = listBone[index-2]
+                newBone.use_connect = True
+
+            listBone.append(newBone)
+
+        if self.parentToBone and activeBone:
+            listBone[0].parent = activeBone
+
+        editBones.active = listBone[0]
+
+        if self.sideMirror and self.sideBone != "NONE":
+            listBone = []
+            for index in range(1, self.numberBone+1):
+                roll, rotRad = boneData[("r" if self.sideBone == "l" else "l")]
+                newBoneSide = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (("0" if index < 10 else "") + str(index)), ("r" if self.sideBone == "l" else "l")]))
+
+                baseLocation = context.scene.cursor.location.copy()
+                baseLocation.x = -baseLocation.x
+
+                newBoneSide.head = baseLocation
+                newBoneSide.tail = baseLocation + Vector(((-0.05 * index) if self.sideBone == "l" else (0.05 * index), 0.0, 0.0))
+                newBoneSide.roll = roll
+
+                newBoneSide["UE4RIGTYPE"] = "FINGER" if index == 1 else ""
+                newBoneSide["rotateBone"] = 1
+                newBoneSide["rotationRadian"] = rotRad
+                newBoneSide["orientAxis"] = 0
+                newBoneSide["orientRoll"] = -1.5708
+
+                newBone["customShape"] = 1
+                newBone["customShapeType"] = 0
+                newBone["customShapeParam"] = [1.8, 1.8, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+                if listBone:
+                    newBoneSide.parent = listBone[index-2]
+                    newBoneSide.use_connect = True
+
+                listBone.append(newBoneSide)
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                listBone[0].parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Leg_Human(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentleghuman"
+    bl_label = "Add LEG_HUMAN"
+    bl_description = "Add Leg Human Bone Component"
+
+    boneThighName: StringProperty(
+        name="Thigh Name",
+        default="thigh"
+    )
+
+    boneCalfName: StringProperty(
+        name="Calf Name",
+        default="calf"
+    )
+
+    boneFootName: StringProperty(
+        name="Foot Name",
+        default="foot"
+    )
+
+    boneBallName: StringProperty(
+        name="Ball Name",
+        default="ball"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("l")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        boneData = {
+            "l": [
+                # thigh left
+                (
+                    # boneName
+                    self.boneThighName,
+                    # head
+                    Vector((0, 0, 0)),
+                    # tail
+                    Vector((0, -0.05, -0.43)),
+                    # roll
+                    1.5708,
+                    # UE4RIGTYPE
+                    "LEG_HUMAN",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    1.5707963705062866,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    3.1415927410125732,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [18.0, 18.0, 0.0, 22.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # calf left
+                (
+                    # boneName
+                    self.boneCalfName,
+                    # head
+                    Vector((0, -0.05, -0.43)),
+                    # tail
+                    Vector((0, -0.01, -0.8)),
+                    # roll
+                    1.5708,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    1.5707963705062866,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    3.1415927410125732,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [12.0, 12.0, 0.0, 22.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # foot left
+                (
+                    # boneName
+                    self.boneFootName,
+                    # head
+                    Vector((0, -0.01, -0.8)),
+                    # tail
+                    Vector((0.0, -0.17, -0.92)),
+                    # roll
+                    3.14159,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    3.1415927410125732,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    1.5707963705062866,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [10.0, 10.0, 0.0, 17.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # ball left
+                (
+                    # boneName
+                    self.boneBallName,
+                    # head
+                    Vector((0.0, -0.17, -0.92)),
+                    # tail
+                    Vector((0.0, -0.22, -0.92)),
+                    # roll
+                    3.14159,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    -1.5707963705062866,
+                    # orientAxis
+                    0,
+                    # orientRoll
+                    -1.5707963705062866,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [11.0, 3.0, 0.0, 5.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                )
+            ],
+            "r": [
+                # thigh right
+                (
+                    # boneName
+                    self.boneThighName,
+                    # head
+                    Vector((0, 0, 0)),
+                    # tail
+                    Vector((0, -0.05, -0.43)),
+                    # roll
+                    -1.5708,
+                    # UE4RIGTYPE
+                    "LEG_HUMAN",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    1.5707963705062866,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    0,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [18.0, 18.0, 0.0, 22.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # calf right
+                (
+                    # boneName
+                    self.boneCalfName,
+                    # head
+                    Vector((0, -0.05, -0.43)),
+                    # tail
+                    Vector((0, -0.01, -0.8)),
+                    # roll
+                    -1.5708,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    1.5707963705062866,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    0,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [12.0, 12.0, 0.0, 22.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # foot right
+                (
+                    # boneName
+                    self.boneFootName,
+                    # head
+                    Vector((0, -0.01, -0.8)),
+                    # tail
+                    Vector((0.0, -0.17, -0.92)),
+                    # roll
+                    3.14159,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    0,
+                    # orientAxis
+                    2,
+                    # orientRoll
+                    -1.5707963705062866,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [10.0, 10.0, 0.0, 17.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                ),
+                # ball right
+                (
+                    # boneName
+                    self.boneBallName,
+                    # head
+                    Vector((0.0, -0.17, -0.92)),
+                    # tail
+                    Vector((0.0, -0.22, -0.92)),
+                    # roll
+                    3.14159,
+                    # UE4RIGTYPE
+                    "",
+                    # rotateBone
+                    True,
+                    # rotationRadian
+                    1.5707963705062866,
+                    # orientAxis
+                    0,
+                    # orientRoll
+                    -1.5707963705062866,
+                    # customShape
+                    True,
+                    # customShapeType
+                    0,
+                    # customShapeParam
+                    [11.0, 3.0, 0.0, 5.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                )
+            ]
+        }
+
+        listBone = []
+        for index, data in enumerate(boneData[self.sideBone]):
+            boneName, head, tail, roll, ue4rigtype, rotBone, rotRad, orientAxis, orientRoll, customShape, customShapeType, customShapeParam = data
+
+            newBone = editBones.new(self.buildName([self.prefixName, boneName, self.suffixName, self.sideBone]))
+
+            newBone.head = context.scene.cursor.location + head
+            newBone.tail = context.scene.cursor.location + tail
+            newBone.roll = roll
+
+            newBone["UE4RIGTYPE"] = ue4rigtype
+            newBone["rotateBone"] = rotBone
+            newBone["rotationRadian"] = rotRad
+            newBone["orientAxis"] = orientAxis
+            newBone["orientRoll"] = orientRoll
+
+            newBone["customShape"] = customShape
+            newBone["customShapeType"] = customShapeType
+            newBone["customShapeParam"] = customShapeParam
+
+            if listBone:
+                newBone.parent = listBone[index-1]
+                newBone.use_connect = True
+
+            listBone.append(newBone)
+
+        if self.parentToBone and activeBone:
+            listBone[0].parent = activeBone
+
+        editBones.active = listBone[0]
+
+        if self.sideMirror:
+            listBone = []
+            for index, data in enumerate(boneData[("r" if self.sideBone == "l" else "l")]):
+                boneName, head, tail, roll, ue4rigtype, rotBone, rotRad, orientAxis, orientRoll, customShape, customShapeType, customShapeParam = data
+
+                newBone = editBones.new(self.buildName([self.prefixName, boneName, self.suffixName, ("r" if self.sideBone == "l" else "l")]))
+
+                baseLocation = context.scene.cursor.location.copy()
+                baseLocation.x = -baseLocation.x
+
+                newBone.head = baseLocation + head
+                newBone.tail = baseLocation + tail
+                newBone.roll = roll
+
+                newBone["UE4RIGTYPE"] = ue4rigtype
+                newBone["rotateBone"] = rotBone
+                newBone["rotationRadian"] = rotRad
+                newBone["orientAxis"] = orientAxis
+                newBone["orientRoll"] = orientRoll
+
+                newBone["customShape"] = customShape
+                newBone["customShapeType"] = customShapeType
+                newBone["customShapeParam"] = customShapeParam
+
+                if listBone:
+                    newBone.parent = listBone[index-1]
+                    newBone.use_connect = True
+
+                listBone.append(newBone)
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                listBone[0].parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Chain(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentchain"
+    bl_label = "Add CHAIN"
+    bl_description = "Add Chain Bone Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="chain"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("NONE", "None", ""),
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("NONE")
+    )
+
+    numberBone: IntProperty(
+        name="Number Bone",
+        min=2,
+        default=2
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        listBone = []
+        for index in range(1, self.numberBone+1):
+            newBone = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (("0" if index < 10 else "") + str(index)), (self.sideBone if self.sideBone != "NONE" else "")]))
+
+            newBone.head = context.scene.cursor.location
+            newBone.tail = context.scene.cursor.location + Vector((0.0, 0.0, 0.2 * index))
+            newBone.roll = 0
+
+            newBone["UE4RIGTYPE"] = "COPY_BONE"
+            newBone["rotateBone"] = 1
+            newBone["rotationRadian"] = 0
+            newBone["orientAxis"] = 0
+            newBone["orientRoll"] = 0
+
+            newBone["customShape"] = 1
+            newBone["customShapeType"] = 0
+            newBone["customShapeParam"] = [10.0, 10.0, 0.0, 15.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            if listBone:
+                newBone.parent = listBone[index-2]
+                newBone.use_connect = True
+
+            listBone.append(newBone)
+
+        if self.parentToBone and activeBone:
+            listBone[0].parent = activeBone
+
+        editBones.active = listBone[0]
+
+        if self.sideMirror and self.sideBone != "NONE":
+            listBone = []
+            for index in range(1, self.numberBone+1):
+                newBoneSide = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (("0" if index < 10 else "") + str(index)), ("r" if self.sideBone == "l" else "l")]))
+
+                newBoneSide.head = context.scene.cursor.location
+                newBoneSide.head.x = -newBoneSide.head.x
+                newBoneSide.tail = context.scene.cursor.location + Vector((0.0, 0.0, 0.2 * index))
+                newBoneSide.tail.x = -newBoneSide.tail.x
+                newBoneSide.roll = 0
+
+                newBoneSide["UE4RIGTYPE"] = "COPY_BONE"
+                newBoneSide["rotateBone"] = 1
+                newBoneSide["rotationRadian"] = 0
+                newBoneSide["orientAxis"] = 0
+                newBoneSide["orientRoll"] = 0
+
+                newBoneSide["customShape"] = 1
+                newBoneSide["customShapeType"] = 0
+                newBoneSide["customShapeParam"] = [10.0, 10.0, 0.0, 15.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+                if listBone:
+                    newBoneSide.parent = listBone[index-2]
+                    newBoneSide.use_connect = True
+
+                listBone.append(newBoneSide)
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                listBone[0].parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
+class OP_BoneComponent_Prop(OP_MixBoneComponent):
+    bl_idname = "ue4workspace.bonecomponentprop"
+    bl_label = "Add PROP"
+    bl_description = "Add Property Bone Component"
+
+    boneName: StringProperty(
+        name="Bone Name",
+        default="prop"
+    )
+
+    prefixName: StringProperty(
+        name="Prefix Name",
+        default=""
+    )
+
+    suffixName: StringProperty(
+        name="Suffix Name",
+        default=""
+    )
+
+    sideBone: EnumProperty(
+        name="Side Name",
+        items=[
+            ("NONE", "None", ""),
+            ("l", "Left", ""),
+            ("r", "Right", "")
+        ],
+        default=("NONE")
+    )
+
+    sideMirror: BoolProperty(
+        name="Mirror Side",
+        default=False
+    )
+
+    parentToBone: BoolProperty(
+        name="Parent To Active Bone",
+        default=False
+    )
+
+    def execute(self, context):
+        preferences = context.preferences.addons[__package__].preferences
+        activeObject = context.active_object
+        editBones = activeObject.data.edit_bones
+        activeBone = context.active_bone
+
+        newBone = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, (self.sideBone if self.sideBone != "NONE" else "")]))
+
+        newBone.head = context.scene.cursor.location
+        newBone.tail = context.scene.cursor.location + Vector((0.0, 0.15, 0.0))
+        newBone.roll = 0
+        newBone.use_deform = False
+
+        newBone["UE4RIGTYPE"] = "PROP"
+        newBone["rotateBone"] = 1
+        newBone["rotationRadian"] = 0.0
+        newBone["orientAxis"] = 0
+        newBone["orientRoll"] = 0.0
+
+        newBone["customShape"] = 1
+        newBone["customShapeType"] = 0
+        newBone["customShapeParam"] = [16.0, 25.0, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+        if self.parentToBone and activeBone:
+            newBone.parent = activeBone
+
+        editBones.active = newBone
+
+        if self.sideMirror and self.sideBone != "NONE":
+            newBoneSide = editBones.new(self.buildName([self.prefixName, self.boneName, self.suffixName, ("r" if self.sideBone == "l" else "l")]))
+
+            newBoneSide.head = newBone.head
+            newBoneSide.head.x = -newBone.head.x
+            newBoneSide.tail = newBone.tail
+            newBoneSide.tail.x = -newBone.tail.x
+            newBoneSide.roll = 0
+            newBoneSide.use_deform = False
+
+            newBoneSide["UE4RIGTYPE"] = "PROP"
+            newBoneSide["rotateBone"] = 1
+            newBoneSide["rotationRadian"] = 0.0
+            newBoneSide["orientAxis"] = 0
+            newBoneSide["orientRoll"] = 0.0
+
+            newBoneSide["customShape"] = 1
+            newBoneSide["customShapeType"] = 0
+            newBoneSide["customShapeParam"] = [16.0, 25.0, 0.0, 2.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+            if self.parentToBone and activeBone:
+                parentSide = editBones.get(activeBone.name[:-1] + ("r" if self.sideBone == "l" else "l"))
+                newBoneSide.parent = parentSide if parentSide else activeBone
+
+        return {"FINISHED"}
+
 # operator export
 
 Ops = [
     OP_PoseToAPose,
-    OP_ApplyPose
+    OP_ApplyPose,
+    OP_BoneComponent_Copy,
+    OP_BoneComponent_Pelvis,
+    OP_BoneComponent_Spine,
+    OP_BoneComponent_Neck,
+    OP_BoneComponent_Head,
+    OP_BoneComponent_FaceAttach,
+    OP_BoneComponent_Jaw,
+    OP_BoneComponent_Landmark,
+    OP_BoneComponent_Eye,
+    OP_BoneComponent_Eyelid,
+    OP_BoneComponent_Arm_Human,
+    OP_BoneComponent_Finger,
+    OP_BoneComponent_Leg_Human,
+    OP_BoneComponent_Chain
 ]
