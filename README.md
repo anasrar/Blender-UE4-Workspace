@@ -2,7 +2,7 @@
 
 ![Blender Unreal Engine Workspace](https://anasrar.github.io/Blender-UE4-Workspace/img/blender-unreal-engine-4-workspace-banner.png)
 
-Blender **2.8x** *(above)* add-on for export directly to Unreal Engine 4 with all setting in Blender (inspired by **send to unreal** add-on).
+Blender **2.91** *(above)* add-on for export directly to Unreal Engine 4 (**4.26** *above*) with all setting in Blender (inspired by **send to unreal** add-on).
 
 ## Feature
 
@@ -22,23 +22,26 @@ Export for Static Mesh.
 - Custom collision from vertices
 - Custom collision from mesh - ```v.1.2```
 - Custom lightmaps
-- Export profile - ```v.1.2```
+- **[ DEPRECATED - v.2.0 ]** Export profile - ```v.1.2```
 - Socket System - ```v.1.3```
 - Level of Detail - ```v.1.4```
-- Import Static Mesh From Unreal Engine ```v.1.4```
+- Import Static Mesh From Unreal Engine - ```v.1.4```
 
-### Character
+### Skeletal Mesh
 
-Export for Character (Skeletal Mesh).
+Export for Skeletal Mesh.
 
 - Export to FBX and Unreal Engine  
 - Modular character
-- Skeleton preset (Epic skeleton)
-- Add twist bone for skeleton preset - ```v.1.2```
-- Generate rig for skeleton preset - ```v.1.2```
-- Export profile - ```v.1.2```
-- Socket System (**Not Support Export**) - ```v.1.3```
-- Character Part Manager ```v.1.4```
+- **[ DEPRECATED - v.2.0 ]** Skeleton preset (Epic skeleton)
+- **Move To Another Add-on** : TBA
+- **[ DEPRECATED - v.2.0 ]** Add twist bone for skeleton preset - ```v.1.2```
+- **Move To Another Add-on** : TBA
+- **[ DEPRECATED - v.2.0 ]** Generate rig for skeleton preset - ```v.1.2```
+- **Move To Another Add-on** : TBA
+- **[ DEPRECATED - v.2.0 ]** Export profile - ```v.1.2```
+- Socket System - ```v.1.3``` - Copy Socket To Unreal Engine - ```v.2.0```
+- Skeletal Mesh Part Manager - ```v.1.4```
 - Import Skeletal Mesh From Unreal Engine ```v.1.4```
 
 ### Animation
@@ -46,16 +49,18 @@ Export for Character (Skeletal Mesh).
 Export for Animation.
 
 - Export to FBX and Unreal Engine - ```v.1.2```  
-- Export profile - ```v.1.2```
+- **[ DEPRECATED - v.2.0 ]** Export profile - ```v.1.2```
 - Import Animation From Unreal Engine ```v.1.4```
 
-### Retarget Animation (Experimental)
+### Retarget Animation
 
-Retarget Animation to another skeleton - ```v.1.3``` **Experimental**, ```v.1.4``` **Production Ready**
+**[ DEPRECATED - v.2.0 ]** Retarget Animation to another skeleton - ```v.1.3``` **Experimental**, ```v.1.4``` **Production Ready**
 
-## Documetation
+**Move To Another Add-on** : https://github.com/anasrar/ReNim
 
-[documentation page](https://anasrar.github.io/Blender-UE4-Workspace/) or [youtube playlist](https://www.youtube.com/playlist?list=PLolnhUV-ZzXrXx1gJunoknuni8klsy0wH)
+## Documentation
+
+[documentation page](https://anasrar.github.io/Blender-UE4-Workspace/) or [YouTube playlist](https://www.youtube.com/playlist?list=PLolnhUV-ZzXrXx1gJunoknuni8klsy0wH)
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/anasrar/Blender-UE4-Workspace?style=flat-square)
 
@@ -72,7 +77,7 @@ You can download from
 - Gumroad for latest version
   - https://gumroad.com/l/BlenderUnrealEngineWorkspace
 
-- Github for pervious version
+- GitHub for pervious version
   - https://github.com/anasrar/Blender-UE4-Workspace/releases
 
 master branch is **unstable** and **bug fix version**
@@ -99,15 +104,9 @@ Press **N** on Blender for open the tab menu.
 
 ## Compatibility Test
 
-tested with blender version
+* **Blender 2.91** (make sure export folder path is absolute)
 
-* **2.81** - **DROP** from version `v.1.3`
-
-* **2.82** - **DROP** from version `v.1.4`
-
-* **2.83** (make sure export folder path is absolute)
-
-* **2.90** (make sure export folder path is absolute)
+    **Unreal Engine 4.26**
 
 using Blender latest version for better compatibility.
 

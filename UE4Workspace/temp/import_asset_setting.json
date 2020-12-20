@@ -1,0 +1,20 @@
+{
+    "path": "C:\\Users\\user\\Documents\\TESTING\\",
+    "files": [
+        [
+            "A8CF65F74F8C640F351B56876D4013AD",
+            "/Game/Blender/axis.axis",
+            0
+        ]
+    ],
+    "fbx_export_compatibility": "FBX_2013",
+    "ascii": false,
+    "force_front_x_axis": false,
+    "vertex_color": true,
+    "level_of_detail": true,
+    "collision": true,
+    "export_morph_targets": true,
+    "export_preview_mesh": false,
+    "map_skeletal_motion_to_root": false,
+    "export_local_time": true
+}

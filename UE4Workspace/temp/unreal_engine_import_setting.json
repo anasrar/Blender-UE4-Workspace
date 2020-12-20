@@ -1,0 +1,46 @@
+{
+    "files": [
+        {
+            "path": "C:\\Users\\user\\Documents\\TESTING\\run.fbx",
+            "skeleton": "27C0FCBB4FFB22BE3CBF45B7BB60FC7B:/Game/Mixamo/Ch40_nonPBR_Skeleton"
+        }
+    ],
+    "main_folder": "Blender",
+    "subfolder": "",
+    "overwrite_file": true,
+    "temporary": false,
+    "animation_length": "FBXALIT_EXPORTED_TIME",
+    "import_meshes_in_bone_hierarchy": true,
+    "frame_import_range": [
+        0,
+        0
+    ],
+    "use_default_sample_rate": false,
+    "custom_sample_rate": 0,
+    "import_custom_attribute": true,
+    "delete_existing_custom_attribute_curves": false,
+    "import_bone_tracks": true,
+    "set_material_drive_parameter_on_custom_attribute": false,
+    "material_curve_suffixes": [
+        "_mat"
+    ],
+    "remove_redundant_keys": true,
+    "delete_existing_morph_target_curves": false,
+    "do_not_import_curve_with_zero": true,
+    "preserve_local_transform": false,
+    "import_translation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "import_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "import_uniform_scale": 1.0,
+    "convert_scene": true,
+    "force_front_x_axis": false,
+    "convert_scene_unit": false,
+    "override_full_name": true
+}
