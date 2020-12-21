@@ -281,7 +281,7 @@ def register():
 
 def unregister():
     del bpy.types.Object.is_socket
-    del bpy.types.Mesh.is_attach_to_object
+    del bpy.types.Object.is_attach_to_object
     del bpy.types.Object.attach_to
 
     for x in list_class_to_register[::-1]:
