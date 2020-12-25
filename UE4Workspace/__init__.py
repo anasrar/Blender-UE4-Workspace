@@ -36,6 +36,7 @@ from . object import main as object_main
 from . static_mesh import main as static_mesh_main
 from . skeletal_mesh import main as skeletal_mesh_main
 from . animation import main as animation_main
+from . groom import main as groom_main
 from . credit import main as credit_main
 from . copy_to_unreal_engine import main as copy_to_unreal_engine_main
 
@@ -48,6 +49,7 @@ list_class_to_register = [
     static_mesh_main,
     skeletal_mesh_main,
     animation_main,
+    groom_main,
     credit_main,
     copy_to_unreal_engine_main
 ]
