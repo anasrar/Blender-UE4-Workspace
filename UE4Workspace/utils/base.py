@@ -20,6 +20,18 @@ class Panel(OriginalPanel):
     def poll(cls, context):
         return (context.mode == 'OBJECT')
 
+class ExperimentalPanel(OriginalPanel):
+    bl_category = 'UE4Workspace'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, context):
+        preferences = context.preferences.addons['UE4Workspace'].preferences
+        misc = preferences.misc
+        return (context.mode == 'OBJECT' and misc.experimental_features)
+
 class ObjectPanel(OriginalPanel):
     bl_category = 'UE4Workspace'
     bl_space_type = 'VIEW_3D'
@@ -84,6 +96,7 @@ class ExportOperator(OriginalOperator):
     temp_lod = []
     temp_main_lod_matrix_and_parent = None
     temp_skeletal_meshes = []
+    temp_hair_particle = []
 
     @classmethod
     def description(cls, context, properties):
@@ -291,3 +304,11 @@ class ExportOperator(OriginalOperator):
             skeletal_mesh_object.select_set(state=False)
 
         self.temp_skeletal_meshes = []
+
+    def prepare_groom(self, obj):
+        self.temp_hair_particle = [obj.show_instancer_for_render, obj.show_instancer_for_viewport]
+        obj.show_instancer_for_render, obj.show_instancer_for_viewport = [False, True]
+
+    def restore_groom(self, obj):
+        obj.show_instancer_for_render, obj.show_instancer_for_viewport = self.temp_hair_particle
+        self.temp_hair_particle = []
