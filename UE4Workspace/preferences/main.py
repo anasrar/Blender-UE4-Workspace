@@ -8,6 +8,7 @@ from . import_asset import IMPORT_ASSET_fbx_import, IMPORT_ASSET_unreal_engine, 
 from . static_mesh import STATIC_MESH_FBX_export, STATIC_MESH_unreal_engine_export, STATIC_MESH_export
 from . skeletal_mesh import SKELETAL_MESH_FBX_export, SKELETAL_MESH_unreal_engine_export, SKELETAL_MESH_export
 from . animation import ANIMATION_FBX_export, ANIMATION_unreal_engine_export, ANIMATION_export
+from . groom import GROOM_export
 from . misc import MISC_option
 
 class Preferences(AddonPreferences):
@@ -35,6 +36,10 @@ class Preferences(AddonPreferences):
 
     animation: bpy.props.PointerProperty(
         type=ANIMATION_export
+    )
+
+    groom: bpy.props.PointerProperty(
+        type=GROOM_export
     )
 
     misc: bpy.props.PointerProperty(
@@ -78,6 +83,7 @@ list_class_to_register = [
     ANIMATION_FBX_export,
     ANIMATION_unreal_engine_export,
     ANIMATION_export,
+    GROOM_export,
     MISC_option,
     Preferences
 ]
