@@ -2,7 +2,7 @@ import math
 import bpy
 from bpy.utils import register_class, unregister_class
 from bpy.types import Operator
-from mathutils import Matrix
+from mathutils import Matrix, Euler
 from .. utils.base import ObjectSubPanel, create_matrix_scale_from_vector
 
 class OP_AttachObject(Operator):
@@ -121,14 +121,6 @@ class OP_CopySocket(Operator):
     def execute(self, context):
         active_object = context.active_object
 
-        bone_parent = bpy.data.objects.new(name='dummy_socket_bone_parent', object_data=None)
-        socket_point = bpy.data.objects.new(name='dummy_socket_point', object_data=None)
-
-        socket_point.parent = bone_parent
-
-        context.scene.collection.objects.link(bone_parent)
-        context.scene.collection.objects.link(socket_point)
-
         socket_bone_objects = [obj for obj in active_object.children if obj.type == 'EMPTY' and obj.is_socket and obj.parent_type == 'BONE' and obj.parent_bone]
 
         string_clipboard = 'SocketCopyPasteBuffer\n\nNumSockets={}\n\n'.format(len(socket_bone_objects))
@@ -138,11 +130,7 @@ class OP_CopySocket(Operator):
             pose_bone_target = active_object.pose.bones.get(socket_obj.parent_bone)
 
             if pose_bone_target is not None:
-
-                bone_parent.matrix_world = active_object.matrix_world @ pose_bone_target.matrix
-                socket_point.matrix_world = socket_obj.matrix_world.copy()
-
-                socket_point_location, socket_point_rotation_quaternion, socket_point_scale = socket_point.matrix_local.decompose()
+                socket_point_location, socket_point_rotation_quaternion, socket_point_scale = ((active_object.matrix_world @ pose_bone_target.matrix).inverted() @ socket_obj.matrix_world.copy()).decompose()
                 socket_point_rotation_euler = socket_point_rotation_quaternion.to_euler('XYZ')
 
                 string_clipboard += 'IsOnSkeleton=1\nBegin Object Class=/Script/Engine.SkeletalMeshSocket Name=\"SkeletalMeshSocket_{index}\"\nSocketName=\"{socket_name}\"\nBoneName=\"{bone_name}\"\nRelativeLocation=(X={location[x]},Y={location[y]},Z={location[z]})\nRelativeRotation=(Pitch={rotation[y]},Yaw={rotation[z]},Roll={rotation[x]})\nRelativeScale=(X={scale[x]},Y={scale[y]},Z={scale[z]})\nEnd Object\n\n'.format(
@@ -166,12 +154,113 @@ class OP_CopySocket(Operator):
                     }
                 )
 
-        bpy.data.objects.remove(socket_point, do_unlink=True)
-        bpy.data.objects.remove(bone_parent, do_unlink=True)
-
         context.window_manager.clipboard = string_clipboard
 
         self.report({'INFO'}, 'Copy socket success')
+
+        return {"FINISHED"}
+
+class SocketObject(object):
+   _temp_dict = {
+      'SocketName': 'Socket',
+      'BoneName': 'Bone',
+      'RelativeLocation': 'X=0.0,Y=0.0,Z=0.0',
+      'RelativeRotation': 'Pitch=0.0,Yaw=0.0,Roll=0.0',
+      'RelativeScale': 'X=1.0,Y=1.0,Z=1.0'
+   }
+
+   SocketName = 'Socket'
+   BoneName = 'Bone'
+   RelativeLocation = {}
+   RelativeRotation = {}
+   RelativeScale = {}
+
+   def __init__(self, **bone):
+      self._temp_dict.update(bone)
+      self.update_transform()
+      for name in ['SocketName', 'BoneName']:
+         setattr(self, name, self._temp_dict[name])
+
+   def update_transform(self):
+      def serialize(key: str):
+         dict_value = {key: float(val) for key, val in [temp_string.strip().split('=', 1) for temp_string in self._temp_dict[key].split(',')]}
+         setattr(self, name, dict_value)
+      for name in ['RelativeLocation', 'RelativeRotation', 'RelativeScale']:
+         serialize(name)
+
+      self.RelativeLocation['Y'] *= -1
+
+      self.RelativeRotation['Pitch'] *= -1
+      self.RelativeRotation['Yaw'] *= -1
+
+class OP_PasteSocket(Operator):
+    bl_idname = 'ue4workspace.paste_socket'
+    bl_label = 'Paste Socket'
+    bl_description = 'Paste socket from unreal engine skeleton'
+    bl_options = {'UNDO', 'REGISTER'}
+
+    size: bpy.props.FloatProperty(
+        name='Size',
+        min=0.01,
+        default=0.1
+        )
+
+    @classmethod
+    def poll(self, context):
+        return context.mode == 'OBJECT' and context.active_object is not None and context.active_object.type == 'ARMATURE'
+
+    def execute(self, context):
+        active_object = context.active_object
+        clipboard = context.window_manager.clipboard
+        num_socket_pasted = 0
+
+        if clipboard and ('Begin Object Class=/Script/Engine.SkeletalMeshSocket' in clipboard) and ('End Object' in clipboard):
+            clipboard_list = clipboard.splitlines()
+            socket_objects = []
+
+            for index in [index for index, string in enumerate(clipboard_list) if string.strip().startswith('Begin Object Class=/Script/Engine.SkeletalMeshSocket Name="SkeletalMeshSocket_')]:
+                socket_dict = {}
+                loop = True
+                index_loop = index + 1
+                while(loop):
+                    string = clipboard_list[index_loop]
+                    loop = not string.strip().startswith('End Object')
+                    if loop:
+                        index_loop += 1
+                        key, value = string.strip().split('=', 1)
+                        socket_dict[key] = value.strip('"').strip('()')
+                socket_objects.append(SocketObject(**socket_dict))
+
+            # create collection (UE4Socket) if not exist
+            collection = bpy.data.collections.get('UE4Socket', False)
+            if (not collection):
+                collection = bpy.data.collections.new('UE4Socket')
+                context.scene.collection.children.link(collection)
+
+            for socket_object in socket_objects:
+                pose_bone = active_object.pose.bones.get(socket_object.BoneName, None)
+                if pose_bone is not None:
+                    socket_matrix_world = (active_object.matrix_world @ pose_bone.matrix) @ (Matrix.Translation((socket_object.RelativeLocation['X'], socket_object.RelativeLocation['Y'], socket_object.RelativeLocation['Z'])) @ Euler((math.radians(socket_object.RelativeRotation['Roll']), math.radians(socket_object.RelativeRotation['Pitch']), math.radians(socket_object.RelativeRotation['Yaw'])), 'XYZ').to_matrix().to_4x4())
+
+                    socket = bpy.data.objects.new(name=socket_object.SocketName, object_data=None)
+                    socket.is_socket = True
+                    socket.show_name = True
+                    socket.matrix_world = socket_matrix_world
+                    socket.scale.x = (socket_object.RelativeScale['X'] * (active_object.scale.x/0.01))
+                    socket.scale.y = (socket_object.RelativeScale['Y'] * (active_object.scale.y/0.01))
+                    socket.scale.z = (socket_object.RelativeScale['Z'] * (active_object.scale.z/0.01))
+                    socket.empty_display_type = 'ARROWS'
+                    socket.empty_display_size = self.size
+                    collection.objects.link(socket)
+                    socket.parent = active_object
+                    socket.parent_type = 'BONE'
+                    socket.parent_bone = pose_bone.name
+                    # clear Local Transform
+                    socket.matrix_parent_inverse = (active_object.matrix_world @ Matrix.Translation(pose_bone.tail - pose_bone.head) @ pose_bone.matrix).inverted()
+
+                    num_socket_pasted += 1
+
+        self.report({'INFO'}, f'Paste {num_socket_pasted} socket success')
 
         return {"FINISHED"}
 
@@ -207,10 +296,13 @@ class PANEL(ObjectSubPanel):
 
         socket_objects = [obj for obj in context.scene.objects if obj.type == 'EMPTY' and obj.is_socket and obj.parent is active_object]
 
-        if socket_objects and active_object.type == 'ARMATURE':
-            row = layout.box().row()
-            row.scale_y = 1.5
-            row.operator('ue4workspace.copy_socket',icon='DECORATE_ANIMATE', text='Copy Socket')
+        if active_object.type == 'ARMATURE':
+            box = layout.box()
+            col = box.column(align=True)
+            col.scale_y = 1.5
+            col.operator('ue4workspace.paste_socket',icon='DECORATE_ANIMATE', text='Paste Socket')
+            if socket_objects:
+                col.operator('ue4workspace.copy_socket',icon='DECORATE_ANIMATE', text='Copy Socket')
 
         if socket_objects:
             for obj in socket_objects:
@@ -255,6 +347,7 @@ list_class_to_register = [
     OP_AttachObject,
     OP_CreateSocket,
     OP_CopySocket,
+    OP_PasteSocket,
     PANEL
 ]
 
