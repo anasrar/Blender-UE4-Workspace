@@ -502,7 +502,7 @@ class SKELETAL_MESH_export(PropertyGroup):
     )
 
     def get_skeleton(self, context):
-        return [('CREATE', 'Create New', 'Create new skeleton')] + skeletons
+        return [('00:CREATE', 'Create New', 'Create new skeleton')] + skeletons
 
     skeleton: bpy.props.EnumProperty(
         name='Skeleton',
