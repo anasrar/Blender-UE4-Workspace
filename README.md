@@ -25,6 +25,7 @@ Export for Static Mesh.
 - **[ DEPRECATED - v.2.0 ]** Export profile - ```v.1.2```
 - Socket System - ```v.1.3```
 - Level of Detail - ```v.1.4```
+- Generate Level of Detail - ```v.2.0```
 - Import Static Mesh From Unreal Engine - ```v.1.4```
 
 ### Skeletal Mesh
@@ -34,13 +35,12 @@ Export for Skeletal Mesh.
 - Export to FBX and Unreal Engine  
 - Modular character
 - **[ DEPRECATED - v.2.0 ]** Skeleton preset (Epic skeleton)
-- **Move To Another Add-on** : TBA
 - **[ DEPRECATED - v.2.0 ]** Add twist bone for skeleton preset - ```v.1.2```
-- **Move To Another Add-on** : TBA
 - **[ DEPRECATED - v.2.0 ]** Generate rig for skeleton preset - ```v.1.2```
 - **Move To Another Add-on** : TBA
 - **[ DEPRECATED - v.2.0 ]** Export profile - ```v.1.2```
-- Socket System - ```v.1.3``` - Copy Socket To Unreal Engine - ```v.2.0```
+- Socket System - ```v.1.3```
+- Copy/Paste Socket Unreal Engine - ```v.2.0```
 - Skeletal Mesh Part Manager - ```v.1.4```
 - Import Skeletal Mesh From Unreal Engine ```v.1.4```
 
@@ -57,6 +57,19 @@ Export for Animation.
 **[ DEPRECATED - v.2.0 ]** Retarget Animation to another skeleton - ```v.1.3``` **Experimental**, ```v.1.4``` **Production Ready**
 
 **Move To Another Add-on** : https://github.com/anasrar/ReNim
+
+### Groom Hair [Experimental]
+Export Hair Particle From Blender and Import as Groom Hair In Unreal Engine (Not Support Direct Export To Unreal) - ```v.2.0```
+
+Export Setting : [[Groom] unreal engine import setting](https://github.com/anasrar/Blender-UE4-Workspace/issues/22)
+
+### Copy Transform To Unreal Engine Map
+
+Copy Transform Selected Object To Unreal Engine Map - ```v.2.0```
+
+#### Support
+
+- Static Mesh
 
 ## Documentation
 
