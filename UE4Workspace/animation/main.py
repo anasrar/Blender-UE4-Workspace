@@ -209,6 +209,9 @@ class OP_ExportAnimationMesh(ExportOperator):
 
                 active_object.animation_data.action = export_action
 
+                if fbx_setting.bake_anim_force_startend_keying:
+                    context.scene.frame_start, context.scene.frame_end = export_action.frame_range
+
                 export_setting = {
                     'filepath': self.create_string_directory(directory, filename_ext),
                     'check_existing': False,
@@ -218,6 +221,8 @@ class OP_ExportAnimationMesh(ExportOperator):
                     'object_types': {'ARMATURE'},
                     'use_custom_props': animation.use_custom_props,
                     'bake_anim': True,
+                    'bake_anim_use_nla_strips': False,
+                    'bake_anim_use_all_actions': False,
                     'path_mode': 'AUTO',
                     'embed_textures': False,
                     'batch_mode': 'OFF'
