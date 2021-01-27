@@ -1,4 +1,5 @@
 import bpy
+from bpy.types import Operator
 from bpy.utils import register_class, unregister_class
 from .. utils.base import ExportOperator, ExperimentalPanel
 
@@ -142,6 +143,47 @@ class OP_ExportGroom(ExportOperator):
 
         return {'FINISHED'}
 
+class OP_GroomImportOctahedron(Operator):
+    bl_idname = 'ue4workspace.groom_import_octahedron'
+    bl_label = 'Import Octahedron'
+    bl_description = 'Import Octahedron For Baking Groom Texture'
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        preferences = context.preferences.addons['UE4Workspace'].preferences
+        misc = preferences.misc
+        return misc.experimental_features
+
+    def execute(self, context):
+        new_mesh = bpy.data.meshes.new('octahedron')
+        new_mesh.from_pydata([(1.0, -0.0, -0.0), (-0.0, 1.0, -0.0), (-0.0, -0.0, 1.0), (-0.0, -0.0, -1.0), (-0.0, -1.0, -0.0), (-1.0, -0.0, -0.0)], [], [(1, 2, 0), (3, 1, 0), (0, 2, 4), (0, 4, 3), (1, 5, 2), (5, 1, 3), (5, 4, 2), (3, 4, 5)])
+        for polygon in new_mesh.polygons:
+            polygon.use_smooth = True
+
+        uv = new_mesh.uv_layers.new(name='UVMap')
+        for index_data, uv_pos in enumerate([(1.0, 1.0), (0.5, 1.0), (1.0, 0.5), (0.5, 0.0), (1.0, 0.0), (1.0, 0.5), (1.0, 0.5), (0.5, 1.0), (0.5, 0.5), (1.0, 0.5), (0.5, 0.5), (0.5, 0.0), (0.0, 1.0), (0.0, 0.5), (0.5, 1.0), (0.0, 0.5), (0.0, 0.0), (0.5, 0.0), (0.0, 0.5), (0.5, 0.5), (0.5, 1.0), (0.5, 0.0), (0.5, 0.5), (0.0, 0.5)]):
+            uv.data[index_data].uv = uv_pos
+
+        # create material (MAT_UE4BakeGroom) if not exist
+        mat = bpy.data.materials.get('MAT_UE4BakeGroom')
+        if mat is None:
+            mat = bpy.data.materials.new(name='MAT_UE4BakeGroom')
+            mat.use_nodes = True
+            mat.use_fake_user = True
+            image_node = mat.node_tree.nodes.new(type='ShaderNodeTexImage')
+            image_node.location = (-280.0, 300.0)
+            mat.node_tree.links.new(image_node.outputs[0], mat.node_tree.nodes['Principled BSDF'].inputs[0])
+            mat.node_tree.nodes.active = image_node
+        new_mesh.materials.append(mat)
+
+        new_object = bpy.data.objects.new('octahedron', new_mesh)
+        new_object.matrix_world = context.scene.cursor.matrix
+
+        context.view_layer.active_layer_collection.collection.objects.link(new_object)
+
+        return {'FINISHED'}
+
 class PANEL(ExperimentalPanel):
     bl_idname = 'UE4WORKSPACE_PT_GroomPanel'
     bl_label = '[Experimental] Groom'
@@ -150,6 +192,10 @@ class PANEL(ExperimentalPanel):
         layout = self.layout
         preferences = context.preferences.addons['UE4Workspace'].preferences
         groom = preferences.groom
+
+        row = layout.row(align=True)
+        row.scale_y = 1.5
+        row.operator('ue4workspace.groom_import_octahedron', icon='KEYFRAME')
 
         col_data = [
             ('Subfolder', 'subfolder'),
@@ -190,6 +236,7 @@ class PANEL(ExperimentalPanel):
 
 list_class_to_register = [
     OP_ExportGroom,
+    OP_GroomImportOctahedron,
     PANEL
 ]
 
